@@ -30,6 +30,8 @@ myenv/
 .DS_Store
 Thumbs.db
 
+*abc*
+
 # Ignora i file di dipendenze di Python
 __pycache__/
 *.pyc
