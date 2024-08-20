@@ -1,0 +1,50 @@
+# Ignora i file di log
+*.log
+
+# Ignora i file temporanei di sistema
+*.tmp
+*.swp
+*.swo
+
+# Ignora i file di compilazione
+*.class
+*.o
+*.a
+*.so
+
+# Ignora le directory di build
+/build/
+/dist/
+/out/
+
+# Ignora i file di configurazione dell'ambiente
+.env
+.venv/
+.tox/
+.nox/
+.coverage
+*.egg-info/
+
+# Ignora i file e le directory del sistema
+.DS_Store
+Thumbs.db
+
+# Ignora i file di dipendenze di Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignora i file di dipendenze di Node.js
+node_modules/
+npm-debug.log
+
+# Ignora le chiavi SSH e i certificati
+*.pem
+*.key
+*.crt
+
+# Ignora file specifici per IDE
+.idea/
+.vscode/
+*.code-workspace
+
