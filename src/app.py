@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import mysql.connector
 from mysql.connector import Error
 import os
@@ -25,7 +25,7 @@ def get_data():
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor(dictionary=True)
         
-        # Ottieni gli ultimi 10 dati per i grafici
+        # Ottieni gli ultimi 50 dati per i grafici
         cursor.execute("SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 50")
         data = cursor.fetchall()
 
@@ -60,5 +60,12 @@ def index():
 
     return render_template('index.html', labels=labels, temperatures=temperatures, humidities=humidities, last_temperature=last_temperature, last_humidity=last_humidity)
 
+@app.route('/api_sensors')
+def api_sensors():
+    """Restituisce i dati del database in formato JSON."""
+    data, _ = get_data()
+    return jsonify(data)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
+
