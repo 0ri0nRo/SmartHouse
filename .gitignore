@@ -20,6 +20,7 @@
 # Ignora i file di configurazione dell'ambiente
 .env
 .venv/
+myenv/
 .tox/
 .nox/
 .coverage
