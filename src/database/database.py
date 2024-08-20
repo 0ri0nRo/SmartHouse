@@ -1,10 +1,10 @@
-import mysql.connector
-from mysql.connector import Error
+import psycopg2
+from psycopg2 import sql, Error
 from datetime import datetime
 
 class Database:
     def __init__(self, db_config):
-        """Inizializza la connessione al database MySQL e crea la tabella se non esiste."""
+        """Inizializza la connessione al database PostgreSQL e crea la tabella se non esiste."""
         self.db_config = db_config
         self.connection = None
         self.cursor = None
@@ -12,9 +12,9 @@ class Database:
         self.create_table_if_not_exists()
     
     def connect_to_db(self):
-        """Crea una connessione al database MySQL."""
+        """Crea una connessione al database PostgreSQL."""
         try:
-            self.connection = mysql.connector.connect(**self.db_config)
+            self.connection = psycopg2.connect(**self.db_config)
             self.cursor = self.connection.cursor()
         except Error as e:
             print(f"Errore nella connessione al database: {e}")
@@ -25,10 +25,10 @@ class Database:
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS sensor_readings (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 temperature_c FLOAT NOT NULL,
                 humidity FLOAT NOT NULL,
-                timestamp DATETIME NOT NULL
+                timestamp TIMESTAMP NOT NULL
             );
             """
             self.cursor.execute(create_table_query)
@@ -37,12 +37,14 @@ class Database:
             print(f"Errore durante la creazione della tabella: {e}")
             exit(1)
     
-
     def save_to_db(self, temperature, humidity):
         """Salva i dati nel database."""
         try:
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            query = "INSERT INTO sensor_readings (temperature_c, humidity, timestamp) VALUES (%s, %s, %s)"
+            query = """
+            INSERT INTO sensor_readings (temperature_c, humidity, timestamp) 
+            VALUES (%s, %s, %s)
+            """
             values = (temperature, humidity, current_time)
             self.cursor.execute(query, values)
             self.connection.commit()
@@ -56,5 +58,3 @@ class Database:
         if self.connection:
             self.connection.close()
         print("Connessione al database chiusa.")
-
-

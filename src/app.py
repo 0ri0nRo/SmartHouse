@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify
-import mysql.connector
-from mysql.connector import Error
+import psycopg2
+from psycopg2 import Error
+import psycopg2.extras
 import os
 from dotenv import load_dotenv
 
@@ -22,8 +23,8 @@ def get_data():
     data = []
     last_entry = {}
     try:
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor(dictionary=True)
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         # Ottieni gli ultimi 50 dati per i grafici
         cursor.execute("SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 50")
@@ -68,4 +69,3 @@ def api_sensors():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
