@@ -18,7 +18,7 @@ services:
       dockerfile: Dockerfile
     command: python main.py
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"  # Monta la porta seriale
+      - "/dev/ttyACM1:/dev/ttyACM1"  # Monta la porta seriale
     depends_on:
       - db
     environment:

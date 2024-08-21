@@ -3,6 +3,7 @@ import json
 import re
 import time
 import psycopg2
+from datetime import datetime, timedelta
 from database.database import Database
 
 # Definizione delle variabili di connessione al database
@@ -33,6 +34,7 @@ class SensorReader:
         }
         self.last_temperature = None
         self.last_humidity = None
+        self.last_record_time = datetime.now()  # Timestamp dell'ultima registrazione
 
     def read_data(self):
         """Legge e processa i dati dalla porta seriale e ritorna una lista con temperatura e umidità."""
@@ -56,10 +58,10 @@ class SensorReader:
                 
                 # Per debug, puoi stampare i dati ricevuti
                 print(f"Temperatura={temperature}°C, Umidità={humidity}%")
-                time.sleep(3600)  # Pausa di 3600 secondi prima di leggere nuovamente
+
             else:
                 pass
-    
+
     def get_raspberry_pi_temperature(self):
         """Legge e ritorna la temperatura della CPU del Raspberry Pi."""
         try:

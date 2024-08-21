@@ -10,7 +10,7 @@ void setup() {
 
 void loop() {
   // aspetta alcuni secondi tra le misurazioni
-  delay(2000);
+  delay(3600000);
 
   // leggi l'umidità
   float humi  = dht11.readHumidity();

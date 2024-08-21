@@ -9,7 +9,7 @@ load_dotenv()
 
 def main():
     """Funzione principale per eseguire il programma."""
-    port = '/dev/ttyACM0'  # Porta seriale
+    port = '/dev/ttyACM1'  # Porta seriale
     baud_rate = 9600  # Baud rate
     timeout = 10  # Timeout in secondi
     
