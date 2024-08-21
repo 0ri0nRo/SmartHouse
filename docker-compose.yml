@@ -1,27 +1,48 @@
-version: '3.8'
-
 services:
-  web:
-    build: .
-    command: python app.py
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: sensor_data
+      TZ: Europe/Rome
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5000:5000"
+      - "5432:5432"
+    restart: always
+
+  main:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    command: python main.py
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"  # Monta la porta seriale
+    depends_on:
+      - db
     environment:
       - DB_HOST=db
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+    restart: always
+
+  app:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    command: python app.py
+    ports:
+      - "5000:5000"
     depends_on:
       - db
-
-  db:
-    image: postgres:13
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: sensor_data
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - DB_HOST=db
+      - DB_DATABASE=sensor_data
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+    restart: always
 
 volumes:
   postgres_data:

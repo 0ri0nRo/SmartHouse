@@ -1,15 +1,36 @@
 import serial
 import json
 import re
-import time  # Importa il modulo time
+import time
+import psycopg2
 from database.database import Database
 
+# Definizione delle variabili di connessione al database
+db_host = 'db'  # Modifica se necessario
+db_database = 'sensor_data'
+db_user = 'postgres'
+db_password = '1234'
+
+# Connessione al database
+def get_db_connection():
+    """Crea e ritorna una connessione al database."""
+    return psycopg2.connect(
+        dbname=db_database,
+        user=db_user,
+        password=db_password,
+        host=db_host
+    )
+
 class SensorReader:
-    def __init__(self, port, baud_rate, timeout, db_config):
-        """Inizializza la connessione seriale."""
+    def __init__(self, port, baud_rate, timeout):
+        """Inizializza la connessione seriale e la connessione al database."""
         self.ser = serial.Serial(port, baud_rate, timeout=timeout)
-        self.db_config = db_config
-        # Inizializza gli ultimi valori salvati come None
+        self.db_config = {
+            'dbname': db_database,
+            'user': db_user,
+            'password': db_password,
+            'host': db_host
+        }
         self.last_temperature = None
         self.last_humidity = None
 
@@ -39,4 +60,3 @@ class SensorReader:
                 pass
 
             time.sleep(1)  # Pausa di 60 secondi prima di leggere nuovamente
-

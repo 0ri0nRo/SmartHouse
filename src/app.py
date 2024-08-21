@@ -44,10 +44,10 @@ def get_data():
 def index():
     """Visualizza i dati nella pagina principale."""
     data, last_entry = get_data()
-    
+
     # Prepara i dati per i grafici
     # Estrai le etichette (timestamp), temperature e humidities
-    labels = [entry['timestamp'] for entry in data]
+    labels = [entry['timestamp'].strftime("%d-%m-%Y %H:%M:%S") for entry in data]
     temperatures = [entry['temperature_c'] for entry in data]
     humidities = [entry['humidity'] for entry in data]
 
@@ -56,16 +56,32 @@ def index():
     temperatures.reverse()
     humidities.reverse()
 
-    last_temperature = last_entry.get('temperature_c', 'N/A')
-    last_humidity = last_entry.get('humidity', 'N/A')
+    # Gestisci i casi in cui last_entry è None
+    last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
+    last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
 
     return render_template('index.html', labels=labels, temperatures=temperatures, humidities=humidities, last_temperature=last_temperature, last_humidity=last_humidity)
+
 
 @app.route('/api_sensors')
 def api_sensors():
     """Restituisce i dati del database in formato JSON."""
-    data, _ = get_data()
-    return jsonify(data)
+    data, last_entry = get_data()
+
+    # Restituisce sia i dati per i grafici che l'ultimo dato inserito
+    return jsonify({
+        'temperature': {
+            'current': last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A',
+            'minMaxLast24Hours': [min([entry['temperature_c'] for entry in data]), max([entry['temperature_c'] for entry in data])],
+            'chartData': [entry['temperature_c'] for entry in data]
+        },
+        'humidity': {
+            'current': last_entry.get('humidity', 'N/A') if last_entry else 'N/A',
+            'minMaxLast24Hours': [min([entry['humidity'] for entry in data]), max([entry['humidity'] for entry in data])],
+            'chartData': [entry['humidity'] for entry in data]
+        },
+        'labels': [entry['timestamp'].strftime("%d-%m-%Y %H:%M:%S") for entry in data]
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
