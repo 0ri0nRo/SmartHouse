@@ -58,9 +58,9 @@ class SensorReader:
                 
                 # Per debug, puoi stampare i dati ricevuti
                 print(f"Temperatura={temperature}°C, Umidità={humidity}%")
-
             else:
                 pass
+
 
     def get_raspberry_pi_temperature(self):
         """Legge e ritorna la temperatura della CPU del Raspberry Pi."""
