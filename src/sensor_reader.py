@@ -5,6 +5,7 @@ import time
 import psycopg2
 from datetime import datetime, timedelta
 from database.database import Database
+import psutil
 
 # Definizione delle variabili di connessione al database
 db_host = 'db'  # Modifica se necessario
@@ -62,14 +63,40 @@ class SensorReader:
                 pass
 
 
-    def get_raspberry_pi_temperature(self):
-        """Legge e ritorna la temperatura della CPU del Raspberry Pi."""
+    def get_raspberry_pi_stats():
+        """Legge e ritorna la temperatura della CPU, l'uso della CPU, e le statistiche di memoria e archiviazione del Raspberry Pi."""
         try:
+            # Leggi la temperatura della CPU
             with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
                 temp_str = temp_file.read().strip()
-                # La temperatura è in millesimi di grado Celsius, converti in gradi Celsius
                 temperature = float(temp_str) / 1000.0
-                return temperature
+            
+            # Ottieni l'uso della CPU
+            cpu_usage = psutil.cpu_percent(interval=1)
+            
+            # Ottieni le statistiche di memoria RAM
+            memory = psutil.virtual_memory()
+            memory_used = memory.used / (1024 ** 3)  # Converti in GB
+            memory_total = memory.total / (1024 ** 3)  # Converti in GB
+            
+            # Ottieni le statistiche di memoria di archiviazione (SD)
+            disk = psutil.disk_usage('/')
+            disk_used = disk.used / (1024 ** 3)  # Converti in GB
+            disk_total = disk.total / (1024 ** 3)  # Converti in GB
+            disk_free = disk.free / (1024 ** 3)   # Converti in GB
+            
+            # Costruisci il dizionario con i dati
+            stats = {
+                'temperature': temperature,
+                'cpuUsage': cpu_usage,
+                'memoryUsed': f'{memory_used:.2f} GB',
+                'memoryTotal': f'{memory_total:.2f} GB',
+                'diskUsed': f'{disk_used:.2f} GB',
+                'diskTotal': f'{disk_total:.2f} GB',
+                'diskFree': f'{disk_free:.2f} GB'
+            }
+            return stats
+
         except FileNotFoundError:
             print("File di temperatura non trovato.")
             return None
@@ -77,5 +104,5 @@ class SensorReader:
             print("Permessi insufficienti per accedere al file di temperatura.")
             return None
         except Exception as e:
-            print(f"Errore durante la lettura della temperatura: {e}")
+            print(f"Errore durante la lettura delle statistiche: {e}")
             return None

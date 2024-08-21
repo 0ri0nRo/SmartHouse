@@ -132,10 +132,13 @@
             <p><span id="humidityMinMax">-- / --</span></p>
         </div>
 
-        <!-- Raspberry Pi Temperature Card -->
+        <!-- Raspberry Pi Stats Card -->
         <div class="card raspberry-pi">
             <h2 id="raspberryPiTemp">-- °C</h2>
             <p>Raspberry Pi Temperature</p>
+            <p>CPU Usage: <span id="cpuUsage">-- %</span></p>
+            <p>Memory Used: <span id="memoryUsed">-- GB</span> / <span id="memoryTotal">-- GB</span></p>
+            <p>Disk Used: <span id="diskUsed">-- GB</span> / <span id="diskTotal">-- GB</span> (Free: <span id="diskFree">-- GB</span>)</p>
         </div>
     </div>
 
@@ -173,14 +176,14 @@
             }
         }
 
-        async function fetchRaspberryPiTemp() {
+        async function fetchRaspberryPiStats() {
             try {
-                const response = await fetch('/api_raspberry_pi_temp'); // Endpoint API per la temperatura del Raspberry Pi
+                const response = await fetch('/api_raspberry_pi_stats'); // Endpoint API per le statistiche del Raspberry Pi
                 const data = await response.json();
-                console.log('Raspberry Pi Temperature Data:', data); // Debugging output
-                return data.temperature; // Assumendo che l'API restituisca un oggetto con una proprietà 'temperature'
+                console.log('Raspberry Pi Stats Data:', data); // Debugging output
+                return data;
             } catch (error) {
-                console.error('Error fetching Raspberry Pi temperature:', error);
+                console.error('Error fetching Raspberry Pi stats:', error);
                 return null;
             }
         }
@@ -198,9 +201,9 @@
         async function updateUI() {
             const data = await fetchData();
             const colleferroTemp = await fetchColleferroTemp();
-            const raspberryPiTemp = await fetchRaspberryPiTemp(); // Nuova chiamata API
+            const raspberryPiStats = await fetchRaspberryPiStats(); // Nuova chiamata API
 
-            if (!data) return;
+            if (!data || !raspberryPiStats) return;
 
             // Update current temperature and humidity
             document.getElementById("temperatureValue").textContent = `${data.temperature.current.toFixed(2)} °C`;
@@ -215,8 +218,14 @@
             // Update Colleferro temperature
             document.getElementById("colleferroTemp").textContent = colleferroTemp !== null ? `${colleferroTemp.toFixed(2)} °C` : '-- °C';
 
-            // Update Raspberry Pi temperature
-            document.getElementById("raspberryPiTemp").textContent = raspberryPiTemp !== null ? `${raspberryPiTemp.toFixed(2)} °C` : '-- °C';
+            // Update Raspberry Pi stats
+            document.getElementById("raspberryPiTemp").textContent = `${raspberryPiStats.temperature.toFixed(2)} °C`;
+            document.getElementById("cpuUsage").textContent = `${raspberryPiStats.cpuUsage.toFixed(1)} %`;
+            document.getElementById("memoryUsed").textContent = `${raspberryPiStats.memoryUsed}`;
+            document.getElementById("memoryTotal").textContent = `${raspberryPiStats.memoryTotal}`;
+            document.getElementById("diskUsed").textContent = `${raspberryPiStats.diskUsed}`;
+            document.getElementById("diskTotal").textContent = `${raspberryPiStats.diskTotal}`;
+            document.getElementById("diskFree").textContent = `${raspberryPiStats.diskFree}`;
 
             // Adjust labels to add 2 hours
             const adjustedLabels = addHoursToLabels(data.labels, 2);

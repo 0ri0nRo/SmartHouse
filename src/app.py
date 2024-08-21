@@ -5,6 +5,7 @@ import psycopg2.extras
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import psutil
 
 # Carica le variabili di ambiente dal file .env
 load_dotenv()
@@ -63,21 +64,48 @@ def index():
 
     return render_template('index.html', labels=labels, temperatures=temperatures, humidities=humidities, last_temperature=last_temperature, last_humidity=last_humidity)
 
-@app.route('/api_raspberry_pi_temp')
-def raspberry_pi_temp():
-    """Restituisce la temperatura della CPU del Raspberry Pi."""
+@app.route('/api_raspberry_pi_stats')
+def raspberry_pi_stats():
+    """Restituisce la temperatura della CPU, l'uso della CPU, e le statistiche di memoria e archiviazione del Raspberry Pi."""
     try:
-        # Usa il metodo appropriato per ottenere la temperatura
+        # Leggi la temperatura della CPU
         with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
             temp_str = temp_file.read().strip()
             temperature = float(temp_str) / 1000.0
-            return jsonify({'temperature': temperature})
+        
+        # Ottieni l'uso della CPU
+        cpu_usage = psutil.cpu_percent(interval=1)
+        
+        # Ottieni le statistiche di memoria RAM
+        memory = psutil.virtual_memory()
+        memory_used = memory.used / (1024 ** 3)  # Converti in GB
+        memory_total = memory.total / (1024 ** 3)  # Converti in GB
+        
+        # Ottieni le statistiche di memoria di archiviazione (SD)
+        disk = psutil.disk_usage('/')
+        disk_used = disk.used / (1024 ** 3)  # Converti in GB
+        disk_total = disk.total / (1024 ** 3)  # Converti in GB
+        disk_free = disk.free / (1024 ** 3)   # Converti in GB
+        
+        # Costruisci il dizionario con i dati
+        stats = {
+            'temperature': temperature,
+            'cpuUsage': cpu_usage,
+            'memoryUsed': f'{memory_used:.2f} GB',
+            'memoryTotal': f'{memory_total:.2f} GB',
+            'diskUsed': f'{disk_used:.2f} GB',
+            'diskTotal': f'{disk_total:.2f} GB',
+            'diskFree': f'{disk_free:.2f} GB'
+        }
+        return jsonify(stats)
+        
     except FileNotFoundError:
         return jsonify({'error': 'File di temperatura non trovato.'}), 404
     except PermissionError:
         return jsonify({'error': 'Permessi insufficienti per accedere al file di temperatura.'}), 403
     except Exception as e:
-        return jsonify({'error': f'Errore durante la lettura della temperatura: {e}'}), 500
+        return jsonify({'error': f'Errore durante la lettura delle statistiche: {e}'}), 500
+
 
 @app.route('/api_sensors')
 def api_sensors():
