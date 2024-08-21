@@ -27,7 +27,7 @@ def get_data():
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         # Ottieni gli ultimi 50 dati per i grafici
-        cursor.execute("SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 50")
+        cursor.execute("SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 24")
         data = cursor.fetchall()
 
         # Ottieni l'ultima temperatura e umidità

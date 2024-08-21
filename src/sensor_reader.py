@@ -37,6 +37,7 @@ class SensorReader:
     def read_data(self):
         """Legge e processa i dati dalla porta seriale e ritorna una lista con temperatura e umidità."""
         while True:
+            time.sleep(3600)  # Pausa di 60 secondi prima di leggere nuovamente
             line = self.ser.readline().decode('utf-8').strip()
             temperature, humidity = line.split(",")
 
@@ -58,5 +59,3 @@ class SensorReader:
                 print(f"Temperatura={temperature}°C, Umidità={humidity}%")
             else:
                 pass
-
-            time.sleep(3600)  # Pausa di 60 secondi prima di leggere nuovamente

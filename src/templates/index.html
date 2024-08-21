@@ -23,7 +23,6 @@
             text-align: center;
         }
 
-        /* Main container for the cards */
         .cards-container {
             display: flex;
             flex-direction: column; /* Stack vertically for mobile */
@@ -56,7 +55,6 @@
             margin: 5px 0;
         }
 
-        /* Container for the charts */
         .container {
             width: 100%; /* Full width on mobile */
             max-width: 600px; /* Max width for larger devices */
@@ -69,24 +67,31 @@
 
         .chart-container {
             margin-bottom: 40px;
+            background: #f9f9f9; /* Light background for better contrast */
+            border-radius: 8px;
+            padding: 15px; /* Padding around the chart */
+            border: 1px solid #ddd; /* Light border around the chart */
         }
 
         .chart-container canvas {
             width: 100% !important; /* Ensure the canvas fills its container */
             height: auto !important; /* Maintain aspect ratio */
-            border-radius: 8px;
         }
 
         .footer {
             margin-top: 20px;
-            padding: 10px;
+            padding: 15px;
             background: #333;
             color: #fff;
             text-align: center;
             width: 100%;
+            position: fixed; /* Fixes the footer to the bottom */
+            bottom: 0; /* Sticks to the bottom of the page */
+            left: 0; /* Sticks to the left edge of the page */
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 18px; /* Slightly larger font size for better readability */
         }
 
-        /* Responsive design for larger screens */
         @media (min-width: 768px) {
             .cards-container {
                 flex-direction: row; /* Switch to horizontal layout */
@@ -200,7 +205,8 @@
                             title: {
                                 display: true,
                                 text: 'Date and Time'
-                            }
+                            },
+                            reverse: true // Invert X axis
                         },
                         y: {
                             title: {
@@ -248,7 +254,8 @@
                             title: {
                                 display: true,
                                 text: 'Date and Time'
-                            }
+                            },
+                            reverse: true // Invert X axis
                         },
                         y: {
                             title: {
