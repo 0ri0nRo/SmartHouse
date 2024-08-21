@@ -122,7 +122,6 @@
         <div class="card">
             <h2 id="temperatureValue">-- °C</h2>
             <p>Indoor: <span id="tempMinMax">-- / --</span></p>
-            <p>Outdoor: <span id="colleferroTemp">-- °C</span></p>
         </div>
 
         <!-- Humidity Card -->
@@ -164,18 +163,6 @@
             }
         }
 
-        async function fetchColleferroTemp() {
-            try {
-                const response = await fetch('https://archive-api.open-meteo.com/v1/archive?latitude=41.8919&longitude=12.5113&start_date=2024-08-20&end_date=2024-08-20&hourly=temperature_2m&timezone=Europe%2FBerlin'); // Colleferro API
-                const data = await response.json();
-                const currentTemp = data.hourly.temperature_2m[0]; // Adjust if necessary
-                return currentTemp;
-            } catch (error) {
-                console.error('Error fetching Colleferro temperature:', error);
-                return null;
-            }
-        }
-
         async function fetchRaspberryPiStats() {
             try {
                 const response = await fetch('/api_raspberry_pi_stats'); // Endpoint API per le statistiche del Raspberry Pi
@@ -200,7 +187,6 @@
 
         async function updateUI() {
             const data = await fetchData();
-            const colleferroTemp = await fetchColleferroTemp();
             const raspberryPiStats = await fetchRaspberryPiStats(); // Nuova chiamata API
 
             if (!data || !raspberryPiStats) return;
@@ -214,9 +200,6 @@
                 `${data.temperature.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[0]).toFixed(2)} / ${data.temperature.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[1]).toFixed(2)}`;
             document.getElementById("humidityMinMax").textContent = 
                 `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(2)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(2)}`;
-
-            // Update Colleferro temperature
-            document.getElementById("colleferroTemp").textContent = colleferroTemp !== null ? `${parseFloat(colleferroTemp).toFixed(2)} °C` : '-- °C';
 
             // Update Raspberry Pi stats
             document.getElementById("raspberryPiTemp").textContent = `${parseFloat(raspberryPiStats.temperature).toFixed(2)} °C`;

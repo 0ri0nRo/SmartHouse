@@ -57,7 +57,7 @@ def get_data():
 
 
 
-@app.route('/')
+@app.route('/main')
 def index():
     """Visualizza i dati nella pagina principale."""
     data, last_entry = get_data()
