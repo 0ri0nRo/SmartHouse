@@ -35,7 +35,7 @@ Before running this project, ensure you have the following installed:
 Use Docker Compose to build and start the container. This command will also start any dependencies defined in the `docker-compose.yml` file.
 
 ```bash
-docker-compose up --build
+docker-compose up -d --build
 ```
 This command will:
 

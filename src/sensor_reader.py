@@ -59,4 +59,4 @@ class SensorReader:
             else:
                 pass
 
-            time.sleep(1)  # Pausa di 60 secondi prima di leggere nuovamente
+            time.sleep(3600)  # Pausa di 60 secondi prima di leggere nuovamente
