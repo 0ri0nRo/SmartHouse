@@ -71,7 +71,7 @@ coverage/
 build/
 dist/
 tmp/
-
+myenv/
 # npm package-lock files
 package-lock.json
 
