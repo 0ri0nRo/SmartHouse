@@ -3,8 +3,6 @@
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
 
 
-
-
 ## Features
 
 - **Interactive Charts**: Displays temperature and humidity data over time using Chart.js.
