@@ -4,6 +4,7 @@ from psycopg2 import Error
 import psycopg2.extras
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Carica le variabili di ambiente dal file .env
 load_dotenv()

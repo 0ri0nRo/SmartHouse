@@ -167,6 +167,16 @@
             }
         }
 
+        function addHoursToLabels(labels, hours) {
+            return labels.map(label => {
+                const [time] = label.split(' ');
+                const [h, m] = time.split(':').map(Number);
+                const date = new Date();
+                date.setHours(h + hours, m);
+                return date.toTimeString().slice(0, 5); // Format to HH:MM
+            });
+        }
+
         async function updateUI() {
             const data = await fetchData();
             const colleferroTemp = await fetchColleferroTemp();
@@ -186,12 +196,15 @@
             // Update Colleferro temperature
             document.getElementById("colleferroTemp").textContent = colleferroTemp !== null ? `${colleferroTemp.toFixed(2)} °C` : '-- °C';
 
+            // Adjust labels to add 2 hours
+            const adjustedLabels = addHoursToLabels(data.labels, 2);
+
             // Update temperature chart
             const tempCtx = document.getElementById('temperatureChart').getContext('2d');
             new Chart(tempCtx, {
                 type: 'line',
                 data: {
-                    labels: data.labels,
+                    labels: adjustedLabels,
                     datasets: [{
                         label: 'Temperature (°C)',
                         data: data.temperature.chartData,
@@ -237,7 +250,7 @@
             new Chart(humidityCtx, {
                 type: 'line',
                 data: {
-                    labels: data.labels,
+                    labels: adjustedLabels,
                     datasets: [{
                         label: 'Humidity (%)',
                         data: data.humidity.chartData,
