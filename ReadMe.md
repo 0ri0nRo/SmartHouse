@@ -27,7 +27,7 @@ Before running this project, ensure you have the following installed:
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/SmartHouse/
+   git clone https://github.com/0ri0nRo/SmartHouse.git
    ```
 ## Build and Run the Docker Container
 
