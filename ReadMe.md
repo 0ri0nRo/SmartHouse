@@ -2,6 +2,9 @@
 
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
 
+
+
+
 ## Features
 
 - **Interactive Charts**: Displays temperature and humidity data over time using Chart.js.
@@ -41,10 +44,4 @@ This command will:
 - Build the Docker image as defined in the Dockerfile.
 - Create and start a container based on the built image.
 - Expose the application on port 5000.
-
-## Licence
-
-You can copy and paste this Markdown text directly into your README file. It provides a clear overview of the project, setup instructions, and details about the Docker configuration and project structure.
-
-
 
