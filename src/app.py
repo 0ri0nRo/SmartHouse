@@ -72,15 +72,21 @@ def api_sensors():
     return jsonify({
         'temperature': {
             'current': last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A',
-            'minMaxLast24Hours': [min([entry['temperature_c'] for entry in data]), max([entry['temperature_c'] for entry in data])],
+            'minMaxLast24Hours': [
+                min(entry['temperature_c'] for entry in data),
+                max(entry['temperature_c'] for entry in data)
+            ],
             'chartData': [entry['temperature_c'] for entry in data]
         },
         'humidity': {
             'current': last_entry.get('humidity', 'N/A') if last_entry else 'N/A',
-            'minMaxLast24Hours': [min([entry['humidity'] for entry in data]), max([entry['humidity'] for entry in data])],
+            'minMaxLast24Hours': [
+                min(entry['humidity'] for entry in data),
+                max(entry['humidity'] for entry in data)
+            ],
             'chartData': [entry['humidity'] for entry in data]
         },
-        'labels': [entry['timestamp'].strftime("%d-%m-%Y %H:%M:%S") for entry in data]
+        'labels': [entry['timestamp'].strftime("%H:%M") for entry in data]  # Solo orario
     })
 
 if __name__ == '__main__':
