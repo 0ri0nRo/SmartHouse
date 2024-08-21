@@ -132,20 +132,22 @@ def api_sensors():
             'error': 'Nessun dato disponibile.'
         }), 404
 
-    # Calcola i valori minimi e massimi per temperatura e umidità
     try:
-       
         # Supponiamo che 'data' sia una lista di dizionari con le chiavi 'avg_temperature' e 'humidity'
         min_temp = min(entry['avg_temperature'] for entry in data)
         max_temp = max(entry['avg_temperature'] for entry in data)
-        min_hum = min(entry.get('avg_humidity', float('inf')) for entry in data)
-        max_hum = max(entry.get('avg_humidity', float('-inf')) for entry in data)
+
+        # Calcola il minimo, massimo e la media dell'umidità
+        min_hum = min(entry.get('humidity', float('inf')) for entry in data)
+        max_hum = max(entry.get('humidity', float('-inf')) for entry in data)
+        avg_hum = sum(entry.get('humidity', 0) for entry in data) / len(data)
 
         # Formattazione con due cifre decimali
         min_temp = f"{min_temp:.2f}"
         max_temp = f"{max_temp:.2f}"
-        min_hum = f"{min_hum:.2f}"
-        max_hum = f"{max_hum:.2f}"
+        min_hum = f"{min_hum:.2f}" if min_hum != float('inf') else "N/A"
+        max_hum = f"{max_hum:.2f}" if max_hum != float('-inf') else "N/A"
+        avg_hum = f"{avg_hum:.2f}" if len(data) > 0 else "N/A"
 
         # Formattazione dei dati per i grafici
         chart_data_temperature = [f"{entry['avg_temperature']:.2f}" for entry in data]
@@ -165,10 +167,12 @@ def api_sensors():
         'humidity': {
             'current': f"{last_entry.get('humidity', 'N/A'):.2f}" if last_entry else 'N/A',
             'minMaxLast24Hours': [min_hum, max_hum],
+            'average': avg_hum,  # Aggiungi la media dell'umidità
             'chartData': chart_data_humidity
         },
         'labels': [f"{int(entry['hour'])}:00" for entry in data]  # Solo orario
     })
+
 
 
 
