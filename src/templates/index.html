@@ -111,7 +111,7 @@
 </head>
 
 <body>
-    <h1>Temperature and Humidity Dashboard</h1>
+    <h1>Temperature and Humidity</h1>
 
     <div class="cards-container">
         <!-- Temperature Card -->
@@ -234,7 +234,17 @@
                                 display: true,
                                 text: 'Date and Time'
                             },
-                            reverse: true // Invert X axis
+                            ticks: {
+                                autoSkip: false, // Ensure all labels are shown
+                                maxRotation: 45, // Rotate labels if needed
+                                minRotation: 30 // Minimum rotation angle for readability
+                            },
+                            grid: {
+                                drawBorder: false,
+                                drawOnChartArea: true,
+                                drawTicks: false
+                            },
+                            reverse: true // Invert the X-axis
                         },
                         y: {
                             ticks: {
@@ -280,7 +290,17 @@
                                 display: true,
                                 text: 'Date and Time'
                             },
-                            reverse: true // Invert X axis
+                            ticks: {
+                                autoSkip: false, // Ensure all labels are shown
+                                maxRotation: 45, // Rotate labels if needed
+                                minRotation: 30 // Minimum rotation angle for readability
+                            },
+                            grid: {
+                                drawBorder: false,
+                                drawOnChartArea: true,
+                                drawTicks: false
+                            },
+                            reverse: true // Invert the X-axis
                         },
                         y: {
                             ticks: {
