@@ -28,13 +28,24 @@ def get_data():
         connection = psycopg2.connect(**db_config)
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        # Ottieni gli ultimi 50 dati per i grafici
-        cursor.execute("SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 24")
+        # Ottieni la media delle temperature per ogni ora del giorno corrente
+        cursor.execute("""
+            SELECT
+                EXTRACT(HOUR FROM timestamp) AS hour,
+                AVG(temperature_c) AS avg_temperature,
+                AVG(humidity) AS humidity 
+            FROM sensor_readings
+            WHERE DATE(timestamp) = CURRENT_DATE
+            GROUP BY hour
+            ORDER BY hour DESC;
+        """)
         data = cursor.fetchall()
+        print(f"Data fetched: {data}")
 
         # Ottieni l'ultima temperatura e umidità
         cursor.execute("SELECT temperature_c, humidity FROM sensor_readings ORDER BY timestamp DESC LIMIT 1")
         last_entry = cursor.fetchone()
+        print(f"Last entry fetched: {last_entry}")
 
         cursor.close()
         connection.close()
@@ -42,27 +53,30 @@ def get_data():
         print(f"Errore durante il recupero dei dati: {e}")
     return data, last_entry
 
+
+
+
+
 @app.route('/')
 def index():
     """Visualizza i dati nella pagina principale."""
     data, last_entry = get_data()
 
     # Prepara i dati per i grafici
-    # Estrai le etichette (timestamp), temperature e humidities
-    labels = [entry['timestamp'].strftime("%d-%m-%Y %H:%M:%S") for entry in data]
-    temperatures = [entry['temperature_c'] for entry in data]
-    humidities = [entry['humidity'] for entry in data]
+    # Estrai le etichette (ore) e le temperature
+    labels = [f"{int(entry['hour'])}:00" for entry in data]  # Utilizza ore per le etichette
+    temperatures = [entry['avg_temperature'] for entry in data]
 
     # Inverti l'ordine delle liste
     labels.reverse()
     temperatures.reverse()
-    humidities.reverse()
 
     # Gestisci i casi in cui last_entry è None
     last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
     last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
 
-    return render_template('index.html', labels=labels, temperatures=temperatures, humidities=humidities, last_temperature=last_temperature, last_humidity=last_humidity)
+    return render_template('index.html', labels=labels, temperatures=temperatures, last_temperature=last_temperature, last_humidity=last_humidity)
+
 
 @app.route('/api_raspberry_pi_stats')
 def raspberry_pi_stats():
@@ -112,26 +126,51 @@ def api_sensors():
     """Restituisce i dati del database in formato JSON."""
     data, last_entry = get_data()
 
-    # Restituisce sia i dati per i grafici che l'ultimo dato inserito
+    if not data:
+        # Se non ci sono dati, restituisci un errore
+        return jsonify({
+            'error': 'Nessun dato disponibile.'
+        }), 404
+
+    # Calcola i valori minimi e massimi per temperatura e umidità
+    try:
+       
+        # Supponiamo che 'data' sia una lista di dizionari con le chiavi 'avg_temperature' e 'humidity'
+        min_temp = min(entry['avg_temperature'] for entry in data)
+        max_temp = max(entry['avg_temperature'] for entry in data)
+        min_hum = min(entry.get('avg_humidity', float('inf')) for entry in data)
+        max_hum = max(entry.get('avg_humidity', float('-inf')) for entry in data)
+
+        # Formattazione con due cifre decimali
+        min_temp = f"{min_temp:.2f}"
+        max_temp = f"{max_temp:.2f}"
+        min_hum = f"{min_hum:.2f}"
+        max_hum = f"{max_hum:.2f}"
+
+        # Formattazione dei dati per i grafici
+        chart_data_temperature = [f"{entry['avg_temperature']:.2f}" for entry in data]
+        chart_data_humidity = [f"{entry.get('humidity', 'N/A'):.2f}" for entry in data]
+
+    except KeyError as e:
+        return jsonify({
+            'error': f'Chiave mancante nei dati: {e}'
+        }), 500
+
     return jsonify({
         'temperature': {
-            'current': last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A',
-            'minMaxLast24Hours': [
-                min(entry['temperature_c'] for entry in data),
-                max(entry['temperature_c'] for entry in data)
-            ],
-            'chartData': [entry['temperature_c'] for entry in data]
+            'current': f"{last_entry.get('temperature_c', 'N/A'):.2f}" if last_entry else 'N/A',
+            'minMaxLast24Hours': [min_temp, max_temp],
+            'chartData': chart_data_temperature
         },
         'humidity': {
-            'current': last_entry.get('humidity', 'N/A') if last_entry else 'N/A',
-            'minMaxLast24Hours': [
-                min(entry['humidity'] for entry in data),
-                max(entry['humidity'] for entry in data)
-            ],
-            'chartData': [entry['humidity'] for entry in data]
+            'current': f"{last_entry.get('humidity', 'N/A'):.2f}" if last_entry else 'N/A',
+            'minMaxLast24Hours': [min_hum, max_hum],
+            'chartData': chart_data_humidity
         },
-        'labels': [entry['timestamp'].strftime("%H:%M") for entry in data]  # Solo orario
+        'labels': [f"{int(entry['hour'])}:00" for entry in data]  # Solo orario
     })
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

@@ -206,26 +206,26 @@
             if (!data || !raspberryPiStats) return;
 
             // Update current temperature and humidity
-            document.getElementById("temperatureValue").textContent = `${data.temperature.current.toFixed(2)} °C`;
-            document.getElementById("humidityValue").textContent = `${data.humidity.current.toFixed(2)} %`;
+            document.getElementById("temperatureValue").textContent = `${parseFloat(data.temperature.current).toFixed(2)} °C`;
+            document.getElementById("humidityValue").textContent = `${parseFloat(data.humidity.current).toFixed(2)} %`;
 
             // Update min/max temperature and humidity
             document.getElementById("tempMinMax").textContent = 
-                `${data.temperature.minMaxLast24Hours[0]} / ${data.temperature.minMaxLast24Hours[1]}`;
+                `${data.temperature.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[0]).toFixed(2)} / ${data.temperature.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[1]).toFixed(2)}`;
             document.getElementById("humidityMinMax").textContent = 
-                `${data.humidity.minMaxLast24Hours[0]} / ${data.humidity.minMaxLast24Hours[1]}`;
+                `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(2)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(2)}`;
 
             // Update Colleferro temperature
-            document.getElementById("colleferroTemp").textContent = colleferroTemp !== null ? `${colleferroTemp.toFixed(2)} °C` : '-- °C';
+            document.getElementById("colleferroTemp").textContent = colleferroTemp !== null ? `${parseFloat(colleferroTemp).toFixed(2)} °C` : '-- °C';
 
             // Update Raspberry Pi stats
-            document.getElementById("raspberryPiTemp").textContent = `${raspberryPiStats.temperature.toFixed(2)} °C`;
-            document.getElementById("cpuUsage").textContent = `${raspberryPiStats.cpuUsage.toFixed(1)} %`;
-            document.getElementById("memoryUsed").textContent = `${raspberryPiStats.memoryUsed}`;
-            document.getElementById("memoryTotal").textContent = `${raspberryPiStats.memoryTotal}`;
-            document.getElementById("diskUsed").textContent = `${raspberryPiStats.diskUsed}`;
-            document.getElementById("diskTotal").textContent = `${raspberryPiStats.diskTotal}`;
-            document.getElementById("diskFree").textContent = `${raspberryPiStats.diskFree}`;
+            document.getElementById("raspberryPiTemp").textContent = `${parseFloat(raspberryPiStats.temperature).toFixed(2)} °C`;
+            document.getElementById("cpuUsage").textContent = `${parseFloat(raspberryPiStats.cpuUsage).toFixed(1)} %`;
+            document.getElementById("memoryUsed").textContent = `${parseFloat(raspberryPiStats.memoryUsed).toFixed(2)} GB`;
+            document.getElementById("memoryTotal").textContent = `${parseFloat(raspberryPiStats.memoryTotal).toFixed(2)} GB`;
+            document.getElementById("diskUsed").textContent = `${parseFloat(raspberryPiStats.diskUsed).toFixed(2)} GB`;
+            document.getElementById("diskTotal").textContent = `${parseFloat(raspberryPiStats.diskTotal).toFixed(2)} GB`;
+            document.getElementById("diskFree").textContent = `${parseFloat(raspberryPiStats.diskFree).toFixed(2)} GB`;
 
             // Adjust labels to add 2 hours
             const adjustedLabels = addHoursToLabels(data.labels, 2);
@@ -238,7 +238,7 @@
                     labels: adjustedLabels,
                     datasets: [{
                         label: 'Temperature (°C)',
-                        data: data.temperature.chartData,
+                        data: data.temperature.chartData.map(val => parseFloat(val).toFixed(2)),
                         borderColor: 'rgba(75, 192, 192, 1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         fill: true,
@@ -294,7 +294,7 @@
                     labels: adjustedLabels,
                     datasets: [{
                         label: 'Humidity (%)',
-                        data: data.humidity.chartData,
+                        data: data.humidity.chartData.map(val => parseFloat(val).toFixed(2)),
                         borderColor: 'rgba(153, 102, 255, 1)',
                         backgroundColor: 'rgba(153, 102, 255, 0.2)',
                         fill: true,
