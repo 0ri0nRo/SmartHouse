@@ -56,6 +56,24 @@ class SensorReader:
                 
                 # Per debug, puoi stampare i dati ricevuti
                 print(f"Temperatura={temperature}°C, Umidità={humidity}%")
-                time.sleep(3600)  # Pausa di 60 secondi prima di leggere nuovamente
+                time.sleep(3600)  # Pausa di 3600 secondi prima di leggere nuovamente
             else:
                 pass
+    
+    def get_raspberry_pi_temperature(self):
+        """Legge e ritorna la temperatura della CPU del Raspberry Pi."""
+        try:
+            with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
+                temp_str = temp_file.read().strip()
+                # La temperatura è in millesimi di grado Celsius, converti in gradi Celsius
+                temperature = float(temp_str) / 1000.0
+                return temperature
+        except FileNotFoundError:
+            print("File di temperatura non trovato.")
+            return None
+        except PermissionError:
+            print("Permessi insufficienti per accedere al file di temperatura.")
+            return None
+        except Exception as e:
+            print(f"Errore durante la lettura della temperatura: {e}")
+            return None

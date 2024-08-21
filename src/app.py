@@ -63,6 +63,21 @@ def index():
 
     return render_template('index.html', labels=labels, temperatures=temperatures, humidities=humidities, last_temperature=last_temperature, last_humidity=last_humidity)
 
+@app.route('/api_raspberry_pi_temp')
+def raspberry_pi_temp():
+    """Restituisce la temperatura della CPU del Raspberry Pi."""
+    try:
+        # Usa il metodo appropriato per ottenere la temperatura
+        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
+            temp_str = temp_file.read().strip()
+            temperature = float(temp_str) / 1000.0
+            return jsonify({'temperature': temperature})
+    except FileNotFoundError:
+        return jsonify({'error': 'File di temperatura non trovato.'}), 404
+    except PermissionError:
+        return jsonify({'error': 'Permessi insufficienti per accedere al file di temperatura.'}), 403
+    except Exception as e:
+        return jsonify({'error': f'Errore durante la lettura della temperatura: {e}'}), 500
 
 @app.route('/api_sensors')
 def api_sensors():
