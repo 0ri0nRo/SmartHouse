@@ -387,14 +387,21 @@ def get_daily_temperature_for_month(month):
         
         rows = cursor.fetchall()
         
+        # Debug: Stampa i dati recuperati
+        print("Dati recuperati:", rows)
+        
         # Organizza i dati in un dizionario
         for row in rows:
-            day = row['day']
+            day = int(row['day'])
             avg_temperature = float(row['avg_temperature'])
             daily_data[day] = avg_temperature
         
         cursor.close()
         connection.close()
+        
+        # Debug: Stampa i dati organizzati
+        print("Dati giornalieri:", daily_data)
+        
     except Error as e:
         print(f"Errore durante il recupero dei dati: {e}")
     
@@ -407,6 +414,9 @@ def api_daily_temperature(month):
         return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
     
     data = get_daily_temperature_for_month(month)
+    
+    # Debug: Stampa i dati restituiti
+    print("Dati API:", data)
     
     if not data:
         return jsonify({'error': 'Nessun dato disponibile per il mese selezionato.'}), 404
