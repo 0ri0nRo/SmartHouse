@@ -1,0 +1,1 @@
+ALTER DATABASE network_devices SET timezone = 'Europe/Rome';

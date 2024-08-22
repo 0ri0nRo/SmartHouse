@@ -17,3 +17,4 @@ flask
 gunicorn
 subprocess.run
 psutil
+python-nmap

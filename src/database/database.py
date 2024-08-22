@@ -1,5 +1,5 @@
 import psycopg2
-from psycopg2 import sql, Error
+from psycopg2 import Error
 from datetime import datetime
 
 class Database:
@@ -38,16 +38,26 @@ class Database:
             exit(1)
     
     def save_to_db(self, temperature, humidity):
-        """Salva i dati nel database."""
+        """Salva i dati nel database. Se è mezzanotte, cancella tutte le righe prima dell'inserimento."""
         try:
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            now = datetime.now()
+            # timestamp = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # Controlla se l'orario corrente è mezzanotte
+            # if now.hour == 0 and now.minute == 0:
+            #    print("È mezzanotte. Cancellazione di tutte le righe dalla tabella.")
+            #    self.cursor.execute("DELETE FROM sensor_readings")
+            #    self.connection.commit()
+            
+            # Inserisci i nuovi dati
             query = """
             INSERT INTO sensor_readings (temperature_c, humidity, timestamp) 
             VALUES (%s, %s, %s)
             """
-            values = (temperature, humidity, current_time)
+            values = (temperature, humidity, now)
             self.cursor.execute(query, values)
             self.connection.commit()
+            print("Dati inseriti nel database.")
         except Error as e:
             print(f"Errore durante l'inserimento dei dati: {e}")
 
@@ -58,3 +68,61 @@ class Database:
         if self.connection:
             self.connection.close()
         print("Connessione al database chiusa.")
+    
+    def create_table_if_not_exists_devices(self):
+        """Crea la tabella se non esiste già."""
+        try:
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS network_devices (
+                id SERIAL PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                hostname VARCHAR(255),
+                status VARCHAR(50),
+                timestamp TIMESTAMP NOT NULL
+            );
+            """
+            self.cursor.execute(create_table_query)
+            self.connection.commit()
+        except Error as e:
+            print(f"Errore durante la creazione della tabella: {e}")
+            exit(1)
+    
+    def save_devices_to_db(self, devices):
+        """Salva le informazioni sui dispositivi di rete nel database."""
+        try:
+            query = """
+            INSERT INTO network_devices (ip_address, hostname, status, timestamp) 
+            VALUES (%s, %s, %s, %s)
+            """
+            timestamp = datetime.now()  # Ottieni il timestamp corrente
+            for ip, info in devices.items():
+                values = (ip, info['hostname'], info['status'], timestamp)
+                self.cursor.execute(query, values)
+            self.connection.commit()
+            print("Dispositivi di rete inseriti nel database.")
+        except Error as e:
+            print(f"Errore durante l'inserimento dei dati: {e}")
+    
+    
+    def get_devices_from_db(self):
+        """Recupera i dispositivi salvati più recentemente dal database."""
+        try:
+            query = """
+            SELECT ip_address, hostname, status, timestamp 
+            FROM network_devices 
+            ORDER BY timestamp DESC;
+            """
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+            devices = {}
+            for row in rows:
+                ip_address, hostname, status, timestamp = row
+                devices[ip_address] = {
+                    'hostname': hostname,
+                    'status': status,
+                    'timestamp': timestamp
+                }
+            return devices
+        except Error as e:
+            print(f"Errore durante il recupero dei dispositivi: {e}")
+            return {}

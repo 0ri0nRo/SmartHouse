@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import psutil
-
+import nmap
 # Carica le variabili di ambiente dal file .env
 load_dotenv()
 
@@ -19,6 +19,58 @@ db_config = {
     'user': os.getenv('DB_USER'),
     'password': os.getenv('DB_PASSWORD')
 }
+
+
+
+def scan_network(network='192.168.178.0/24'):
+    """Scansiona la rete utilizzando nmap e salva i dispositivi nel database."""
+
+    nm = nmap.PortScanner()
+    nm.scan(hosts=network, arguments='-sn')  # -sn per una scansione ping semplice
+    devices = {}
+
+    for host in nm.all_hosts():
+        hostname = nm[host].hostname() or 'Unknown'
+        devices[host] = {
+            'hostname': hostname,
+            'status': nm[host].state()
+        }
+
+    # Salva i dispositivi nel database
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor()
+        
+        # Assicurati che la tabella esista
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS network_devices (
+            id SERIAL PRIMARY KEY,
+            ip_address VARCHAR(45) NOT NULL,
+            hostname VARCHAR(255),
+            status VARCHAR(50),
+            timestamp TIMESTAMP NOT NULL
+        );
+        """)
+        connection.commit()
+
+        query = """
+        INSERT INTO network_devices (ip_address, hostname, status, timestamp) 
+        VALUES (%s, %s, %s, %s)
+        """
+        timestamp = datetime.now()  # Ottieni il timestamp corrente
+        for ip, info in devices.items():
+            values = (ip, info['hostname'], info['status'], timestamp)
+            cursor.execute(query, values)
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+        print("Dispositivi di rete inseriti nel database.")
+    except Error as e:
+        print(f"Errore durante l'inserimento dei dati: {e}")
+
+    return devices
+
 
 def get_data():
     """Recupera i dati dal database."""
@@ -37,7 +89,7 @@ def get_data():
             FROM sensor_readings
             WHERE DATE(timestamp) = CURRENT_DATE
             GROUP BY hour
-            ORDER BY hour DESC;
+            ORDER BY hour ASC;
         """)
         data = cursor.fetchall()
         print(f"Data fetched: {data}")
@@ -54,6 +106,48 @@ def get_data():
     return data, last_entry
 
 
+
+@app.route('/api/devices', methods=['GET'])
+def get_devices():
+    """API endpoint to get all devices from the database."""
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        cursor.execute("""SELECT *
+            FROM network_devices AS nd
+            INNER JOIN (
+                SELECT hostname, MAX(timestamp) AS max_timestamp
+                FROM network_devices
+                GROUP BY hostname
+            ) AS latest
+            ON nd.hostname = latest.hostname AND nd.timestamp = latest.max_timestamp
+            ORDER BY nd.timestamp DESC;
+            """)
+        devices = cursor.fetchall()
+        
+        cursor.close()
+        connection.close()
+
+        
+
+        # Converti i risultati in un formato JSON serializzabile
+        devices_list = []
+        for device in devices:
+            if device['hostname'][:-10] == "":
+                device['hostname'] = "Fritzbox-modem1234567890"
+            devices_list.append({
+                'id': device['id'],
+                'ip_address': device['ip_address'],
+                'hostname': device['hostname'][:-10],
+                'status': device['status'],
+                'timestamp': device['timestamp'].isoformat()[:-7]
+            })
+
+        return jsonify(devices_list)
+    except Exception as e:
+        print(f"Errore nell'endpoint /api/devices: {e}")
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 

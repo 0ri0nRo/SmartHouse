@@ -26,6 +26,7 @@ services:
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+      - TZ=Europe/Rome
     restart: unless-stopped
 
   app:
@@ -43,9 +44,23 @@ services:
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+      - TZ=Europe/Rome
+    restart: unless-stopped
+
+  network_scanner:
+    build:
+      context: ./src  # Assumi che scanner.py si trovi in questa directory
+      dockerfile: Dockerfile
+    command: python3 scanner.py
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=sensor_data
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+      - TZ=Europe/Rome
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  main:
-  app:
