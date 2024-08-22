@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Charts</title>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9; /* Light gray background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 90%;
+            width: 800px;
+            margin: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px; /* Adjust as needed */
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Temperature Charts</h1>
+    <div class="container">
+        <div class="controls">
+            <label for="monthSelector">Select Month Number:</label>
+            <select id="monthSelector">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+            </select>
+        </div>
+        <div class="chart-container">
+            <!-- Container for the daily temperature chart -->
+            <canvas id="dailyTemperatureChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <!-- Container for the monthly temperature range chart -->
+            <canvas id="monthlyTemperatureRangeChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <!-- Container for the average temperature per day across all months chart -->
+            <canvas id="averageTemperaturePerDayChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        async function fetchTemperatureData() {
+            try {
+                const response = await fetch('/api/monthly_temperature');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return {};
+            }
+        }
+
+        async function fetchDailyTemperatureData(month) {
+            try {
+                const response = await fetch(`/api/daily_temperature/${month}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching daily temperature data:', error);
+                return {};
+            }
+        }
+
+        async function renderDailyTemperatureChart(month) {
+            try {
+                const data = await fetchDailyTemperatureData(month);
+                console.log('Fetched data for daily chart:', data); // Debugging line
+
+                const days = Object.keys(data).sort((a, b) => a - b); // Sort days in ascending order
+                const temperatures = days.map(day => data[day]);
+
+                const ctx = document.getElementById('dailyTemperatureChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: days.map(day => `Day ${day}`),
+                        datasets: [{
+                            label: `Daily Temperature for Month ${month}`,
+                            data: temperatures,
+                            borderColor: '#FF5733',
+                            backgroundColor: 'rgba(255, 87, 51, 0.2)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Day of the Month'
+                                },
+                                ticks: {
+                                    autoSkip: false,
+                                    maxRotation: 45,
+                                    minRotation: 30
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°C)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        return `Temperature: ${tooltipItem.raw}°C`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering daily temperature chart:', error);
+            }
+        }
+
+        async function renderMonthlyTemperatureRangeChart() {
+            try {
+                const data = await fetchTemperatureData();
+                console.log('Fetched data for monthly range chart:', data); // Debugging line
+
+                const monthNumbers = Array.from({ length: 12 }, (_, i) => i + 1);
+
+                const monthlyRanges = monthNumbers.map(month => {
+                    const monthData = data[month] || {};
+                    const temperatures = Object.values(monthData);
+                    if (temperatures.length > 0) {
+                        const minTemp = Math.min(...temperatures);
+                        const maxTemp = Math.max(...temperatures);
+                        return { min: minTemp, max: maxTemp };
+                    }
+                    return { min: null, max: null };
+                });
+
+                const ctx = document.getElementById('monthlyTemperatureRangeChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: monthNumbers,
+                        datasets: [
+                            {
+                                label: 'Min Temperature',
+                                data: monthlyRanges.map(r => r.min),
+                                borderColor: '#FF5733',
+                                backgroundColor: 'rgba(255, 87, 51, 0.2)',
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Max Temperature',
+                                data: monthlyRanges.map(r => r.max),
+                                borderColor: '#33B5E5',
+                                backgroundColor: 'rgba(51, 181, 229, 0.2)',
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°C)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        return `Temperature: ${tooltipItem.raw}°C`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering monthly temperature range chart:', error);
+            }
+        }
+
+        async function renderAverageTemperaturePerDayChart() {
+            try {
+                const data = await fetchTemperatureData();
+                console.log('Fetched data for average temperature per day chart:', data); // Debugging line
+
+                const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+                const dayTemperatures = daysInMonth.map(day => {
+                    const temperatures = [];
+                    Object.values(data).forEach(monthData => {
+                        if (monthData[day] !== undefined) {
+                            temperatures.push(monthData[day]);
+                        }
+                    });
+                    if (temperatures.length > 0) {
+                        return temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
+                    }
+                    return null;
+                });
+
+                const ctx = document.getElementById('averageTemperaturePerDayChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: daysInMonth.map(day => day.toString()),
+                        datasets: [{
+                            label: 'Average Temperature per Day Across All Months',
+                            data: dayTemperatures,
+                            borderColor: '#FF5733',
+                            backgroundColor: 'rgba(255, 87, 51, 0.2)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Day of the Month'
+                                },
+                                ticks: {
+                                    autoSkip: false,
+                                    maxRotation: 45,
+                                    minRotation: 30
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°C)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        return `Temperature: ${tooltipItem.raw}°C`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering average temperature per day chart:', error);
+            }
+        }
+
+        // Initial chart render
+        async function initializeCharts() {
+            await renderMonthlyTemperatureRangeChart();
+            await renderAverageTemperaturePerDayChart();
+            // Render daily temperature chart for the initial month
+            const initialMonth = document.getElementById('monthSelector').value;
+            await renderDailyTemperatureChart(initialMonth);
+        }
+
+        initializeCharts();
+
+        // Add event listener for month selection
+        document.getElementById('monthSelector').addEventListener('change', async (event) => {
+            const selectedMonth = event.target.value;
+            await renderDailyTemperatureChart(selectedMonth);
+        });
+    </script>
+</body>
+</html>

@@ -81,6 +81,7 @@
             background: #f9f9f9; /* Slightly lighter background for charts */
             border-radius: 6px;
             padding: 10px;
+            cursor: pointer; /* Add pointer cursor to indicate clickability */
         }
 
         .chart-container canvas {
@@ -133,7 +134,6 @@
             margin: 2px 0;
             color: #777; /* Slightly lighter gray text */
         }
-
     </style>
 </head>
 
@@ -166,10 +166,12 @@
     </div>
 
     <div class="container">
-        <div class="chart-container">
+        <!-- Temperature Chart as Button -->
+        <div class="chart-container" id="temperatureChartContainer">
             <canvas id="temperatureChart"></canvas>
         </div>
 
+        <!-- Humidity Chart -->
         <div class="chart-container">
             <canvas id="humidityChart"></canvas>
         </div>
@@ -385,6 +387,11 @@
                 ${deviceDetails}
             `;
         }
+
+        // Add click event listener to temperature chart container
+        document.getElementById('temperatureChartContainer').addEventListener('click', () => {
+            window.location.href = '/temp';
+        });
 
         // Call the updateUI function when the page loads
         window.onload = updateUI;

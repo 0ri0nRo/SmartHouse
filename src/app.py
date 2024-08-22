@@ -71,6 +71,58 @@ def scan_network(network='192.168.178.0/24'):
 
     return devices
 
+def get_monthly_temperature_data():
+    """Recupera la temperatura media per ogni giorno per ogni mese dell'anno corrente."""
+    monthly_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni la temperatura media per ogni giorno di ogni mese dell'anno corrente
+        cursor.execute("""
+            SELECT
+                EXTRACT(MONTH FROM timestamp) AS month,
+                EXTRACT(DAY FROM timestamp) AS day,
+                AVG(temperature_c) AS avg_temperature
+            FROM sensor_readings
+            WHERE DATE_PART('year', timestamp) = DATE_PART('year', CURRENT_DATE)
+            GROUP BY month, day
+            ORDER BY month, day;
+        """)
+        
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            month = int(row['month'])
+            day = int(row['day'])
+            avg_temperature = float(row['avg_temperature'])
+            
+            if month not in monthly_data:
+                monthly_data[month] = {}
+            
+            monthly_data[month][day] = avg_temperature
+        
+        print(f"Monthly temperature data fetched: {monthly_data}")
+
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati mensili: {e}")
+    
+    return monthly_data
+
+
+@app.route('/api/monthly_temperature')
+def api_monthly_temperature():
+    """Restituisce la temperatura media per ogni giorno di ogni mese dell'anno corrente."""
+    data = get_monthly_temperature_data()
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile.'}), 404
+
+    return jsonify(data)
+
 
 def get_data():
     """Recupera i dati dal database."""
@@ -263,7 +315,103 @@ def api_sensors():
     })
 
 
+@app.route('/temp')
+def temp():
+    """Visualizza la pagina Hello World."""
+    return render_template('temperature.html')
 
+
+def get_average_monthly_temperature():
+    """Recupera la temperatura media per ogni mese dell'anno corrente."""
+    monthly_avg_temperature = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni la temperatura media per ogni mese dell'anno corrente
+        cursor.execute("""
+            SELECT
+                EXTRACT(MONTH FROM timestamp) AS month,
+                AVG(temperature_c) AS avg_temperature
+            FROM sensor_readings
+            WHERE DATE_PART('year', timestamp) = DATE_PART('year', CURRENT_DATE)
+            GROUP BY month
+            ORDER BY month;
+        """)
+        
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            month = int(row['month'])
+            avg_temperature = float(row['avg_temperature'])
+            monthly_avg_temperature[month] = avg_temperature
+        
+        print(f"Monthly average temperature data fetched: {monthly_avg_temperature}")
+
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati mensili: {e}")
+    
+    return monthly_avg_temperature
+
+@app.route('/api/monthly_average_temperature')
+def api_monthly_average_temperature():
+    """Restituisce la temperatura media per ogni mese dell'anno corrente."""
+    data = get_average_monthly_temperature()
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile.'}), 404
+
+    return jsonify(data)
+
+def get_daily_temperature_for_month(month):
+    """Recupera la temperatura media per ogni giorno del mese selezionato."""
+    daily_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni la temperatura media per ogni giorno del mese selezionato
+        cursor.execute("""
+            SELECT
+                EXTRACT(DAY FROM timestamp) AS day,
+                AVG(temperature_c) AS avg_temperature
+            FROM sensor_readings
+            WHERE EXTRACT(MONTH FROM timestamp) = %s
+            AND DATE_PART('year', timestamp) = DATE_PART('year', CURRENT_DATE)
+            GROUP BY day
+            ORDER BY day;
+        """, (month,))
+        
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            day = row['day']
+            avg_temperature = float(row['avg_temperature'])
+            daily_data[day] = avg_temperature
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati: {e}")
+    
+    return daily_data
+
+@app.route('/api/daily_temperature/<int:month>', methods=['GET'])
+def api_daily_temperature(month):
+    """Restituisce la temperatura media per ogni giorno del mese selezionato."""
+    if month < 1 or month > 12:
+        return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
+    
+    data = get_daily_temperature_for_month(month)
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per il mese selezionato.'}), 404
+
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
