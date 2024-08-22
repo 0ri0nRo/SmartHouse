@@ -123,14 +123,8 @@
                 const data = await fetchDailyTemperatureData(month);
                 console.log('Fetched data for daily chart:', data); // Debugging line
 
-                if (Object.keys(data).length === 0) {
-                    console.error('No data available for the selected month');
-                    clearChart();
-                    return;
-                }
-
-                const days = Object.keys(data).sort((a, b) => a - b); // Sort days in ascending order
-                const temperatures = days.map(day => data[day]);
+                const days = Array.from({ length: 31 }, (_, i) => i + 1); // Days from 1 to 31
+                const temperatures = days.map(day => data[day] || null); // Use null for missing data
 
                 const ctx = document.getElementById('dailyTemperatureChart').getContext('2d');
 
@@ -140,7 +134,7 @@
                 dailyTemperatureChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: days.map(day => `Day ${day}`),
+                        labels: days.map(day => `${day}`),
                         datasets: [{
                             label: `Daily Temperature for Month ${month}`,
                             data: temperatures,
@@ -181,7 +175,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function(tooltipItem) {
-                                        return `Temperature: ${tooltipItem.raw}°C`;
+                                        return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
                                     }
                                 }
                             }
