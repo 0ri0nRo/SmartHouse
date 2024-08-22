@@ -74,8 +74,7 @@ class Database:
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS network_devices (
-                id SERIAL PRIMARY KEY,
-                ip_address VARCHAR(45) NOT NULL,
+                ip_address VARCHAR(45) NOT NULL PRIMARY KEY,
                 hostname VARCHAR(255),
                 status VARCHAR(50),
                 timestamp TIMESTAMP NOT NULL
@@ -90,19 +89,34 @@ class Database:
     def save_devices_to_db(self, devices):
         """Salva le informazioni sui dispositivi di rete nel database."""
         try:
-            query = """
-            INSERT INTO network_devices (ip_address, hostname, status, timestamp) 
+            # Query per inserire o aggiornare il dispositivo a seconda della lunghezza dell'hostname
+            query_insert_or_update = """
+            INSERT INTO network_devices (ip_address, hostname, status, timestamp)
             VALUES (%s, %s, %s, %s)
+            ON CONFLICT (ip_address) 
+            DO UPDATE SET 
+                hostname = CASE 
+                            WHEN LENGTH(EXCLUDED.hostname) > LENGTH(network_devices.hostname) 
+                            THEN EXCLUDED.hostname 
+                            ELSE network_devices.hostname 
+                        END,
+                status = EXCLUDED.status,
+                timestamp = EXCLUDED.timestamp;
             """
             timestamp = datetime.now()  # Ottieni il timestamp corrente
+
+            # Itera sui dispositivi per inserirli o aggiornarli in base alla lunghezza dell'hostname
             for ip, info in devices.items():
                 values = (ip, info['hostname'], info['status'], timestamp)
-                self.cursor.execute(query, values)
+                self.cursor.execute(query_insert_or_update, values)
+
+            # Commit delle modifiche nel database
             self.connection.commit()
-            print("Dispositivi di rete inseriti nel database.")
+            print("Dispositivi di rete inseriti o aggiornati nel database.")
+        
         except Error as e:
-            print(f"Errore durante l'inserimento dei dati: {e}")
-    
+            print(f"Errore durante l'inserimento o l'aggiornamento dei dati: {e}")
+
     
     def get_devices_from_db(self):
         """Recupera i dispositivi salvati più recentemente dal database."""

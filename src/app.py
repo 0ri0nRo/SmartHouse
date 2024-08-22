@@ -115,14 +115,9 @@ def get_devices():
         cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
         cursor.execute("""SELECT *
-            FROM network_devices AS nd
-            INNER JOIN (
-                SELECT hostname, MAX(timestamp) AS max_timestamp
                 FROM network_devices
-                GROUP BY hostname
-            ) AS latest
-            ON nd.hostname = latest.hostname AND nd.timestamp = latest.max_timestamp
-            ORDER BY nd.timestamp DESC;
+                WHERE timestamp = (SELECT MAX(timestamp) FROM network_devices)
+                ORDER BY timestamp DESC;
             """)
         devices = cursor.fetchall()
         

@@ -66,4 +66,4 @@ def scan_network(network='192.168.178.0/24'):
 if __name__ == "__main__":
     while True:
         scan_network()
-        time.sleep(3600)  # Esegui la scansione ogni 60 minuti
+        time.sleep(60)  # Esegui la scansione ogni 60 minuti
