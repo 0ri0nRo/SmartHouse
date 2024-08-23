@@ -59,8 +59,8 @@
         }
 
         .controls button {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 6px 12px; /* Adjusted padding for a smaller button */
+            font-size: 14px; /* Reduced font size */
             border: none;
             border-radius: 4px;
             background-color: #007bff;
@@ -108,12 +108,36 @@
                 font-size: 14px;
             }
         }
+
+        @media (max-width: 480px) {
+            .chart-container {
+                height: 300px; /* Adjust height for smaller screens */
+            }
+        }
     </style>
 </head>
 
 <body>
     <h1>Temperature Charts</h1>
     <div class="container">
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="todayTemperatureChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="dailyTemperatureChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="monthlyAverageTemperatureChart"></canvas>
+            </div>
+        </div>
+
         <div class="controls">
             <label for="monthSelector">Select Month:</label>
             <select id="monthSelector">
@@ -136,26 +160,7 @@
                 <!-- Gli anni verranno generati dinamicamente tramite JavaScript -->
             </select>
 
-            <button id="updateChartsButton">Update Charts</button>
-        </div>
-
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="dailyTemperatureChart"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="monthlyAverageTemperatureChart"></canvas>
-            </div>
-        </div>
-
-        <!-- New Chart for Today's Temperature -->
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="todayTemperatureChart"></canvas>
-            </div>
+            <button id="updateChartsButton">Update</button>
         </div>
     </div>
 
@@ -348,7 +353,7 @@
                 const data = await fetchTodayTemperatureData();
                 console.log('Fetched data for today\'s temperature chart:', data);
 
-                const hours = Array.from({ length: 24 }, (_, i) => i);
+                const hours = Object.keys(data).map(hour => parseInt(hour, 10)).sort((a, b) => a - b);
                 const temperatures = hours.map(hour => data[hour] || null);
 
                 const ctx = document.getElementById('todayTemperatureChart').getContext('2d');
@@ -441,9 +446,9 @@
             const month = parseInt(document.getElementById('monthSelector').value, 10);
             const year = parseInt(document.getElementById('yearSelector').value, 10);
 
+            await renderTodayTemperatureChart(); // Render today's chart first
             await renderDailyTemperatureChart(month, year);
             await renderMonthlyAverageTemperatureChart(year);
-            await renderTodayTemperatureChart();
         }
 
         document.getElementById('updateChartsButton').addEventListener('click', updateCharts);
