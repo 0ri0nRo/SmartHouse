@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -67,11 +68,12 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Temperature Charts</h1>
     <div class="container">
         <div class="controls">
-            <label for="monthSelector">Select Month Number:</label>
+            <label for="monthSelector">Select Month:</label>
             <select id="monthSelector">
                 <option value="1">January</option>
                 <option value="2">February</option>
@@ -86,8 +88,15 @@
                 <option value="11">November</option>
                 <option value="12">December</option>
             </select>
+
+            <label for="yearSelector">Select Year:</label>
+            <select id="yearSelector">
+                <!-- Gli anni verranno generati dinamicamente tramite JavaScript -->
+            </select>
+
+            <button id="updateChartsButton">Update Charts</button>
         </div>
-        
+
         <div class="chart-card">
             <div class="chart-container">
                 <canvas id="dailyTemperatureChart"></canvas>
@@ -105,9 +114,9 @@
         let dailyTemperatureChart = null;
         let monthlyAverageTemperatureChart = null;
 
-        async function fetchDailyTemperatureData(month) {
+        async function fetchDailyTemperatureData(month, year) {
             try {
-                const response = await fetch(`/api/daily_temperature/${month}`);
+                const response = await fetch(`/api/monthly_average_temperature/${month}/${year}`);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -118,9 +127,9 @@
             }
         }
 
-        async function fetchMonthlyAverageTemperatureData() {
+        async function fetchMonthlyAverageTemperatureData(year) {
             try {
-                const response = await fetch('/api/monthly_average_temperature');
+                const response = await fetch(`/api/monthly_average_temperature/${year}`);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -137,9 +146,9 @@
             }
         }
 
-        async function renderDailyTemperatureChart(month) {
+        async function renderDailyTemperatureChart(month, year) {
             try {
-                const data = await fetchDailyTemperatureData(month);
+                const data = await fetchDailyTemperatureData(month, year);
                 console.log('Fetched data for daily chart:', data);
 
                 const days = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -153,7 +162,7 @@
                     data: {
                         labels: days.map(day => `${day}`),
                         datasets: [{
-                            label: `Daily Temperature for ${getMonthName(month)}`,
+                            label: `Daily Temperature for ${getMonthName(month)} ${year}`,
                             data: temperatures,
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             borderColor: 'rgba(255, 99, 132, 1)',
@@ -191,7 +200,7 @@
                             },
                             tooltip: {
                                 callbacks: {
-                                    label: function(tooltipItem) {
+                                    label: function (tooltipItem) {
                                         return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
                                     }
                                 }
@@ -204,9 +213,9 @@
             }
         }
 
-        async function renderMonthlyAverageTemperatureChart() {
+        async function renderMonthlyAverageTemperatureChart(year) {
             try {
-                const data = await fetchMonthlyAverageTemperatureData();
+                const data = await fetchMonthlyAverageTemperatureData(year);
                 console.log('Fetched data for monthly average temperature chart:', data);
 
                 const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -220,7 +229,7 @@
                     data: {
                         labels: months.map(month => getMonthName(month)),
                         datasets: [{
-                            label: 'Average Temperature per Month',
+                            label: `Average Temperature for ${year}`,
                             data: temperatures,
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
                             borderColor: 'rgba(75, 192, 192, 1)',
@@ -235,6 +244,11 @@
                                 title: {
                                     display: true,
                                     text: 'Month'
+                                },
+                                ticks: {
+                                    autoSkip: false,
+                                    maxRotation: 45,
+                                    minRotation: 30
                                 }
                             },
                             y: {
@@ -253,7 +267,7 @@
                             },
                             tooltip: {
                                 callbacks: {
-                                    label: function(tooltipItem) {
+                                    label: function (tooltipItem) {
                                         return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
                                     }
                                 }
@@ -274,20 +288,52 @@
             return monthNames[month - 1] || 'Unknown';
         }
 
-        // Initial chart render
-        async function initializeCharts() {
-            const initialMonth = document.getElementById('monthSelector').value;
-            await renderDailyTemperatureChart(initialMonth);
-            await renderMonthlyAverageTemperatureChart();
+        // Imposta il mese e l'anno corrente come selezionati
+        function setDefaultDate() {
+            const currentMonth = new Date().getMonth() + 1;
+            const currentYear = new Date().getFullYear();
+
+            document.getElementById('monthSelector').value = currentMonth;
+            document.getElementById('yearSelector').value = currentYear;
         }
 
-        initializeCharts();
+        // Popola il selettore dell'anno con un intervallo di anni
+        function populateYearSelector() {
+            const yearSelector = document.getElementById('yearSelector');
+            const currentYear = new Date().getFullYear();
 
-        // Add event listener for month selection
-        document.getElementById('monthSelector').addEventListener('change', async (event) => {
-            const selectedMonth = event.target.value;
-            await renderDailyTemperatureChart(selectedMonth);
+            for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelector.appendChild(option);
+            }
+        }
+
+        // Inizializzazione
+        async function initializeCharts() {
+            populateYearSelector();
+            setDefaultDate();
+
+            const initialMonth = document.getElementById('monthSelector').value;
+            const initialYear = document.getElementById('yearSelector').value;
+
+            await renderDailyTemperatureChart(initialMonth, initialYear);
+            await renderMonthlyAverageTemperatureChart(initialYear);
+        }
+
+        // Aggiungi event listener per il bottone di aggiornamento
+        document.getElementById('updateChartsButton').addEventListener('click', async () => {
+            const selectedMonth = document.getElementById('monthSelector').value;
+            const selectedYear = document.getElementById('yearSelector').value;
+
+            await renderDailyTemperatureChart(selectedMonth, selectedYear);
+            await renderMonthlyAverageTemperatureChart(selectedYear);
         });
+
+        // Inizializzazione dei grafici al caricamento della pagina
+        initializeCharts();
     </script>
 </body>
+
 </html>
