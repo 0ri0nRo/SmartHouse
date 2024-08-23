@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Temperature Chart</title>
+    <title>Temperature Charts</title>
     <!-- Include Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -46,6 +46,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 20px;
+            margin-bottom: 20px;
         }
 
         .chart-container {
@@ -67,36 +68,42 @@
     </style>
 </head>
 <body>
-    <h1>Daily Temperature Chart</h1>
+    <h1>Temperature Charts</h1>
     <div class="container">
         <div class="controls">
             <label for="monthSelector">Select Month Number:</label>
             <select id="monthSelector">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
             </select>
         </div>
         
         <div class="chart-card">
             <div class="chart-container">
-                <!-- Container for the daily temperature chart -->
                 <canvas id="dailyTemperatureChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="monthlyAverageTemperatureChart"></canvas>
             </div>
         </div>
     </div>
 
     <script>
         let dailyTemperatureChart = null;
+        let monthlyAverageTemperatureChart = null;
 
         async function fetchDailyTemperatureData(month) {
             try {
@@ -111,32 +118,42 @@
             }
         }
 
-        function clearChart() {
-            if (dailyTemperatureChart) {
-                dailyTemperatureChart.destroy();
-                dailyTemperatureChart = null;
+        async function fetchMonthlyAverageTemperatureData() {
+            try {
+                const response = await fetch('/api/monthly_average_temperature');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching monthly average temperature data:', error);
+                return {};
+            }
+        }
+
+        function clearChart(chart) {
+            if (chart) {
+                chart.destroy();
             }
         }
 
         async function renderDailyTemperatureChart(month) {
             try {
                 const data = await fetchDailyTemperatureData(month);
-                console.log('Fetched data for daily chart:', data); // Debugging line
+                console.log('Fetched data for daily chart:', data);
 
-                const days = Array.from({ length: 31 }, (_, i) => i + 1); // Days from 1 to 31
-                const temperatures = days.map(day => data[day] || null); // Use null for missing data
+                const days = Array.from({ length: 31 }, (_, i) => i + 1);
+                const temperatures = days.map(day => data[day] || null);
 
                 const ctx = document.getElementById('dailyTemperatureChart').getContext('2d');
-
-                // Clear the previous chart if it exists
-                clearChart();
+                clearChart(dailyTemperatureChart);
 
                 dailyTemperatureChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: days.map(day => `${day}`),
                         datasets: [{
-                            label: `Daily Temperature for Month ${month}`,
+                            label: `Daily Temperature for ${getMonthName(month)}`,
                             data: temperatures,
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             borderColor: 'rgba(255, 99, 132, 1)',
@@ -187,10 +204,81 @@
             }
         }
 
+        async function renderMonthlyAverageTemperatureChart() {
+            try {
+                const data = await fetchMonthlyAverageTemperatureData();
+                console.log('Fetched data for monthly average temperature chart:', data);
+
+                const months = Array.from({ length: 12 }, (_, i) => i + 1);
+                const temperatures = months.map(month => data[month] || null);
+
+                const ctx = document.getElementById('monthlyAverageTemperatureChart').getContext('2d');
+                clearChart(monthlyAverageTemperatureChart);
+
+                monthlyAverageTemperatureChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months.map(month => getMonthName(month)),
+                        datasets: [{
+                            label: 'Average Temperature per Month',
+                            data: temperatures,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°C)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering monthly average temperature chart:', error);
+            }
+        }
+
+        function getMonthName(month) {
+            const monthNames = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+            return monthNames[month - 1] || 'Unknown';
+        }
+
         // Initial chart render
         async function initializeCharts() {
             const initialMonth = document.getElementById('monthSelector').value;
             await renderDailyTemperatureChart(initialMonth);
+            await renderMonthlyAverageTemperatureChart();
         }
 
         initializeCharts();
