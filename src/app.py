@@ -96,7 +96,7 @@ def get_monthly_temperature_data():
         for row in rows:
             month = int(row['month'])
             day = int(row['day'])
-            avg_temperature = float(row['avg_temperature'])
+            avg_temperature = round(float(row['avg_temperature']), 2)
             
             if month not in monthly_data:
                 monthly_data[month] = {}
@@ -468,7 +468,7 @@ def get_daily_temperature_for_month_and_year(month, year):
         # Organizza i dati in un dizionario
         for row in rows:
             day = int(row['day'])
-            avg_temperature = float(row['avg_temperature'])
+            avg_temperature = round(float(row['avg_temperature']), 2)
             daily_data[day] = avg_temperature
         
         cursor.close()
@@ -545,7 +545,7 @@ def get_daily_temperature():
         # Organizza i dati in un dizionario
         for row in rows:
             hour = int(row['hour'])
-            avg_temperature = float(row['avg_temperature'])
+            avg_temperature = round(float(row['avg_temperature']), 2)
             hourly_data[hour] = avg_temperature
         
         cursor.close()
@@ -590,7 +590,7 @@ def get_hourly_humidity():
         # Organizza i dati in un dizionario
         for row in rows:
             hour = int(row['hour'])
-            avg_humidity = float(row['avg_humidity'])
+            avg_humidity = round(float(row['avg_humidity']), 2)
             hourly_data[hour] = avg_humidity
         
         cursor.close()
@@ -635,7 +635,7 @@ def get_daily_humidity_for_month(month):
         # Organizza i dati in un dizionario
         for row in rows:
             day = int(row['day'])
-            avg_humidity = float(row['avg_humidity'])
+            avg_humidity = round(float(row['avg_humidity']), 2)
             daily_data[day] = avg_humidity
         
         cursor.close()
@@ -683,7 +683,7 @@ def get_daily_humidity_for_month_and_year(month, year):
         # Organizza i dati in un dizionario
         for row in rows:
             day = int(row['day'])
-            avg_humidity = float(row['avg_humidity'])
+            avg_humidity = round(float(row['avg_humidity']), 2)
             daily_data[day] = avg_humidity
         
         cursor.close()
@@ -732,7 +732,7 @@ def get_monthly_humidity_for_year(year):
         
         for row in rows:
             month = int(row['month'])
-            avg_humidity = float(row['avg_humidity'])
+            avg_humidity = round(float(row['avg_humidity']), 2)
             monthly_avg_humidity[month] = avg_humidity
         
         cursor.close()
