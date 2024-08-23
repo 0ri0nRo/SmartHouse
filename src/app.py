@@ -517,5 +517,49 @@ def api_monthly_average_temperature_by_year(anno):
 
     return jsonify(data)
     
+def get_daily_temperature():
+    """Recupera la temperatura media per ogni ora del giorno corrente."""
+    hourly_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni la temperatura media per ogni ora del giorno corrente
+        cursor.execute("""
+            SELECT
+                EXTRACT(HOUR FROM timestamp) AS hour,
+                AVG(temperature_c) AS avg_temperature
+            FROM sensor_readings
+            WHERE DATE(timestamp) = CURRENT_DATE
+            GROUP BY hour
+            ORDER BY hour;
+        """)
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            hour = int(row['hour'])
+            avg_temperature = float(row['avg_temperature'])
+            hourly_data[hour] = avg_temperature
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati: {e}")
+    
+    return hourly_data
+
+@app.route('/api/today_temperature', methods=['GET'])
+def today_temperature():
+    """Restituisce la temperatura media per ogni ora del giorno corrente."""
+    data = get_daily_temperature()
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per oggi.'}), 404
+
+    return jsonify(data)
+
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
