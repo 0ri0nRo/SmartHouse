@@ -321,6 +321,12 @@ def temp():
     return render_template('temperature.html')
 
 
+@app.route('/umid')
+def umid():
+    """Visualizza la pagina Hello World."""
+    return render_template('umid.html')
+
+
 def get_average_monthly_temperature():
     """Recupera la temperatura media per ogni mese dell'anno corrente."""
     monthly_avg_temperature = {}
@@ -558,6 +564,198 @@ def today_temperature():
         return jsonify({'error': 'Nessun dato disponibile per oggi.'}), 404
 
     return jsonify(data)
+
+
+
+# Funzione per ottenere l'umidità media per ogni ora del giorno corrente
+def get_hourly_humidity():
+    """Recupera l'umidità media per ogni ora del giorno corrente."""
+    hourly_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni l'umidità media per ogni ora del giorno corrente
+        cursor.execute("""
+            SELECT
+                EXTRACT(HOUR FROM timestamp) AS hour,
+                AVG(humidity) AS avg_humidity
+            FROM sensor_readings
+            WHERE DATE(timestamp) = CURRENT_DATE
+            GROUP BY hour
+            ORDER BY hour;
+        """)
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            hour = int(row['hour'])
+            avg_humidity = float(row['avg_humidity'])
+            hourly_data[hour] = avg_humidity
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati: {e}")
+    
+    return hourly_data
+
+@app.route('/api/today_humidity', methods=['GET'])
+def today_humidity():
+    """Restituisce l'umidità media per ogni ora del giorno corrente."""
+    data = get_hourly_humidity()
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per oggi.'}), 404
+
+    return jsonify(data)
+
+# Funzione per ottenere l'umidità media per ogni giorno del mese selezionato
+def get_daily_humidity_for_month(month):
+    """Recupera l'umidità media per ogni giorno del mese selezionato."""
+    daily_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni l'umidità media per ogni giorno del mese selezionato
+        cursor.execute("""
+            SELECT
+                EXTRACT(DAY FROM timestamp) AS day,
+                AVG(humidity) AS avg_humidity
+            FROM sensor_readings
+            WHERE EXTRACT(MONTH FROM timestamp) = %s
+            AND DATE_PART('year', timestamp) = DATE_PART('year', CURRENT_DATE)
+            GROUP BY day
+            ORDER BY day;
+        """, (month,))
+        
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            day = int(row['day'])
+            avg_humidity = float(row['avg_humidity'])
+            daily_data[day] = avg_humidity
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati: {e}")
+    
+    return daily_data
+
+@app.route('/api/daily_humidity/<int:month>/', methods=['GET'])
+def api_daily_humidity(month):
+    """Restituisce l'umidità media per ogni giorno del mese selezionato."""
+    if month < 1 or month > 12:
+        return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
+    
+    data = get_daily_humidity_for_month(month)
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per il mese selezionato.'}), 404
+
+    return jsonify(data)
+
+# Funzione per ottenere l'umidità media per ogni giorno del mese e anno selezionati
+def get_daily_humidity_for_month_and_year(month, year):
+    """Recupera l'umidità media per ogni giorno del mese e anno selezionati."""
+    daily_data = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni l'umidità media per ogni giorno del mese e anno selezionati
+        cursor.execute("""
+            SELECT
+                EXTRACT(DAY FROM timestamp) AS day,
+                AVG(humidity) AS avg_humidity
+            FROM sensor_readings
+            WHERE EXTRACT(MONTH FROM timestamp) = %s
+            AND EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY day
+            ORDER BY day;
+        """, (month, year))
+        
+        rows = cursor.fetchall()
+        
+        # Organizza i dati in un dizionario
+        for row in rows:
+            day = int(row['day'])
+            avg_humidity = float(row['avg_humidity'])
+            daily_data[day] = avg_humidity
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati: {e}")
+    
+    return daily_data
+
+@app.route('/api/daily_humidity/<int:month>/<int:year>', methods=['GET'])
+def api_daily_humidity_by_month_and_year(month, year):
+    """Restituisce l'umidità media per ogni giorno del mese e anno selezionati."""
+    if month < 1 or month > 12:
+        return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
+
+    if year < 1900 or year > datetime.now().year:
+        return jsonify({'error': 'Anno non valido.'}), 400
+
+    data = get_daily_humidity_for_month_and_year(month, year)
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per il mese e anno selezionati.'}), 404
+
+    return jsonify(data)
+
+# Funzione per ottenere l'umidità media per ogni mese dell'anno selezionato
+def get_monthly_humidity_for_year(year):
+    """Recupera l'umidità media per ogni mese dell'anno specificato."""
+    monthly_avg_humidity = {}
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Ottieni l'umidità media per ogni mese dell'anno specificato
+        cursor.execute("""
+            SELECT
+                EXTRACT(MONTH FROM timestamp) AS month,
+                AVG(humidity) AS avg_humidity
+            FROM sensor_readings
+            WHERE EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY month
+            ORDER BY month;
+        """, (year,))
+        
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            month = int(row['month'])
+            avg_humidity = float(row['avg_humidity'])
+            monthly_avg_humidity[month] = avg_humidity
+        
+        cursor.close()
+        connection.close()
+    except Error as e:
+        print(f"Errore durante il recupero dei dati mensili: {e}")
+    
+    return monthly_avg_humidity
+
+@app.route('/api/monthly_average_humidity/<int:year>', methods=['GET'])
+def api_monthly_humidity_by_year(year):
+    """Restituisce l'umidità media per ogni mese dell'anno selezionato."""
+    if year < 1900 or year > datetime.now().year:
+        return jsonify({'error': 'Anno non valido.'}), 400
+
+    data = get_monthly_humidity_for_year(year)
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per l\'anno selezionato.'}), 404
+
+    return jsonify(data)
+
+
 
 
 

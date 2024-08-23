@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temperature Charts</title>
+    <title>Humidity Charts</title>
     <!-- Include Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -59,8 +59,8 @@
         }
 
         .controls button {
-            padding: 6px 12px; /* Adjusted padding for a smaller button */
-            font-size: 14px; /* Reduced font size */
+            padding: 6px 12px;
+            font-size: 14px;
             border: none;
             border-radius: 4px;
             background-color: #007bff;
@@ -111,36 +111,30 @@
 
         @media (max-width: 480px) {
             .chart-container {
-                height: 300px; /* Adjust height for smaller screens */
-            }
-
-            .controls label,
-            .controls select,
-            .controls button {
-                font-size: 12px;
+                height: 300px;
             }
         }
     </style>
 </head>
 
 <body>
-    <h1>Temperature Charts</h1>
+    <h1>Humidity Charts</h1>
     <div class="container">
         <div class="chart-card">
             <div class="chart-container">
-                <canvas id="todayTemperatureChart"></canvas>
+                <canvas id="todayHumidityChart"></canvas>
             </div>
         </div>
 
         <div class="chart-card">
             <div class="chart-container">
-                <canvas id="dailyTemperatureChart"></canvas>
+                <canvas id="dailyHumidityChart"></canvas>
             </div>
         </div>
 
         <div class="chart-card">
             <div class="chart-container">
-                <canvas id="monthlyAverageTemperatureChart"></canvas>
+                <canvas id="monthlyAverageHumidityChart"></canvas>
             </div>
         </div>
 
@@ -171,45 +165,45 @@
     </div>
 
     <script>
-        let dailyTemperatureChart = null;
-        let monthlyAverageTemperatureChart = null;
-        let todayTemperatureChart = null;
+        let dailyHumidityChart = null;
+        let monthlyAverageHumidityChart = null;
+        let todayHumidityChart = null;
 
-        async function fetchDailyTemperatureData(month, year) {
+        async function fetchDailyHumidityData(month, year) {
             try {
-                const response = await fetch(`/api/monthly_average_temperature/${month}/${year}`);
+                const response = await fetch(`/api/daily_humidity/${month}/${year}`);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             } catch (error) {
-                console.error('Error fetching daily temperature data:', error);
+                console.error('Error fetching daily humidity data:', error);
                 return {};
             }
         }
 
-        async function fetchMonthlyAverageTemperatureData(year) {
+        async function fetchMonthlyAverageHumidityData(year) {
             try {
-                const response = await fetch(`/api/monthly_average_temperature/${year}`);
+                const response = await fetch(`/api/monthly_average_humidity/${year}`);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             } catch (error) {
-                console.error('Error fetching monthly average temperature data:', error);
+                console.error('Error fetching monthly average humidity data:', error);
                 return {};
             }
         }
 
-        async function fetchTodayTemperatureData() {
+        async function fetchTodayHumidityData() {
             try {
-                const response = await fetch(`/api/today_temperature`);
+                const response = await fetch(`/api/today_humidity`);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             } catch (error) {
-                console.error('Error fetching today temperature data:', error);
+                console.error('Error fetching today humidity data:', error);
                 return {};
             }
         }
@@ -220,26 +214,26 @@
             }
         }
 
-        async function renderDailyTemperatureChart(month, year) {
+        async function renderDailyHumidityChart(month, year) {
             try {
-                const data = await fetchDailyTemperatureData(month, year);
+                const data = await fetchDailyHumidityData(month, year);
                 console.log('Fetched data for daily chart:', data);
 
                 const days = Array.from({ length: 31 }, (_, i) => i + 1);
-                const temperatures = days.map(day => data[day] || null);
+                const humidities = days.map(day => data[day] || null);
 
-                const ctx = document.getElementById('dailyTemperatureChart').getContext('2d');
-                clearChart(dailyTemperatureChart);
+                const ctx = document.getElementById('dailyHumidityChart').getContext('2d');
+                clearChart(dailyHumidityChart);
 
-                dailyTemperatureChart = new Chart(ctx, {
+                dailyHumidityChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: days.map(day => `${day}`),
                         datasets: [{
-                            label: `Daily Temperature for ${getMonthName(month)} ${year}`,
-                            data: temperatures,
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
+                            label: `Daily Humidity for ${getMonthName(month)} ${year}`,
+                            data: humidities,
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
                             borderWidth: 1
                         }]
                     },
@@ -254,7 +248,7 @@
                                 },
                                 ticks: {
                                     autoSkip: true,
-                                    maxTicksLimit: 10, // Limit the number of labels shown
+                                    maxTicksLimit: 10,
                                     maxRotation: 45,
                                     minRotation: 30
                                 }
@@ -262,7 +256,7 @@
                             y: {
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
+                                    text: 'Humidity (%)'
                                 },
                                 ticks: {
                                     beginAtZero: true
@@ -276,7 +270,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function (tooltipItem) {
-                                        return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
+                                        return `Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
                                     }
                                 }
                             }
@@ -284,30 +278,30 @@
                     }
                 });
             } catch (error) {
-                console.error('Error rendering daily temperature chart:', error);
+                console.error('Error rendering daily humidity chart:', error);
             }
         }
 
-        async function renderMonthlyAverageTemperatureChart(year) {
+        async function renderMonthlyAverageHumidityChart(year) {
             try {
-                const data = await fetchMonthlyAverageTemperatureData(year);
-                console.log('Fetched data for monthly average temperature chart:', data);
+                const data = await fetchMonthlyAverageHumidityData(year);
+                console.log('Fetched data for monthly average humidity chart:', data);
 
                 const months = Array.from({ length: 12 }, (_, i) => i + 1);
-                const temperatures = months.map(month => data[month] || null);
+                const humidities = months.map(month => data[month] || null);
 
-                const ctx = document.getElementById('monthlyAverageTemperatureChart').getContext('2d');
-                clearChart(monthlyAverageTemperatureChart);
+                const ctx = document.getElementById('monthlyAverageHumidityChart').getContext('2d');
+                clearChart(monthlyAverageHumidityChart);
 
-                monthlyAverageTemperatureChart = new Chart(ctx, {
+                monthlyAverageHumidityChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: months.map(month => getMonthName(month)),
                         datasets: [{
-                            label: `Average Temperature for ${year}`,
-                            data: temperatures,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
+                            label: `Average Humidity for ${year}`,
+                            data: humidities,
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
                             borderWidth: 1
                         }]
                     },
@@ -321,8 +315,7 @@
                                     text: 'Month'
                                 },
                                 ticks: {
-                                    autoSkip: true,
-                                    maxTicksLimit: 12,
+                                    autoSkip: false, // Show all labels
                                     maxRotation: 45,
                                     minRotation: 30
                                 }
@@ -330,7 +323,7 @@
                             y: {
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
+                                    text: 'Humidity (%)'
                                 },
                                 ticks: {
                                     beginAtZero: true
@@ -344,7 +337,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function (tooltipItem) {
-                                        return `Average Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
+                                        return `Average Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
                                     }
                                 }
                             }
@@ -352,30 +345,30 @@
                     }
                 });
             } catch (error) {
-                console.error('Error rendering monthly average temperature chart:', error);
+                console.error('Error rendering monthly average humidity chart:', error);
             }
         }
 
-        async function renderTodayTemperatureChart() {
+        async function renderTodayHumidityChart() {
             try {
-                const data = await fetchTodayTemperatureData();
-                console.log('Fetched data for today\'s temperature chart:', data);
+                const data = await fetchTodayHumidityData();
+                console.log('Fetched data for today\'s humidity chart:', data);
 
                 const hours = Object.keys(data).map(hour => parseInt(hour, 10)).sort((a, b) => a - b);
-                const temperatures = hours.map(hour => data[hour] || null);
+                const humidities = hours.map(hour => data[hour] || null);
 
-                const ctx = document.getElementById('todayTemperatureChart').getContext('2d');
-                clearChart(todayTemperatureChart);
+                const ctx = document.getElementById('todayHumidityChart').getContext('2d');
+                clearChart(todayHumidityChart);
 
-                todayTemperatureChart = new Chart(ctx, {
+                todayHumidityChart = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: hours.map(hour => `${hour}:00`),
                         datasets: [{
-                            label: 'Temperature Today',
-                            data: temperatures,
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
+                            label: 'Humidity Today',
+                            data: humidities,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
                             borderWidth: 1
                         }]
                     },
@@ -390,7 +383,7 @@
                                 },
                                 ticks: {
                                     autoSkip: true,
-                                    maxTicksLimit: 10,
+                                    maxTicksLimit: 12,
                                     maxRotation: 45,
                                     minRotation: 30
                                 }
@@ -398,7 +391,7 @@
                             y: {
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
+                                    text: 'Humidity (%)'
                                 },
                                 ticks: {
                                     beginAtZero: true
@@ -412,7 +405,7 @@
                             tooltip: {
                                 callbacks: {
                                     label: function (tooltipItem) {
-                                        return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
+                                        return `Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
                                     }
                                 }
                             }
@@ -420,7 +413,7 @@
                     }
                 });
             } catch (error) {
-                console.error('Error rendering today\'s temperature chart:', error);
+                console.error('Error rendering today\'s humidity chart:', error);
             }
         }
 
@@ -455,9 +448,9 @@
             const month = parseInt(document.getElementById('monthSelector').value, 10);
             const year = parseInt(document.getElementById('yearSelector').value, 10);
 
-            await renderTodayTemperatureChart(); // Render today's chart first
-            await renderDailyTemperatureChart(month, year);
-            await renderMonthlyAverageTemperatureChart(year);
+            await renderTodayHumidityChart(); // Render today's chart first
+            await renderDailyHumidityChart(month, year);
+            await renderMonthlyAverageHumidityChart(year);
         }
 
         document.getElementById('updateChartsButton').addEventListener('click', updateCharts);

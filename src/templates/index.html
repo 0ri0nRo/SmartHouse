@@ -45,6 +45,7 @@
             min-width: 280px; /* Minimum width to ensure readability on small screens */
             box-sizing: border-box;
             margin: 0 0 15px 0; /* Margin at bottom for spacing between rows */
+            cursor: pointer; /* Pointer cursor to indicate clickability */
         }
 
         .card h2 {
@@ -60,7 +61,6 @@
 
         .card.temperature {
             background-color: #e8f4f8;
-            cursor: pointer;
         }
 
         .card.humidity {
@@ -131,7 +131,7 @@
         </div>
 
         <!-- Humidity Card -->
-        <div class="card humidity">
+        <div class="card humidity" id="humidityCard">
             <h2 id="humidityValue">-- %</h2>
             <p>Humidity</p>
             <p><span id="humidityMinMax">-- / --</span></p>
@@ -239,6 +239,11 @@
         // Add click event listener to temperature card
         document.getElementById('temperatureCard').addEventListener('click', () => {
             window.location.href = '/temp';
+        });
+
+        // Add click event listener to humidity card
+        document.getElementById('humidityCard').addEventListener('click', () => {
+            window.location.href = '/umid';
         });
 
         // Call the updateUI function when the page loads
