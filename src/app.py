@@ -444,6 +444,7 @@ def api_monthly_average_temperature_by_month_and_year(mese, anno):
         return jsonify({'error': 'Nessun dato disponibile per il mese e anno selezionati.'}), 404
 
     return jsonify(data)
+
 def get_daily_temperature_for_month_and_year(month, year):
     """Recupera la temperatura media per ogni giorno del mese e anno selezionati."""
     daily_data = {}

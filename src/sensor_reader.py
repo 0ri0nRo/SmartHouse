@@ -58,7 +58,7 @@ class SensorReader:
                 self.last_humidity = humidity
                 
                 # Per debug, puoi stampare i dati ricevuti
-                print(f"Temperatura={temperature}°C, Umidità={humidity}%")
+                # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
             else:
                 pass
 
