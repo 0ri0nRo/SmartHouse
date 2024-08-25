@@ -10,10 +10,11 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f2f2f2; /* Soft gray background */
+            background-color: #f2f2f2;
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         h1 {
@@ -41,22 +42,12 @@
             text-align: center;
             font-size: 14px;
             border: 1px solid #ccc;
-            flex: 1 1 calc(50% - 15px); /* Flex items to fill space and adjust based on screen size */
-            min-width: 280px; /* Minimum width to ensure readability on small screens */
+            flex: 1 1 calc(50% - 15px);
+            min-width: 280px;
             box-sizing: border-box;
-            margin: 0 0 15px 0; /* Margin at bottom for spacing between rows */
-            cursor: pointer; /* Pointer cursor to indicate clickability */
-        }
-
-        .card h2 {
-            margin: 0;
-            font-size: 22px;
-            color: #555;
-        }
-
-        .card p {
-            margin: 2px 0;
-            color: #777;
+            margin: 0 0 15px 0;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .card.temperature {
@@ -84,17 +75,7 @@
             border: 1px solid #ccc;
             box-sizing: border-box;
             margin: 0 0 15px 0;
-        }
-
-        .device-card h2 {
-            font-size: 22px;
-            margin: 0;
-            color: #555;
-        }
-
-        .device-card p {
-            margin: 2px 0;
-            color: #777;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .footer {
@@ -109,18 +90,91 @@
             left: 0;
             font-size: 14px;
             box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, color 0.3s;
         }
 
         @media (max-width: 768px) {
-            .card, .device-card {
-                flex: 1 1 100%; /* Stack cards on small screens */
+            .card,
+            .device-card {
+                flex: 1 1 100%;
             }
+        }
+
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        body.dark-mode .card {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #444;
+        }
+
+        body.dark-mode .footer {
+            background-color: #222;
+            color: #ddd;
+        }
+
+        /* Apple-style Toggle Switch */
+        .switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196f3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
     </style>
 </head>
 
 <body>
     <h1>Alex's House</h1>
+
+    <!-- Dark Mode Toggle Switch -->
+    <label class="switch">
+        <input type="checkbox" id="toggleDarkMode">
+        <span class="slider"></span>
+    </label>
 
     <div class="cards-container">
         <!-- Temperature Card -->
@@ -147,14 +201,38 @@
         </div>
 
         <!-- Device Card -->
-        <div class="device-card" id="deviceCard">
-            <h2>Devices</h2>
-            <p id="deviceCount">--</p>
-            <p id="deviceDetails">--</p>
+        <div class="card device">
+            <h3 id="deviceCard">
         </div>
+        
     </div>
 
     <script>
+        // Function to toggle dark mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+            document.getElementById('toggleDarkMode').checked = isDarkMode;
+        }
+
+        // Load the preferred theme from localStorage
+        function loadTheme() {
+            const darkMode = localStorage.getItem('darkMode');
+            const isDarkMode = darkMode === 'enabled';
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            document.getElementById('toggleDarkMode').checked = isDarkMode;
+        }
+
+        // Event listener for the dark mode toggle button
+        document.getElementById('toggleDarkMode').addEventListener('change', toggleDarkMode);
+
+        // Load the theme when the page is loaded
+        window.onload = () => {
+            loadTheme();
+            updateUI();
+        };
+
         // Funzione per formattare il timestamp in solo orario
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -178,7 +256,6 @@
             try {
                 const response = await fetch('/api_raspberry_pi_stats'); // Endpoint API per le statistiche del Raspberry Pi
                 const data = await response.json();
-                console.log('Raspberry Pi Stats Data:', data); // Debugging output
                 return data;
             } catch (error) {
                 console.error('Error fetching Raspberry Pi stats:', error);
@@ -209,9 +286,9 @@
             document.getElementById("humidityValue").textContent = `${parseFloat(data.humidity.current).toFixed(2)} %`;
 
             // Update min/max temperature and humidity
-            document.getElementById("tempMinMax").textContent = 
+            document.getElementById("tempMinMax").textContent =
                 `${data.temperature.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[0]).toFixed(2)} / ${data.temperature.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[1]).toFixed(2)}`;
-            document.getElementById("humidityMinMax").textContent = 
+            document.getElementById("humidityMinMax").textContent =
                 `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(2)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(2)}`;
 
             // Update Raspberry Pi stats
@@ -226,7 +303,7 @@
             // Update devices section
             const deviceCard = document.getElementById('deviceCard');
             const deviceCount = devices.length;
-            const deviceDetails = devices.map(device => 
+            const deviceDetails = devices.map(device =>
                 `<p>${device.hostname} - Last Seen: ${formatTimestamp(device.timestamp)}</p>`
             ).join('<br>');
 
@@ -245,9 +322,6 @@
         document.getElementById('humidityCard').addEventListener('click', () => {
             window.location.href = '/umid';
         });
-
-        // Call the updateUI function when the page loads
-        window.onload = updateUI;
     </script>
 </body>
 
