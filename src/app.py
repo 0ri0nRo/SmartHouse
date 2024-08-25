@@ -824,5 +824,86 @@ def temperature_average(start_datetime, end_datetime):
 
 
 
+def get_average_umid(start, end):
+    """
+    Query to get the average umid for each hour within the specified range.
+    """
+    try:
+        # Connect to the database
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # SQL query to get average temperatures grouped by hour
+        query = """
+        SELECT DATE_TRUNC('hour', timestamp) AS hour, AVG(humidity) AS avg_temp
+        FROM sensor_readings
+        WHERE timestamp BETWEEN %s AND %s
+        GROUP BY hour
+        ORDER BY hour;
+        """
+
+        # Execute the query with parameters (start and end)
+        cursor.execute(query, (start, end))
+
+        # Fetch the results
+        results = cursor.fetchall()
+
+        # Create the response data
+        data = [{
+            "hour": row['hour'].isoformat(),  # Format the datetime object as ISO 8601 string
+            "avg_temperature": round(row['avg_temp'], 2)
+        } for row in results]
+
+        return data
+
+    except psycopg2.DatabaseError as error:
+        print(f"Database access error: {error}")
+        return None
+    finally:
+        # Close the cursor and connection
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+    
+@app.route('/api/umid_average/<start_datetime>/<end_datetime>', methods=['GET'])
+def umid_average(start_datetime, end_datetime):
+    try:
+        # Validate and parse datetime strings
+        start_datetime = datetime.fromisoformat(start_datetime)
+        end_datetime = datetime.fromisoformat(end_datetime)
+        print(f"Parsed start_datetime: {start_datetime}, end_datetime: {end_datetime}")
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)'}), 400
+
+    # Get average umid
+    data = get_average_umid(start_datetime, end_datetime)
+    
+    if data is None:
+        return jsonify({'error': 'Failed to fetch data. Check logs for details.'}), 500
+
+    return jsonify(data), 200
+
+
+
+@app.route('/api/monthly_average_humidity/<int:mese>/<int:anno>', methods=['GET'])
+def api_monthly_average_umidity_by_month_and_year(mese, anno):
+    """Restituisce la umidità media per ogni giorno del mese e anno selezionati."""
+    if mese < 1 or mese > 12:
+        return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
+
+    if anno < 1900 or anno > datetime.now().year:
+        return jsonify({'error': 'Anno non valido.'}), 400
+
+    data = get_daily_humidity_for_month_and_year(mese, anno)
+    
+    if not data:
+        return jsonify({'error': 'Nessun dato disponibile per il mese e anno selezionati.'}), 404
+
+    return jsonify(data)
+
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
