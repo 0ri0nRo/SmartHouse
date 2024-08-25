@@ -4,9 +4,12 @@ from psycopg2 import Error
 import psycopg2.extras
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 import psutil
 import nmap
+import psycopg2
+import psycopg2.extras
+
 # Carica le variabili di ambiente dal file .env
 load_dotenv()
 
@@ -757,6 +760,67 @@ def api_monthly_humidity_by_year(year):
     return jsonify(data)
 
 
+
+def get_average_temperatures(start, end):
+    """
+    Query to get the average temperature for each hour within the specified range.
+    """
+    try:
+        # Connect to the database
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        # SQL query to get average temperatures grouped by hour
+        query = """
+        SELECT DATE_TRUNC('hour', timestamp) AS hour, AVG(temperature_c) AS avg_temp
+        FROM sensor_readings
+        WHERE timestamp BETWEEN %s AND %s
+        GROUP BY hour
+        ORDER BY hour;
+        """
+
+        # Execute the query with parameters (start and end)
+        cursor.execute(query, (start, end))
+
+        # Fetch the results
+        results = cursor.fetchall()
+
+        # Create the response data
+        data = [{
+            "hour": row['hour'].isoformat(),  # Format the datetime object as ISO 8601 string
+            "avg_temperature": round(row['avg_temp'], 2)
+        } for row in results]
+
+        return data
+
+    except psycopg2.DatabaseError as error:
+        print(f"Database access error: {error}")
+        return None
+    finally:
+        # Close the cursor and connection
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+    
+@app.route('/api/temperature_average/<start_datetime>/<end_datetime>', methods=['GET'])
+def temperature_average(start_datetime, end_datetime):
+    try:
+        # Validate and parse datetime strings
+        start_datetime = datetime.fromisoformat(start_datetime)
+        end_datetime = datetime.fromisoformat(end_datetime)
+        print(f"Parsed start_datetime: {start_datetime}, end_datetime: {end_datetime}")
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)'}), 400
+
+    # Get average temperatures
+    data = get_average_temperatures(start_datetime, end_datetime)
+    
+    if data is None:
+        return jsonify({'error': 'Failed to fetch data. Check logs for details.'}), 500
+
+    return jsonify(data), 200
 
 
 
