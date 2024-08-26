@@ -27,9 +27,10 @@
         .cards-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             width: 90%;
             max-width: 1200px;
+            justify-content: center;
             margin-bottom: 20px;
         }
 
@@ -37,15 +38,14 @@
             background-color: #ffffff;
             color: #333;
             border-radius: 6px;
-            padding: 20px;
+            padding: 15px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
             font-size: 14px;
             border: 1px solid #ccc;
-            flex: 1 1 calc(50% - 15px);
-            min-width: 280px;
+            flex: 1 1 calc(50% - 10px);
+            min-width: 140px;
             box-sizing: border-box;
-            margin: 0 0 15px 0;
             cursor: pointer;
             transition: background-color 0.3s, color 0.3s;
         }
@@ -62,20 +62,12 @@
             background-color: #fbe8e8;
         }
 
-        .device-card {
-            background-color: #ffffff;
-            color: #333;
-            border-radius: 6px;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            font-size: 14px;
-            flex: 1 1 calc(50% - 15px);
-            min-width: 280px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-            margin: 0 0 15px 0;
-            transition: background-color 0.3s, color 0.3s;
+        .card.transports {
+            background-color: #e8e9fb;
+        }
+
+        .card.devices {
+            background-color: #f5e8fb;
         }
 
         .footer {
@@ -93,10 +85,11 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        @media (max-width: 768px) {
-            .card,
-            .device-card {
-                flex: 1 1 100%;
+        @media (max-width: 600px) {
+            .card {
+                flex: 1 1 calc(50% - 10px);
+                padding: 10px;
+                font-size: 12px;
             }
         }
 
@@ -192,7 +185,7 @@
         </div>
 
         <!-- Raspberry Pi Stats Card -->
-        <div class="card raspberry-pi">
+        <div class="card raspberry-pi" id="raspberryPiCard">
             <h2 id="raspberryPiTemp">-- °C</h2>
             <p>Raspberry Pi Temperature</p>
             <p>CPU Usage: <span id="cpuUsage">-- %</span></p>
@@ -200,11 +193,17 @@
             <p>Disk Used: <span id="diskUsed">-- GB</span> / <span id="diskTotal">-- GB</span> (Free: <span id="diskFree">-- GB</span>)</p>
         </div>
 
-        <!-- Device Card -->
-        <div class="card device">
-            <h3 id="deviceCard">
+        <!-- Transports Card -->
+        <div class="card transports" id="transportsCard">
+            <h2>Transports</h2>
+            <p>Click to see transport routes</p>
         </div>
-        
+
+        <!-- Device Card -->
+        <div class="card devices" id="deviceCard">
+            <h2>Devices</h2>
+            <p id="deviceDetails">Click to see connected devices</p>
+        </div>
     </div>
 
     <script>
@@ -301,16 +300,11 @@
             document.getElementById("diskFree").textContent = `${parseFloat(raspberryPiStats.diskFree).toFixed(2)} GB`;
 
             // Update devices section
-            const deviceCard = document.getElementById('deviceCard');
-            const deviceCount = devices.length;
             const deviceDetails = devices.map(device =>
                 `<p>${device.hostname} - Last Seen: ${formatTimestamp(device.timestamp)}</p>`
             ).join('<br>');
 
-            deviceCard.innerHTML = `
-                <h2>Devices (${deviceCount})</h2>
-                ${deviceDetails}
-            `;
+            document.getElementById("deviceDetails").innerHTML = deviceDetails;
         }
 
         // Add click event listener to temperature card
@@ -321,6 +315,16 @@
         // Add click event listener to humidity card
         document.getElementById('humidityCard').addEventListener('click', () => {
             window.location.href = '/umid';
+        });
+
+        // Add click event listener to transports card
+        document.getElementById('transportsCard').addEventListener('click', () => {
+            window.location.href = '/train';
+        });
+
+        // Add click event listener to devices card
+        document.getElementById('deviceCard').addEventListener('click', () => {
+            window.location.href = '/devices';
         });
     </script>
 </body>

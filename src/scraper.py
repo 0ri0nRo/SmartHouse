@@ -1,11 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
-import json
-import os
+import psycopg2
+from psycopg2 import Error
+from datetime import datetime
 
 class TrainScraper:
-    def __init__(self, url):
+    def __init__(self, url, db_config):
         self.url = url
+        self.db_config = db_config
 
     def fetch_data(self):
         """
@@ -70,25 +72,41 @@ class TrainScraper:
 
         return trains
 
-    def save_to_json(self, data, filename):
-        """
-        Salva i dati in un file JSON, aggiornando i dati esistenti.
+    def save_trains_to_db(self, trains):
+        """Salva i treni nel database."""
+        try:
+            # Connessione al database
+            connection = psycopg2.connect(**self.db_config)
+            cursor = connection.cursor()
 
-        Args:
-        data (dict): I dati da salvare nel file JSON.
-        filename (str): Il percorso del file JSON.
-        """
-        if os.path.exists(filename):
-            # Leggi il contenuto esistente del file
-            with open(filename, 'r', encoding='utf-8') as file:
-                existing_data = json.load(file)
-                # Aggiorna i dati esistenti con i nuovi dati
-                existing_data.update(data)
-        else:
-            # Se il file non esiste, inizializza un dizionario vuoto
-            existing_data = data
+            now = datetime.now()
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Scrivi i dati aggiornati nel file
-        with open(filename, 'w', encoding='utf-8') as file:
-            json.dump(existing_data, file, ensure_ascii=False, indent=4)
+            # Cancella i treni del giorno precedente
+            cursor.execute("DELETE FROM trains WHERE timestamp < %s", (today_start,))
+            connection.commit()
 
+            # Query per inserire i treni
+            query = """
+            INSERT INTO trains (train_number, destination, time, delay, platform, stops, timestamp)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            for train_number, info in trains.items():
+                values = (
+                    train_number,
+                    info['destinazione'],
+                    info['orario'],
+                    info['ritardo'],
+                    info['binario'],
+                    info['fermate'],
+                    now
+                )
+                cursor.execute(query, values)
+
+            connection.commit()
+            print("Treni inseriti nel database.")
+            cursor.close()
+            connection.close()
+        
+        except Error as e:
+            print(f"Errore durante l'inserimento dei dati dei treni: {e}")

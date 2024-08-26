@@ -331,6 +331,14 @@ def umid():
     return render_template('umid.html')
 
 
+
+@app.route('/train')
+def train():
+    """Visualizza la pagina Hello World."""
+    return render_template('train.html')
+
+
+
 def get_average_monthly_temperature():
     """Recupera la temperatura media per ogni mese dell'anno corrente."""
     monthly_avg_temperature = {}
@@ -906,35 +914,112 @@ def api_monthly_average_umidity_by_month_and_year(mese, anno):
 
 
 @app.route('/trains_data/<train_destination>', methods=['GET'])
-def get_trains_data(train_destination):
+def get_trains_data_route(train_destination):
+    """Gestisce la richiesta per ottenere i dati dei treni per una destinazione specifica."""
     # URL da cui recuperare i dati
     url = "https://iechub.rfi.it/ArriviPartenze/ArrivalsDepartures/Monitor?placeId=2416&arrivals=False"
     
     # Creazione dell'oggetto TrainScraper
-    scraper = TrainScraper(url)
-    
-    # Parsing dei dati per la destinazione specificata
+    scraper = TrainScraper(url, db_config)
+
+    # Connessione al database
+    connection = psycopg2.connect(**db_config)
+    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        train_data = scraper.parse_trains(train_destination)
-        
-        # Salva i dati in un file JSON
-        file_path = 'trains_data.json'
-        scraper.save_to_json(train_data, file_path)
-        
-        # Controlla se il file esiste e restituisci il file JSON
-        if os.path.exists(file_path):
-            return send_from_directory(directory='.', path=file_path, mimetype='application/json')
-        else:
-            return jsonify({"error": "File not found"}), 404
+        # Recupera e salva i dati dei treni nel database
+        trains = scraper.parse_trains(train_destination)
+        scraper.save_trains_to_db(trains)
+
+        # Recupera i treni precedenti e successivi per la destinazione fornita
+        result = get_trains_data(cursor, train_destination)
+
+        # Chiude la connessione al database
+        cursor.close()
+        connection.close()
+
+        return jsonify(result)
+
     except Exception as e:
         # Gestisci eventuali eccezioni
         return jsonify({"error": str(e)}), 500
 
 
-# Route per servire la pagina HTML
-@app.route('/train', methods=['GET'])
-def main():
-    return render_template('train.html')
+
+def get_trains_data(cursor, destination, limit=4):
+    """Recupera i treni prima e dopo l'orario corrente per una destinazione specificata e restituisce i risultati come JSON."""
+    try:
+        now = datetime.now()
+
+        # Query per i treni passati
+        query_old = """
+        SELECT train_number, destination, time, delay, platform, stops, timestamp
+        FROM trains
+        WHERE time < %s 
+          AND stops ILIKE %s
+        ORDER BY time DESC
+        LIMIT %s;
+        """
+        cursor.execute(query_old, (now.time(), f'%{destination}%', limit))
+        results_old = cursor.fetchall()
+
+        # Query per i treni futuri
+        query = """
+        SELECT train_number, destination, time, delay, platform, stops, timestamp
+        FROM trains
+        WHERE time > %s 
+          AND stops ILIKE %s
+        ORDER BY time ASC
+        LIMIT %s;
+        """
+        cursor.execute(query, (now.time(), f'%{destination}%', limit))
+        results = cursor.fetchall()
+
+        # Converti i risultati in un formato JSON serializzabile
+        def serialize_row(row):
+            return {
+                "train_number": row[0],
+                "destination": row[1],
+                "time": row[2].strftime('%H:%M'),  # Converti time in stringa
+                "delay": row[3],
+                "platform": row[4],
+                "stops": row[5],
+                "timestamp": row[6].isoformat()  # Converti timestamp in stringa ISO
+            }
+        
+        formatted_results = {
+            "result": [serialize_row(row) for row in results],
+            "result_old": [serialize_row(row) for row in results_old]
+        }
+
+        return formatted_results
+
+    except Exception as e:
+        print(f"Errore durante il recupero dei treni: {e}")
+        return {"error": str(e)}
+
+
+
+
+@app.route('/trains_data/<destination>', methods=['GET'])
+def trains_data(destination):
+    try:
+        # Connessione al database
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
+        # Chiama la funzione per ottenere i dati dei treni
+        results = get_trains_data(cursor, destination)
+        
+        cursor.close()
+        connection.close()
+        
+        # Restituisci i risultati come JSON
+        return jsonify(results)
+
+    except Exception as e:
+        print(f"Errore durante il recupero dei dati dei treni: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

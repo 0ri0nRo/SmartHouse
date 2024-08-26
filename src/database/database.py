@@ -140,3 +140,66 @@ class Database:
         except Error as e:
             print(f"Errore durante il recupero dei dispositivi: {e}")
             return {}
+
+    def save_trains_to_db(self, trains):
+        """Salva le informazioni sui treni nel database. Cancella i treni del giorno precedente."""
+        try:
+            now = datetime.now()
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # Cancella i treni del giorno precedente
+            self.cursor.execute("DELETE FROM trains WHERE timestamp < %s", (today_start,))
+            self.connection.commit()
+
+            # Query per inserire o aggiornare i treni
+            query = """
+            INSERT INTO trains (train_number, destination, time, delay, platform, stops, timestamp)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (train_number) DO UPDATE
+            SET
+                destination = EXCLUDED.destination,
+                time = EXCLUDED.time,
+                delay = EXCLUDED.delay,
+                platform = EXCLUDED.platform,
+                stops = EXCLUDED.stops,
+                timestamp = EXCLUDED.timestamp;
+            """
+            for train_number, info in trains.items():
+                values = (
+                    train_number,
+                    info['destinazione'],
+                    info['orario'],
+                    info['ritardo'],
+                    info['binario'],
+                    info['fermate'],
+                    now
+                )
+                self.cursor.execute(query, values)
+
+            self.connection.commit()
+            print("Treni inseriti o aggiornati nel database.")
+        
+        except Error as e:
+            print(f"Errore durante l'inserimento o l'aggiornamento dei dati dei treni: {e}")
+
+
+
+    def create_table_if_not_exists_trains(self):
+        """Crea la tabella per i treni se non esiste già."""
+        try:
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS trains (
+                train_number VARCHAR(20) NOT NULL PRIMARY KEY,
+                destination VARCHAR(255),
+                time TIME,
+                delay VARCHAR(20),
+                platform VARCHAR(20),
+                stops TEXT,
+                timestamp TIMESTAMP NOT NULL,
+            );
+            """
+            self.cursor.execute(create_table_query)
+            self.connection.commit()
+        except Error as e:
+            print(f"Errore durante la creazione della tabella trains: {e}")
+            exit(1)
