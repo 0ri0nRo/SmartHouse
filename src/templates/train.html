@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treni - Futuri e Passati</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Treni</h1>
+
+    <h2>Treni Futuri</h2>
+    <table id="future-trains">
+        <thead>
+            <tr>
+                <th>Numero Treno</th>
+                <th>Destinazione</th>
+                <th>Orario</th>
+                <th>Ritardo</th>
+                <th>Binario</th>
+                <th>Fermate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- I dati dei treni futuri verranno inseriti qui -->
+        </tbody>
+    </table>
+
+    <h2>Treni Passati</h2>
+    <table id="past-trains">
+        <thead>
+            <tr>
+                <th>Numero Treno</th>
+                <th>Destinazione</th>
+                <th>Orario</th>
+                <th>Ritardo</th>
+                <th>Binario</th>
+                <th>Fermate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- I dati dei treni passati verranno inseriti qui -->
+        </tbody>
+    </table>
+
+    <script>
+        // Funzione per formattare la data e l'orario
+        function formatDateTime(dateTime) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateTime).toLocaleDateString(undefined, options);
+        }
+
+        async function fetchTrainData(station) {
+            const response = await fetch(`http://localhost:5000/trains_data/Colleferro`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        }
+
+        function displayTrains(data) {
+            const now = new Date();
+            const futureTrainsTable = document.getElementById('future-trains').getElementsByTagName('tbody')[0];
+            const pastTrainsTable = document.getElementById('past-trains').getElementsByTagName('tbody')[0];
+
+            // Converti l'oggetto in un array di treni
+            const trainsArray = Object.entries(data).map(([trainNumber, train]) => ({
+                trainNumber,
+                ...train,
+                dateTime: new Date(`${new Date().toDateString()} ${train.orario}`)
+            }));
+
+            // Ordina i treni per orario
+            trainsArray.sort((a, b) => a.dateTime - b.dateTime);
+
+            for (const train of trainsArray) {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${train.trainNumber}</td>
+                    <td>${train.destinazione}</td>
+                    <td>${train.orario}</td>
+                    <td>${train.ritardo}</td>
+                    <td>${train.binario}</td>
+                    <td>${train.fermate}</td>
+                `;
+                
+                if (train.dateTime >= now) {
+                    futureTrainsTable.appendChild(row);
+                } else {
+                    pastTrainsTable.appendChild(row);
+                }
+            }
+        }
+
+        async function init() {
+            const stationName = 'Colleferro'; // Puoi cambiare il nome della stazione se necessario
+            try {
+                const trainData = await fetchTrainData(stationName);
+                displayTrains(trainData);
+            } catch (error) {
+                console.error('Error fetching train data:', error);
+                alert('Error fetching train data. Please check the console for more details.');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

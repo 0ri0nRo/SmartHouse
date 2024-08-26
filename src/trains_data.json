@@ -1,0 +1,30 @@
+{
+    "12623": {
+        "destinazione": "CASSINO",
+        "orario": "15:42",
+        "ritardo": "",
+        "binario": "19",
+        "fermate": "FERMA A: CIAMPINO (15.53) - ZAGAROLO (16.08) - VALMONTONE (16.16) - COLLEFERRO (16.23) - ANAGNI-FIUGGI (16.31) - FERENTINO-SUPINO (16.42) - FROSINONE (16.52) - CECCANO (16.58) - CASTRO-POFI (17.06) - CEPRANO-FALVATER (17.14) - ISOLETTA-S.G.I. (17.18) - ROCCASECCA (17.25) - PIED.-VSL-AQUINO (17.31) - CASSINO (17.42)"
+    },
+    "20209": {
+        "destinazione": "COLLEFERRO-SEGNI-PALIANO",
+        "orario": "15:49",
+        "ritardo": "",
+        "binario": "15",
+        "fermate": "FERMA A: CIAMPINO (16.00) - TOR VERGATA (16.06) - COLLE MATTIA (16.12) - COLONNA GALL. (16.16) - ZAGAROLO (16.23) - LABICO (16.29) - VALMONTONE (16.33) - COLLEFERRO (16.43)"
+    },
+    "12627": {
+        "destinazione": "CASSINO",
+        "orario": "16:07",
+        "ritardo": "",
+        "binario": "",
+        "fermate": "FERMA A: COLLEFERRO (16.47) - FROSINONE (17.10) - ROCCASECCA (17.33) - CASSINO (17.45)"
+    },
+    "12713": {
+        "destinazione": "FROSINONE",
+        "orario": "16:14",
+        "ritardo": "",
+        "binario": "",
+        "fermate": "FERMA A: CIAMPINO (16.26) - TOR VERGATA (16.32) - COLLE MATTIA (16.38) - COLONNA GALL. (16.42) - ZAGAROLO (16.49) - LABICO (16.56) - VALMONTONE (17.00) - COLLEFERRO (17.07) - ANAGNI-FIUGGI (17.14) - SGURGOLA (17.19) - MOROLO (17.24) - FERENTINO-SUPINO (17.30) - FROSINONE (17.52)"
+    }
+}
