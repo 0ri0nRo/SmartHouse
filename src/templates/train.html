@@ -178,16 +178,8 @@
             futureTrainsTable.innerHTML = '';
             pastTrainsTable.innerHTML = '';
 
-            // Convert data object into an array of trains
-            const trainsArray = [...data.result, ...data.result_old].map(train => ({
-                ...train,
-                dateTime: new Date(train.timestamp)
-            }));
-
-            // Sort trains by time
-            trainsArray.sort((a, b) => a.dateTime - b.dateTime);
-
-            for (const train of trainsArray) {
+            // Process future trains
+            data.result.forEach(train => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${train.train_number}</td>
@@ -197,28 +189,35 @@
                     <td>${train.platform || 'N/A'}</td>
                     <td>${train.stops}</td>
                 `;
-                
-                if (train.dateTime >= now) {
-                    // Add future trains to the past trains table (inverted)
-                    pastTrainsTable.appendChild(row);
-                } else {
-                    // Add past trains to the future trains table (inverted)
-                    futureTrainsTable.appendChild(row);
-                }
-            }
+                futureTrainsTable.appendChild(row);
+            });
+
+            // Process past trains
+            data.result_old.forEach(train => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${train.train_number}</td>
+                    <td>${train.destination}</td>
+                    <td>${train.time}</td>
+                    <td>${train.delay}</td>
+                    <td>${train.platform || 'N/A'}</td>
+                    <td>${train.stops}</td>
+                `;
+                pastTrainsTable.appendChild(row);
+            });
 
             // Sort past trains from most recent to oldest
             const pastTrainsRows = Array.from(pastTrainsTable.getElementsByTagName('tr'));
             pastTrainsRows.sort((a, b) => {
-                const aDateTime = new Date(`${new Date().toDateString()} ${a.children[2].innerText}`);
-                const bDateTime = new Date(`${new Date().toDateString()} ${b.children[2].innerText}`);
-                return bDateTime - aDateTime; // From most recent to oldest
+                const aTime = new Date(`${new Date().toDateString()} ${a.children[2].innerText}`);
+                const bTime = new Date(`${new Date().toDateString()} ${b.children[2].innerText}`);
+                return bTime - aTime; // From most recent to oldest
             });
 
             // Re-insert sorted rows into the past trains table
-            for (const row of pastTrainsRows) {
+            pastTrainsRows.forEach(row => {
                 pastTrainsTable.appendChild(row);
-            }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {
