@@ -60,11 +60,39 @@
             background-color: #f9f9f9;
         }
 
-        .alert {
-            color: #dc3545;
-            text-align: center;
-            font-size: 1em;
-            margin-top: 20px;
+        .icon-info {
+            display: inline-block;
+            margin-left: 10px;
+            cursor: pointer;
+            color: #007bff;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .icon-info:hover {
+            color: #0056b3;
+        }
+
+        .popup {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .popup.active {
+            display: block;
+        }
+
+        .popup-close {
+            text-align: right;
+            font-size: 1rem;
+            cursor: pointer;
         }
 
         @media (max-width: 768px) {
@@ -88,10 +116,6 @@
             .container {
                 padding: 10px;
             }
-
-            .alert {
-                font-size: 0.9em;
-            }
         }
     </style>
 </head>
@@ -100,13 +124,14 @@
     <div class="container">
         <h1>Trains</h1>
 
-        <!-- Dropdown menu to select destination with input field -->
+        <!-- Dropdown menu and input field for destination selection -->
         <label for="destination-select">Select or enter a destination:</label>
         <select id="destination-select">
             <option value="">Select...</option>
             <option value="COLLEFERRO">COLLEFERRO</option>
             <option value="TORVERGATA">TORVERGATA</option>
-            <!-- Add more destinations here -->
+            <option value="FROSINONE">FROSINONE</option>
+            <!-- Add more destinations as needed -->
         </select>
         <input type="text" id="destination-input" placeholder="Enter destination" />
 
@@ -143,6 +168,13 @@
                 <!-- Past train data will be inserted here -->
             </tbody>
         </table>
+
+        <!-- Popup for displaying train stops -->
+        <div id="popup" class="popup">
+            <div class="popup-close" onclick="closePopup()">×</div>
+            <div id="popup-content"></div>
+        </div>
+
         <div class="alert" id="error-message" style="display: none;">
             Error retrieving train data. Check the console for details.
         </div>
@@ -170,13 +202,23 @@
         }
 
         function displayTrains(data) {
-            const now = new Date();
             const futureTrainsTable = document.getElementById('future-trains').getElementsByTagName('tbody')[0];
             const pastTrainsTable = document.getElementById('past-trains').getElementsByTagName('tbody')[0];
 
             // Clear existing tables
             futureTrainsTable.innerHTML = '';
             pastTrainsTable.innerHTML = '';
+
+            // Function to create an info icon with popup for stops
+            function createInfoIcon(stops) {
+                const icon = document.createElement('span');
+                icon.className = 'icon-info';
+                icon.innerText = 'i';
+                icon.onclick = function () {
+                    showPopup(stops, icon);
+                };
+                return icon;
+            }
 
             // Process future trains
             data.result.forEach(train => {
@@ -187,8 +229,10 @@
                     <td>${train.time}</td>
                     <td>${train.delay}</td>
                     <td>${train.platform || 'N/A'}</td>
-                    <td>${train.stops}</td>
                 `;
+                const stopsCell = document.createElement('td');
+                stopsCell.appendChild(createInfoIcon(train.stops));
+                row.appendChild(stopsCell);
                 futureTrainsTable.appendChild(row);
             });
 
@@ -201,23 +245,30 @@
                     <td>${train.time}</td>
                     <td>${train.delay}</td>
                     <td>${train.platform || 'N/A'}</td>
-                    <td>${train.stops}</td>
                 `;
+                const stopsCell = document.createElement('td');
+                stopsCell.appendChild(createInfoIcon(train.stops));
+                row.appendChild(stopsCell);
                 pastTrainsTable.appendChild(row);
             });
+        }
 
-            // Sort past trains from most recent to oldest
-            const pastTrainsRows = Array.from(pastTrainsTable.getElementsByTagName('tr'));
-            pastTrainsRows.sort((a, b) => {
-                const aTime = new Date(`${new Date().toDateString()} ${a.children[2].innerText}`);
-                const bTime = new Date(`${new Date().toDateString()} ${b.children[2].innerText}`);
-                return bTime - aTime; // From most recent to oldest
-            });
+        function showPopup(stops, icon) {
+            const popup = document.getElementById('popup');
+            const popupContent = document.getElementById('popup-content');
+            popupContent.innerText = stops;
 
-            // Re-insert sorted rows into the past trains table
-            pastTrainsRows.forEach(row => {
-                pastTrainsTable.appendChild(row);
-            });
+            // Position the popup
+            const iconRect = icon.getBoundingClientRect();
+            popup.style.left = `${iconRect.left}px`;
+            popup.style.top = `${iconRect.bottom + window.scrollY}px`;
+
+            popup.classList.add('active');
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('popup');
+            popup.classList.remove('active');
         }
 
         document.addEventListener('DOMContentLoaded', () => {

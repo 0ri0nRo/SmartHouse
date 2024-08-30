@@ -41,7 +41,7 @@ class SensorReader:
         """Legge e processa i dati dalla porta seriale e ritorna una lista con temperatura e umidità."""
         while True:
             line = self.ser.readline().decode('utf-8').strip()
-            temperature, humidity = line.split(",")
+            temperature, humidity, distance = line.split(",")
 
             # Converte i valori in float per una comparazione accurata
             temperature = float(temperature)

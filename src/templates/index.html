@@ -70,6 +70,16 @@
             background-color: #f5e8fb;
         }
 
+        .card.alarm {
+            background-color: #fbe8e8;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .card.alarm.on {
+            background-color: #e8f5e9;
+            color: green;
+        }
+
         .footer {
             margin-top: 20px;
             padding: 15px;
@@ -186,53 +196,49 @@
 
         <!-- Raspberry Pi Stats Card -->
         <div class="card raspberry-pi" id="raspberryPiCard">
-            <h2 id="raspberryPiTemp">-- °C</h2>
-            <p>Raspberry Pi Temperature</p>
-            <p>CPU Usage: <span id="cpuUsage">-- %</span></p>
-            <p>Memory Used: <span id="memoryUsed">-- GB</span> / <span id="memoryTotal">-- GB</span></p>
-            <p>Disk Used: <span id="diskUsed">-- GB</span> / <span id="diskTotal">-- GB</span> (Free: <span id="diskFree">-- GB</span>)</p>
+            <h2>Raspberry Pi</h2>
         </div>
 
         <!-- Transports Card -->
         <div class="card transports" id="transportsCard">
             <h2>Transports</h2>
-            <p>Click to see news about transport routes in Rome</p>
         </div>
 
         <!-- Device Card -->
         <div class="card devices" id="deviceCard">
-            <h2>Devices</h2>
-            <p id="deviceDetails">Click to see connected devices</p>
+            <h2>Home's Security</h2>
+        </div>
+
+        <!-- Alarm Card -->
+        <div class="card alarm" id="alarmCard">
+            <h2 id="alarmStatus">OFF</h2>
+            <p>Home Alarm</p>
         </div>
     </div>
 
     <script>
-        // Function to toggle dark mode
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
-            document.getElementById('toggleDarkMode').checked = isDarkMode;
-        }
 
-        // Load the preferred theme from localStorage
-        function loadTheme() {
-            const darkMode = localStorage.getItem('darkMode');
-            const isDarkMode = darkMode === 'enabled';
-            document.body.classList.toggle('dark-mode', isDarkMode);
-            document.getElementById('toggleDarkMode').checked = isDarkMode;
-        }
+                // Funzione per aprire nuove pagine in base alla card cliccata
+                document.getElementById("temperatureCard").addEventListener("click", () => {
+            window.location.href = "/temp";
+        });
 
-        // Event listener for the dark mode toggle button
-        document.getElementById('toggleDarkMode').addEventListener('change', toggleDarkMode);
+        document.getElementById("humidityCard").addEventListener("click", () => {
+            window.location.href = "/umid";
+        });
 
-        // Load the theme when the page is loaded
-        window.onload = () => {
-            loadTheme();
-            updateUI();
-        };
+        document.getElementById("raspberryPiCard").addEventListener("click", () => {
+            window.location.href = "/raspi";
+        });
 
-        // Funzione per formattare il timestamp in solo orario
+        document.getElementById("transportsCard").addEventListener("click", () => {
+            window.location.href = "/train";
+        });
+
+        document.getElementById("deviceCard").addEventListener("click", () => {
+            window.location.href = "/security";
+        });
+        // Function to format the timestamp to only time
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             const hours = date.getHours().toString().padStart(2, '0');
@@ -251,17 +257,6 @@
             }
         }
 
-        async function fetchRaspberryPiStats() {
-            try {
-                const response = await fetch('/api_raspberry_pi_stats'); // Endpoint API per le statistiche del Raspberry Pi
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error fetching Raspberry Pi stats:', error);
-                return null;
-            }
-        }
-
         async function fetchDevices() {
             try {
                 const response = await fetch('/api/devices'); // Endpoint API per i dispositivi
@@ -275,10 +270,9 @@
 
         async function updateUI() {
             const data = await fetchData();
-            const raspberryPiStats = await fetchRaspberryPiStats(); // Nuova chiamata API
             const devices = await fetchDevices(); // Nuova chiamata API per i dispositivi
 
-            if (!data || !raspberryPiStats || !devices) return;
+            if (!data) return;
 
             // Update current temperature and humidity
             document.getElementById("temperatureValue").textContent = `${parseFloat(data.temperature.current).toFixed(2)} °C`;
@@ -290,15 +284,6 @@
             document.getElementById("humidityMinMax").textContent =
                 `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(2)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(2)}`;
 
-            // Update Raspberry Pi stats
-            document.getElementById("raspberryPiTemp").textContent = `${parseFloat(raspberryPiStats.temperature).toFixed(2)} °C`;
-            document.getElementById("cpuUsage").textContent = `${parseFloat(raspberryPiStats.cpuUsage).toFixed(1)} %`;
-            document.getElementById("memoryUsed").textContent = `${parseFloat(raspberryPiStats.memoryUsed).toFixed(2)} GB`;
-            document.getElementById("memoryTotal").textContent = `${parseFloat(raspberryPiStats.memoryTotal).toFixed(2)} GB`;
-            document.getElementById("diskUsed").textContent = `${parseFloat(raspberryPiStats.diskUsed).toFixed(2)} GB`;
-            document.getElementById("diskTotal").textContent = `${parseFloat(raspberryPiStats.diskTotal).toFixed(2)} GB`;
-            document.getElementById("diskFree").textContent = `${parseFloat(raspberryPiStats.diskFree).toFixed(2)} GB`;
-
             // Update devices section
             const deviceDetails = devices.map(device =>
                 `<p>${device.hostname} - Last Seen: ${formatTimestamp(device.timestamp)}</p>`
@@ -307,26 +292,109 @@
             document.getElementById("deviceDetails").innerHTML = deviceDetails;
         }
 
-        // Add click event listener to temperature card
-        document.getElementById('temperatureCard').addEventListener('click', () => {
-            window.location.href = '/temp';
+        // Function to toggle alarm state
+        async function toggleAlarm() {
+            const alarmCard = document.getElementById("alarmCard");
+            const alarmStatus = document.getElementById("alarmStatus");
+
+            // Determine current status and toggle
+            const isOn = alarmCard.classList.toggle("on");
+
+            // Set the displayed status (ON or OFF)
+            alarmStatus.textContent = isOn ? "ON" : "OFF";
+
+            // Send the new status to the server
+            const alarmData = { status: isOn };  // POST data with the new alarm state
+
+            try {
+                const response = await fetch('/security/alarm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(alarmData),
+                });
+
+                if (response.ok) {
+                    console.log('Alarm status updated successfully.');
+                } else {
+                    console.error('Failed to update alarm status.');
+                }
+            } catch (error) {
+                console.error('Error posting alarm status:', error);
+            }
+        }
+
+        // Add click event listener to the alarm card
+        document.getElementById('alarmCard').addEventListener('click', toggleAlarm);
+
+        // Optional: Fetch the last alarm status from the server on page load
+        async function fetchLastAlarmStatus() {
+            try {
+                const response = await fetch('/security/alarm', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const lastStatus = await response.json();
+
+                // Set the card's state based on the last retrieved alarm status
+                const alarmCard = document.getElementById("alarmCard");
+                const alarmStatus = document.getElementById("alarmStatus");
+
+                if (lastStatus && lastStatus.status) {
+                    alarmCard.classList.add("on");
+                    alarmStatus.textContent = "ON";
+                } else {
+                    alarmCard.classList.remove("on");
+                    alarmStatus.textContent = "OFF";
+                }
+            } catch (error) {
+                console.error('Error fetching last alarm status:', error);
+            }
+        }
+
+        // Load dark mode preference from local storage
+        function loadTheme() {
+            const darkMode = localStorage.getItem("darkMode");
+            const bodyElement = document.body;
+            const toggleDarkMode = document.getElementById("toggleDarkMode");
+
+            if (darkMode === "enabled") {
+                bodyElement.classList.add("dark-mode");
+                toggleDarkMode.checked = true;
+            } else {
+                bodyElement.classList.remove("dark-mode");
+                toggleDarkMode.checked = false;
+            }
+        }
+
+        // Save dark mode preference to local storage
+        function saveTheme(isDarkMode) {
+            if (isDarkMode) {
+                localStorage.setItem("darkMode", "enabled");
+            } else {
+                localStorage.setItem("darkMode", "disabled");
+            }
+        }
+
+        // Toggle dark mode
+        document.getElementById("toggleDarkMode").addEventListener("change", function () {
+            const bodyElement = document.body;
+            bodyElement.classList.toggle("dark-mode");
+            const isDarkMode = bodyElement.classList.contains("dark-mode");
+            saveTheme(isDarkMode);
         });
 
-        // Add click event listener to humidity card
-        document.getElementById('humidityCard').addEventListener('click', () => {
-            window.location.href = '/umid';
-        });
-
-        // Add click event listener to transports card
-        document.getElementById('transportsCard').addEventListener('click', () => {
-            window.location.href = '/train';
-        });
-
-        // Add click event listener to devices card
-        document.getElementById('deviceCard').addEventListener('click', () => {
-            window.location.href = '/devices';
-        });
+        // Fetch the last alarm status and load the dark mode theme when the page loads
+        window.onload = () => {
+            loadTheme();
+            updateUI();
+            fetchLastAlarmStatus();
+        };
     </script>
+
 </body>
 
 </html>

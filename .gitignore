@@ -67,6 +67,8 @@ __pycache__/
 coverage/
 *.lcov
 
+venv/
+
 # Build directories
 build/
 dist/

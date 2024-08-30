@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Security</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #222;
+            margin: 40px 0 20px;
+            font-size: 28px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin-bottom: 60px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #3f51b5;
+        }
+
+        th {
+            padding: 15px 10px;
+            color: #fff;
+            text-align: left;
+            font-weight: 600;
+            font-size: 16px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        tbody tr {
+            background-color: #f9f9f9;
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        td {
+            padding: 15px 10px;
+            font-size: 15px;
+            color: #333;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        td:first-child {
+            font-weight: 500;
+            color: #3f51b5;
+        }
+
+        .footer {
+            padding: 15px;
+            background: #222;
+            color: #fff;
+            text-align: center;
+            width: 100%;
+            font-size: 14px;
+            margin-top: auto;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Device Security</h1>
+
+    <div class="container">
+        <table id="devicesTable">
+            <thead>
+                <tr>
+                    <th>Hostname</th>
+                    <th>Last Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Device rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        async function fetchDevices() {
+            try {
+                const response = await fetch('/api/devices');
+                const devices = await response.json();
+                return devices;
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+                return [];
+            }
+        }
+
+        async function updateDeviceTable() {
+            const devices = await fetchDevices();
+            const tableBody = document.querySelector('#devicesTable tbody');
+            tableBody.innerHTML = '';
+
+            devices.forEach(device => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${device.hostname}</td>
+                    <td>${formatTimestamp(device.timestamp)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        window.onload = () => {
+            updateDeviceTable();
+        };
+    </script>
+</body>
+
+</html>

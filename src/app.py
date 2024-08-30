@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory, jsonify, render_template
+from flask import Flask, render_template, jsonify, request, jsonify, render_template
 import psycopg2
 from psycopg2 import Error
 import psycopg2.extras
@@ -11,6 +11,7 @@ import psycopg2
 import psycopg2.extras
 from scraper import TrainScraper
 import os
+
 # Carica le variabili di ambiente dal file .env
 load_dotenv()
 
@@ -337,6 +338,17 @@ def train():
     """Visualizza la pagina Hello World."""
     return render_template('train.html')
 
+
+
+@app.route('/raspi')
+def raspi():
+    """Visualizza la pagina Hello World."""
+    return render_template('raspi.html')
+
+@app.route('/security')
+def security():
+    """Visualizza la pagina Hello World."""
+    return render_template('security.html')
 
 
 def get_average_monthly_temperature():
@@ -1019,6 +1031,66 @@ def trains_data(destination):
     except Exception as e:
         print(f"Errore durante il recupero dei dati dei treni: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# Route per recuperare l'ultimo valore booleano
+@app.route('/security/alarm', methods=['GET', 'POST'])
+def alarm_status():
+    connection = None
+    cursor = None
+    try:
+        # Connessione al database
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        if request.method == 'GET':
+            # Recupera l'ultimo valore booleano
+            query = """
+                SELECT status, timestamp 
+                FROM alarms_status 
+                ORDER BY timestamp DESC 
+                LIMIT 1;
+            """
+            cursor.execute(query)
+            last_alarm_status = cursor.fetchone()
+
+            if last_alarm_status:
+                return jsonify(last_alarm_status), 200
+            else:
+                return jsonify({'status': False, 'timestamp': None}), 200
+
+        elif request.method == 'POST':
+            # Inserisci un nuovo valore booleano
+            data = request.get_json()
+
+            if 'status' in data:
+                status = data['status']
+
+                # Query per eliminare tutti i valori esistenti
+                delete_query = "DELETE FROM alarms_status;"
+                cursor.execute(delete_query)
+
+                query = """
+                    INSERT INTO alarms_status (status) 
+                    VALUES (%s);
+                """
+                cursor.execute(query, (status,))
+                connection.commit()
+
+                return jsonify({'message': 'Stato dell\'allarme aggiornato correttamente.'}), 201
+            else:
+                return jsonify({'error': 'Campo "status" mancante nel body della richiesta.'}), 400
+
+    except Exception as e:
+        return jsonify({'error': f'Si è verificato un errore: {e}'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
+
 
 
 if __name__ == '__main__':

@@ -203,3 +203,36 @@ class Database:
         except Error as e:
             print(f"Errore durante la creazione della tabella trains: {e}")
             exit(1)
+
+    def save_alarm_status_to_db(self, status):
+        """Salva uno stato booleano nel database."""
+        try:
+            query = """
+            INSERT INTO alarms_status (status) 
+            VALUES (%s)
+            """
+            self.cursor.execute(query, (status,))
+            self.connection.commit()
+            print("Stato dell'allarme inserito nel database.")
+        except Error as e:
+            print(f"Errore durante l'inserimento dello stato dell'allarme: {e}")
+
+    def get_last_alarm_status(self):
+        """Recupera l'ultimo stato booleano inserito nel database."""
+        try:
+            query = """
+            SELECT status, timestamp 
+            FROM alarms_status 
+            ORDER BY timestamp DESC 
+            LIMIT 1;
+            """
+            self.cursor.execute(query)
+            result = self.cursor.fetchone()
+            if result:
+                status, timestamp = result
+                return {'status': status, 'timestamp': timestamp}
+            else:
+                return None
+        except Error as e:
+            print(f"Errore durante il recupero dello stato dell'allarme: {e}")
+            return None
