@@ -71,14 +71,13 @@ class SensorReader:
                 check_timestamp = datetime.now()
 
                 # Verifica se è passato abbastanza tempo dall'ultimo allarme
-                if status == True and distance < 100:
-                    print(f"pre - invio allarme, {check_timestamp} \n")
-                    print(self.password)
+                if status == True and distance < 80:
+                    #print(f"pre - invio allarme, {check_timestamp} \n")
 
                     # Verifica se è passato abbastanza tempo dall'ultimo allarme
                     if (check_timestamp - self.last_alarm_time) >= timedelta(seconds=10):  # Intervallo di 10 secondi
                         invia_allarme_email(self.email_sender)
-                        print("invio allarme")
+                        #print("invio allarme")
 
                         # Aggiorna il timestamp dell'ultimo allarme
                         self.last_alarm_time = check_timestamp
