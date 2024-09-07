@@ -1,7 +1,6 @@
 from sensor_reader import SensorReader
 import os
 from dotenv import load_dotenv
-from database.database import Database
 
 # Carica le variabili di ambiente dal file .env
 load_dotenv()

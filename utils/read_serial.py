@@ -18,7 +18,6 @@ def read_sensor_data():
                 # Converti i dati in float/int
                 tempC = float(tempC)
                 humi = float(humi)
-                distance = int(distance)
                 
                 # Stampa i valori letti
                 print(f"Temperatura: {tempC} °C, Umidità: {humi} %, Distanza: {distance} cm")

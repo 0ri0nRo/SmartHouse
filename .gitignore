@@ -68,7 +68,7 @@ coverage/
 *.lcov
 
 venv/
-
+.env
 # Build directories
 build/
 dist/

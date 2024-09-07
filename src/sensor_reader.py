@@ -6,6 +6,8 @@ import psycopg2
 from datetime import datetime, timedelta
 from database.database import Database
 import psutil
+from send_email import EmailSender, invia_allarme_email
+import os
 
 # Definizione delle variabili di connessione al database
 db_host = 'db'  # Modifica se necessario
@@ -36,31 +38,67 @@ class SensorReader:
         self.last_temperature = None
         self.last_humidity = None
         self.last_record_time = datetime.now()  # Timestamp dell'ultima registrazione
+        self.db = Database(self.db_config)
+        
+        # Configurazione dell'email
+        self.smtp_server = os.getenv('SMTP_SERVER')
+        self.smtp_port = os.getenv('SMTP_PORT')
+        self.username = os.getenv('EMAIL_USERNAME')
+        self.password = os.getenv('EMAIL_PASSWORD')
+        self.email_sender = EmailSender(self.smtp_server, self.smtp_port, self.username, self.password)
+        
+        self.last_alarm_time = datetime.now()
+
+
 
     def read_data(self):
         """Legge e processa i dati dalla porta seriale e ritorna una lista con temperatura e umidità."""
-        while True:
-            line = self.ser.readline().decode('utf-8').strip()
-            temperature, humidity, distance = line.split(",")
+        try:
+            while True:
+                line = self.ser.readline().decode('utf-8').strip()
+                temperature, humidity, distance = line.split(",")
 
-            # Converte i valori in float per una comparazione accurata
-            temperature = float(temperature)
-            humidity = float(humidity)
-            db = Database(self.db_config)
+                # Converte i valori in float per una comparazione accurata
+                temperature = float(temperature)
+                humidity = float(humidity)
+                distance = int(distance)
 
-            # Controlla se i valori sono cambiati
-            if temperature != self.last_temperature or humidity != self.last_humidity:
-                # Salva i nuovi valori nel database
-                db.save_to_db(temperature, humidity)
-                
-                # Aggiorna gli ultimi valori salvati
-                self.last_temperature = temperature
-                self.last_humidity = humidity
-                
-                # Per debug, puoi stampare i dati ricevuti
-                # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
-            else:
-                pass
+                db = Database(self.db_config)
+
+                last_alarm = db.get_last_alarm_status()
+                status = last_alarm["status"]
+                 # Ottieni il timestamp corrente come oggetto datetime
+                check_timestamp = datetime.now()
+
+                # Verifica se è passato abbastanza tempo dall'ultimo allarme
+                if status == True and distance < 100:
+                    print(f"pre - invio allarme, {check_timestamp} \n")
+                    print(self.password)
+
+                    # Verifica se è passato abbastanza tempo dall'ultimo allarme
+                    if (check_timestamp - self.last_alarm_time) >= timedelta(seconds=10):  # Intervallo di 10 secondi
+                        invia_allarme_email(self.email_sender)
+                        print("invio allarme")
+
+                        # Aggiorna il timestamp dell'ultimo allarme
+                        self.last_alarm_time = check_timestamp
+
+                # Controlla se i valori sono cambiati
+                if temperature != self.last_temperature or humidity != self.last_humidity:
+                    # Salva i nuovi valori nel database
+                    db.save_to_db(temperature, humidity)
+                    
+                    # Aggiorna gli ultimi valori salvati
+                    self.last_temperature = temperature
+                    self.last_humidity = humidity
+                    
+                    # Per debug, puoi stampare i dati ricevuti
+                    # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
+                else:
+                    pass
+         
+        except Exception as e:
+            pass
 
 
     def get_raspberry_pi_stats():

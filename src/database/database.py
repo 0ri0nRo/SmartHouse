@@ -57,7 +57,6 @@ class Database:
             values = (temperature, humidity, now)
             self.cursor.execute(query, values)
             self.connection.commit()
-            print("Dati inseriti nel database.")
         except Error as e:
             print(f"Errore durante l'inserimento dei dati: {e}")
 
@@ -195,7 +194,7 @@ class Database:
                 delay VARCHAR(20),
                 platform VARCHAR(20),
                 stops TEXT,
-                timestamp TIMESTAMP NOT NULL,
+                timestamp TIMESTAMP NOT NULL
             );
             """
             self.cursor.execute(create_table_query)

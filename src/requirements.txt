@@ -21,3 +21,4 @@ python-nmap
 requests
 beautifulsoup4
 flask 
+python-dotenv
