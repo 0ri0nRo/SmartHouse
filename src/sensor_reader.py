@@ -82,19 +82,20 @@ class SensorReader:
                         # Aggiorna il timestamp dell'ultimo allarme
                         self.last_alarm_time = check_timestamp
 
-                # Controlla se i valori sono cambiati
-                if temperature != self.last_temperature or humidity != self.last_humidity:
-                    # Salva i nuovi valori nel database
-                    db.save_to_db(temperature, humidity)
-                    
-                    # Aggiorna gli ultimi valori salvati
-                    self.last_temperature = temperature
-                    self.last_humidity = humidity
-                    
-                    # Per debug, puoi stampare i dati ricevuti
-                    # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
-                else:
-                    pass
+                if temperature <= 45:
+                    # Controlla se i valori sono cambiati
+                    if temperature != self.last_temperature or humidity != self.last_humidity:
+                        # Salva i nuovi valori nel database
+                        db.save_to_db(temperature, humidity)
+                        
+                        # Aggiorna gli ultimi valori salvati
+                        self.last_temperature = temperature
+                        self.last_humidity = humidity
+                        
+                        # Per debug, puoi stampare i dati ricevuti
+                        # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
+                    else:
+                        pass
          
         except Exception as e:
             pass
