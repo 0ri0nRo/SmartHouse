@@ -1,223 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Stats Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <title>Raspberry Pi Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5; /* Light background color */
-            color: #333; /* Dark text color for readability */
             margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
         }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-gap: 20px;
-            max-width: 1000px;
-            width: 100%;
-            padding: 20px;
-            background-color: #ffffff; /* White background for the dashboard */
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow for the dashboard */
-        }
-
-        .chart-container {
-            background-color: #ffffff; /* White background for each chart container */
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 90%;
+            max-width: 1200px;
+            justify-content: center;
+            margin-bottom: 20px;
             text-align: center;
         }
-
-        .chart-container h2 {
-            margin-bottom: 15px;
-            font-size: 20px;
-            color: #333;
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            text-align: center;
+            box-sizing: border-box;
+            width: calc(50% - 20px); /* Width for two cards per row */
+            max-width: 400px; /* Maximum width for larger screens */
         }
-
+        .card.cpu-usage {
+            background: #e3f2fd; /* Light Blue for CPU Usage */
+        }
+        .card.temperature {
+            background: #fce4ec; /* Light Pink for Temperature */
+        }
+        .card.disk-usage {
+            background: #e8f5e9; /* Light Green for Disk Usage */
+        }
+        .card.memory-usage {
+            background: #f3e5f5; /* Light Purple for Memory Usage */
+        }
         canvas {
             max-width: 100%;
-            height: auto;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            margin: 20px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        .card h2 {
+            margin-top: 0;
+            margin: 20px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        .value {
+            font-size: 1.2em;
+            margin: 10px 0;
+            text-align: center;
+        }
+        /* Flexbox layout for card rows */
+        @media (max-width: 900px) {
+            .card {
+                width: calc(50% - 10px); /* Adjust width for smaller screens */
+            }
+        }
+        @media (max-width: 600px) {
+            .card {
+                width: calc(100% - 20px); /* Full width for very small screens */
+            }
         }
     </style>
 </head>
-
 <body>
-
-    <div class="dashboard">
-        <!-- CPU Usage -->
-        <div class="chart-container">
+    <h1>Raspberry Pi Stats</h1>
+    <div class="card-container">
+        <div class="card cpu-usage">
             <h2>CPU Usage</h2>
-            <canvas id="cpuUsageChart"></canvas>
+            <div class="value" id="cpuUsageValue">Loading...</div>
         </div>
-
-        <!-- Temperature -->
-        <div class="chart-container">
+        <div class="card temperature">
             <h2>Temperature</h2>
-            <canvas id="tempChart"></canvas>
+            <div class="value" id="temperatureValue">Loading...</div>
         </div>
-
-        <!-- Disk Usage -->
-        <div class="chart-container">
+        <div class="card disk-usage">
             <h2>Disk Usage</h2>
             <canvas id="diskUsageChart"></canvas>
         </div>
-
-        <!-- Memory Usage -->
-        <div class="chart-container">
+        <div class="card memory-usage">
             <h2>Memory Usage</h2>
             <canvas id="memoryUsageChart"></canvas>
         </div>
     </div>
 
     <script>
-        async function fetchData() {
-            try {
-                const response = await fetch('/api_raspberry_pi_stats');
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                return null;
-            }
-        }
+        // Assicurati che Chart.js sia caricato
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+        } else {
+            document.addEventListener('DOMContentLoaded', function () {
+                const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
+                const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
 
-        function createDoughnutChart(ctx, label, value, max, backgroundColor) {
-            return new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [label, 'Remaining'],
-                    datasets: [{
-                        data: [value, max - value],
-                        backgroundColor: [backgroundColor, '#ddd'], /* Changed to lighter color for better contrast */
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    rotation: -90,
-                    circumference: 180,
-                    cutout: '70%',
-                    plugins: {
-                        tooltip: { enabled: false },
-                        legend: { display: false },
-                        title: {
-                            display: true,
-                            text: `${label}: ${value}`,
-                            color: "#333", /* Changed to dark color for better contrast */
-                            font: {
-                                size: 18,
-                            },
-                        },
-                        datalabels: {
-                            display: true,
-                            color: '#333', /* Changed to dark color for better contrast */
-                            font: {
-                                size: 16,
-                            },
-                            formatter: (value, ctx) => {
-                                const total = ctx.dataset.data.reduce((acc, curr) => acc + curr, 0);
-                                const percentage = (value / total * 100).toFixed(1);
-                                return `${value} (${percentage}%)`;
-                            },
-                            anchor: 'end',
-                            align: 'start'
-                        }
+                let diskUsageChart = new Chart(ctxDisk, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used', 'Free'],
+                        datasets: [{
+                            label: 'Disk Usage',
+                            data: [],
+                            backgroundColor: ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)'],
+                            borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+                            borderWidth: 1
+                        }]
                     },
-                    animation: { animateRotate: false },
-                    responsive: true
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (context.parsed !== null) {
+                                            label += `: ${context.parsed.toFixed(2)} GB`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                            datalabels: {
+                                display: true,
+                                formatter: (value, context) => {
+                                    return `${value.toFixed(2)} GB`;
+                                },
+                                color: '#fff'
+                            }
+                        }
+                    }
+                });
+
+                let memoryUsageChart = new Chart(ctxMemory, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used Memory', 'Free Memory'],
+                        datasets: [{
+                            label: 'Memory Usage',
+                            data: [],
+                            backgroundColor: ['rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)'],
+                            borderColor: ['rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (context.parsed !== null) {
+                                            label += `: ${context.parsed.toFixed(2)} GB`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                            datalabels: {
+                                display: true,
+                                formatter: (value, context) => {
+                                    return `${value.toFixed(2)} GB`;
+                                },
+                                color: '#fff'
+                            }
+                        }
+                    }
+                });
+
+                function fetchData() {
+                    axios.get('/api_raspberry_pi_stats')
+                        .then(response => {
+                            const data = response.data;
+                            console.log('Data fetched:', data); // Debugging line
+
+                            if (data) {
+                                // Update CPU Usage value
+                                const cpuUsage = parseFloat(data.cpuUsage).toFixed(2);
+                                document.getElementById('cpuUsageValue').textContent = `${cpuUsage} %`;
+
+                                // Update Temperature value
+                                const temperature = parseFloat(data.temperature).toFixed(2);
+                                document.getElementById('temperatureValue').textContent = `${temperature} °C`;
+
+                                // Update Disk Usage Chart
+                                const diskUsed = parseFloat(data.diskUsed).toFixed(2);
+                                const diskFree = parseFloat(data.diskFree).toFixed(2);
+                                diskUsageChart.data.datasets[0].data = [diskUsed, diskFree];
+                                diskUsageChart.update();
+
+                                // Update Memory Usage Chart
+                                const memoryUsed = parseFloat(data.memoryUsed).toFixed(2);
+                                const memoryTotal = parseFloat(data.memoryTotal).toFixed(2);
+                                memoryUsageChart.data.datasets[0].data = [memoryUsed, memoryTotal - memoryUsed];
+                                memoryUsageChart.update();
+                            } else {
+                                console.error('Data is undefined or null');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching data:', error);
+                        });
                 }
+
+                // Initial data fetch
+                fetchData();
             });
         }
-
-        function createPieChart(ctx, labels, data, backgroundColors) {
-            return new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: {
-                            display: false, /* Hide legend for a more minimal look */
-                        },
-                        title: {
-                            display: true,
-                            text: labels[0],
-                            color: "#333", /* Changed to dark color for better contrast */
-                            font: {
-                                size: 18,
-                            },
-                        },
-                        datalabels: {
-                            display: true,
-                            color: '#333', /* Changed to dark color for better contrast */
-                            font: {
-                                size: 14,
-                            },
-                            formatter: (value, ctx) => {
-                                const total = ctx.dataset.data.reduce((acc, curr) => acc + curr, 0);
-                                const percentage = (value / total * 100).toFixed(1);
-                                return `${value} GB`;
-                            },
-                            anchor: 'end',
-                            align: 'start'
-                        }
-                    },
-                    responsive: true
-                }
-            });
-        }
-
-        async function initializeDashboard() {
-            const data = await fetchData();
-
-            if (!data) {
-                console.error('Failed to initialize dashboard due to data fetching issue.');
-                return;
-            }
-
-            // CPU Usage
-            const cpuUsageCtx = document.getElementById('cpuUsageChart').getContext('2d');
-            const cpuUsagePercent = data.cpuUsage; // Correct percentage
-            createDoughnutChart(cpuUsageCtx, '%', cpuUsagePercent, 100, '#36A2EB');
-
-            // Temperature
-            const tempCtx = document.getElementById('tempChart').getContext('2d');
-            const tempCelsius = parseFloat(data.temperature).toFixed(2); // Format to 2 decimal places
-            createDoughnutChart(tempCtx, '°C', parseFloat(tempCelsius), 100, '#FF6384');
-
-            // Disk Usage
-            const diskCtx = document.getElementById('diskUsageChart').getContext('2d');
-            const diskUsedGB = parseFloat(data.diskUsed);
-            const diskFreeGB = parseFloat(data.diskFree);
-            createPieChart(diskCtx, [diskUsedGB, ' Gb / ', diskFreeGB], [diskUsedGB, diskFreeGB], ['#FF9F40', '#9966FF']);
-
-            // Memory Usage
-            const memoryCtx = document.getElementById('memoryUsageChart').getContext('2d');
-            const memoryUsedGB = parseFloat(data.memoryUsed);
-            const memoryTotalGB = parseFloat(data.memoryTotal);
-            createPieChart(memoryCtx, [memoryUsedGB, ' Gb / ', memoryTotalGB], [memoryUsedGB, memoryTotalGB - memoryUsedGB], ['#4BC0C0', '#FFCE56']);
-        }
-
-        // Initialize dashboard on page load
-        initializeDashboard();
     </script>
-
 </body>
-
 </html>

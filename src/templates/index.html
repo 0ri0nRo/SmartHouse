@@ -51,33 +51,38 @@
         }
 
         .card.temperature {
-            background-color: #e8f4f8;
+            background-color: #cbe5ff; /* Bright red for temperature */
         }
 
         .card.humidity {
-            background-color: #e8f5e9;
+            background-color: #ccffcc; /* Bright green for humidity */
         }
 
         .card.raspberry-pi {
-            background-color: #fbe8e8;
+            background-color: #ffffcc; /* Bright yellow for Raspberry Pi */
         }
 
         .card.transports {
-            background-color: #e8e9fb;
+            background-color: #ccccff; /* Bright blue for transports */
         }
 
         .card.devices {
-            background-color: #f5e8fb;
+            background-color: #f2ccff; /* Bright purple for devices */
         }
 
         .card.alarm {
-            background-color: #fbe8e8;
+            background-color: #ffcccc; /* Bright pink for alarm */
             transition: background-color 0.3s, color 0.3s;
         }
 
-        .card.alarm.on {
-            background-color: #e8f5e9;
+        .card.alarm.green {
+            background-color: #ccffcc; /* Light green for alarm ON */
             color: green;
+        }
+
+        .card.alarm.red {
+            background-color: #ffcccc; /* Light pink for alarm OFF */
+            color: red;
         }
 
         .footer {
@@ -182,15 +187,15 @@
     <div class="cards-container">
         <!-- Temperature Card -->
         <div class="card temperature" id="temperatureCard">
+            <h2>Temperature</h2>
             <h2 id="temperatureValue">-- °C</h2>
-            <p>Temperature</p>
             <p><span id="tempMinMax">-- / --</span></p>
         </div>
 
         <!-- Humidity Card -->
         <div class="card humidity" id="humidityCard">
+            <h2>Humidity</h2>
             <h2 id="humidityValue">-- %</h2>
-            <p>Humidity</p>
             <p><span id="humidityMinMax">-- / --</span></p>
         </div>
 
@@ -217,9 +222,8 @@
     </div>
 
     <script>
-
-                // Funzione per aprire nuove pagine in base alla card cliccata
-                document.getElementById("temperatureCard").addEventListener("click", () => {
+        // Funzione per aprire nuove pagine in base alla card cliccata
+        document.getElementById("temperatureCard").addEventListener("click", () => {
             window.location.href = "/temp";
         });
 
@@ -238,6 +242,7 @@
         document.getElementById("deviceCard").addEventListener("click", () => {
             window.location.href = "/security";
         });
+
         // Function to format the timestamp to only time
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -292,19 +297,48 @@
             document.getElementById("deviceDetails").innerHTML = deviceDetails;
         }
 
+        // Function to fetch the last alarm status and update the color
+        async function fetchLastAlarmStatus() {
+            try {
+                const response = await fetch('/security/alarm', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const [status, _] = await response.json();
+
+                // Set the card's state and color based on the alarm status
+                const alarmCard = document.getElementById("alarmCard");
+                const alarmStatus = document.getElementById("alarmStatus");
+
+                if (status === true) {
+                    alarmCard.classList.add("green");
+                    alarmCard.classList.remove("red");
+                    alarmStatus.textContent = "ON";
+                } else if (status === false) {
+                    alarmCard.classList.add("red");
+                    alarmCard.classList.remove("green");
+                    alarmStatus.textContent = "OFF";
+                }
+            } catch (error) {
+                console.error('Error fetching last alarm status:', error);
+            }
+        }
+
         // Function to toggle alarm state
         async function toggleAlarm() {
             const alarmCard = document.getElementById("alarmCard");
             const alarmStatus = document.getElementById("alarmStatus");
 
             // Determine current status and toggle
-            const isOn = alarmCard.classList.toggle("on");
+            const isOn = alarmCard.classList.contains("green");
 
             // Set the displayed status (ON or OFF)
-            alarmStatus.textContent = isOn ? "ON" : "OFF";
+            alarmStatus.textContent = isOn ? "OFF" : "ON";
 
             // Send the new status to the server
-            const alarmData = { status: isOn };  // POST data with the new alarm state
+            const alarmData = { status: !isOn };  // POST data with the new alarm state
 
             try {
                 const response = await fetch('/security/alarm', {
@@ -317,6 +351,7 @@
 
                 if (response.ok) {
                     console.log('Alarm status updated successfully.');
+                    fetchLastAlarmStatus();  // Refresh the alarm status and color after update
                 } else {
                     console.error('Failed to update alarm status.');
                 }
@@ -327,33 +362,6 @@
 
         // Add click event listener to the alarm card
         document.getElementById('alarmCard').addEventListener('click', toggleAlarm);
-
-        // Optional: Fetch the last alarm status from the server on page load
-        async function fetchLastAlarmStatus() {
-            try {
-                const response = await fetch('/security/alarm', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                const lastStatus = await response.json();
-
-                // Set the card's state based on the last retrieved alarm status
-                const alarmCard = document.getElementById("alarmCard");
-                const alarmStatus = document.getElementById("alarmStatus");
-
-                if (lastStatus && lastStatus.status) {
-                    alarmCard.classList.add("on");
-                    alarmStatus.textContent = "ON";
-                } else {
-                    alarmCard.classList.remove("on");
-                    alarmStatus.textContent = "OFF";
-                }
-            } catch (error) {
-                console.error('Error fetching last alarm status:', error);
-            }
-        }
 
         // Load dark mode preference from local storage
         function loadTheme() {
