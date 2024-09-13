@@ -525,7 +525,7 @@ def get_monthly_average_temperature(year):
         
         for row in rows:
             month = int(row['month'])
-            avg_temperature = float(row['avg_temperature'])
+            avg_temperature = round(float(row['avg_temperature']), 2)
             monthly_avg_temperature[month] = avg_temperature
         
         cursor.close()
