@@ -94,7 +94,7 @@ class SensorReader:
                         self.last_humidity = humidity
                         
                         # Per debug, puoi stampare i dati ricevuti
-                        #print(f"Temperature: {temperature}, Humidity: {humidity}, Distance: {distance}, Timestamp: {check_timestamp_t}")
+                        print(f"Temperature: {temperature}, Humidity: {humidity}, Distance: {distance}, Timestamp: {check_timestamp_t}")
 
                     else:
                         pass
