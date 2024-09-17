@@ -48,6 +48,7 @@ class SensorReader:
         self.email_sender = EmailSender(self.smtp_server, self.smtp_port, self.username, self.password)
         
         self.last_alarm_time = datetime.now()
+        self.last_backup_time = datetime.now()
 
 
 
@@ -62,8 +63,13 @@ class SensorReader:
                 temperature = float(temperature)
                 humidity = float(humidity)
                 distance = int(distance)
-                check_timestamp_t = datetime.now()
-                os.system('./backup.sh')
+
+                print("Eseguo script di backup")
+                # Esegui il backup se è passato più di 24 ore dall'ultima esecuzione
+                if datetime.now() - self.last_backup_time >= timedelta(minutes=1):
+                    os.system('./backup.sh')
+                    print("Eseguito script di backup")
+                    self.last_backup_time = datetime.now()
 
                 db = Database(self.db_config)
 
@@ -94,9 +100,6 @@ class SensorReader:
                         self.last_temperature = temperature
                         self.last_humidity = humidity
                         
-                        # Per debug, puoi stampare i dati ricevuti
-                        print(f"Temperature: {temperature}, Humidity: {humidity}, Distance: {distance}, Timestamp: {check_timestamp_t}")
-
                     else:
                         pass
          
