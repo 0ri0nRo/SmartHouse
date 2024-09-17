@@ -59,6 +59,8 @@ Thumbs.db
 *.pyc
 __pycache__/
 
+/backup
+
 # JetBrains IDEs (IntelliJ, PyCharm, etc.)
 *.iml
 .idea/
