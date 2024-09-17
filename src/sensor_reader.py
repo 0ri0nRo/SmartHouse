@@ -63,6 +63,7 @@ class SensorReader:
                 humidity = float(humidity)
                 distance = int(distance)
                 check_timestamp_t = datetime.now()
+                os.system('./backup.sh')
 
                 db = Database(self.db_config)
 
