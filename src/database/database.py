@@ -235,3 +235,20 @@ class Database:
         except Error as e:
             print(f"Errore durante il recupero dello stato dell'allarme: {e}")
             return None
+
+    def last_temp_db(self):
+
+        try:
+            query = """
+            SELECT temperature_c, timestamp
+            FROM sensor_readings
+            ORDER BY timestamp DESC
+            LIMIT 1;
+            """
+            self.cursor.execute(query)
+            result = self.cursor.fetchone()
+            return {"last_entry" : result}
+
+        except Error as e:
+            print(f"Errore durante il recupero dell'ultima temperatura: {e}")
+            return None

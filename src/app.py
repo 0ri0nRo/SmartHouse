@@ -11,12 +11,12 @@ import psycopg2
 import psycopg2.extras
 from scraper import TrainScraper
 import os
+from database.database import Database
 
 # Carica le variabili di ambiente dal file .env
 load_dotenv()
 
 app = Flask(__name__)
-
 # Configurazione del database
 db_config = {
     'host': os.getenv('DB_HOST'),
@@ -25,6 +25,7 @@ db_config = {
     'password': os.getenv('DB_PASSWORD')
 }
 
+db = Database(db_config)
 
 
 def scan_network(network='192.168.178.0/24'):
@@ -1090,8 +1091,13 @@ def alarm_status():
             connection.close()
 
 
-
-
+@app.route('/last_temp', methods=['GET'])
+def last_temp():
+    try:
+        result = db.last_temp_db()
+        return result    
+    except:
+        pass
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
