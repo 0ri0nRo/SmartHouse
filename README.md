@@ -36,6 +36,9 @@ Use Docker Compose to build and start the container. This command will also star
 
 ```bash
 docker-compose up -d --build
+
+# To backup your data in postgres docker
+sudo src/backup.sh 
 ```
 This command will:
 
