@@ -293,8 +293,6 @@
             const deviceDetails = devices.map(device =>
                 `<p>${device.hostname} - Last Seen: ${formatTimestamp(device.timestamp)}</p>`
             ).join('<br>');
-
-            document.getElementById("deviceDetails").innerHTML = deviceDetails;
         }
 
         // Function to fetch the last alarm status and update the color
@@ -312,11 +310,11 @@
                 const alarmCard = document.getElementById("alarmCard");
                 const alarmStatus = document.getElementById("alarmStatus");
 
-                if (status === true) {
+                if (status === "true") {
                     alarmCard.classList.add("green");
                     alarmCard.classList.remove("red");
                     alarmStatus.textContent = "ON";
-                } else if (status === false) {
+                } else if (status === "false") {
                     alarmCard.classList.add("red");
                     alarmCard.classList.remove("green");
                     alarmStatus.textContent = "OFF";

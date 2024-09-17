@@ -62,6 +62,7 @@ class SensorReader:
                 temperature = float(temperature)
                 humidity = float(humidity)
                 distance = int(distance)
+                check_timestamp_t = datetime.now()
 
                 db = Database(self.db_config)
 
@@ -71,7 +72,7 @@ class SensorReader:
                 check_timestamp = datetime.now()
 
                 # Verifica se è passato abbastanza tempo dall'ultimo allarme
-                if status == True and distance < 80:
+                if status == "true" and distance < 80:
                     #print(f"pre - invio allarme, {check_timestamp} \n")
 
                     # Verifica se è passato abbastanza tempo dall'ultimo allarme
@@ -93,7 +94,8 @@ class SensorReader:
                         self.last_humidity = humidity
                         
                         # Per debug, puoi stampare i dati ricevuti
-                        # print(f"Temperatura={temperature}°C, Umidità={humidity}%")
+                        #print(f"Temperature: {temperature}, Humidity: {humidity}, Distance: {distance}, Timestamp: {check_timestamp_t}")
+
                     else:
                         pass
          
