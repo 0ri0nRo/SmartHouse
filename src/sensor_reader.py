@@ -64,12 +64,12 @@ class SensorReader:
                 humidity = float(humidity)
                 distance = int(distance)
 
-                print("Eseguo script di backup")
+                #print("Eseguo script di backup")
                 # Esegui il backup se è passato più di 24 ore dall'ultima esecuzione
-                if datetime.now() - self.last_backup_time >= timedelta(minutes=1):
-                    os.system('./backup.sh')
-                    print("Eseguito script di backup")
-                    self.last_backup_time = datetime.now()
+                #if datetime.now() - self.last_backup_time >= timedelta(minutes=1):
+                #    os.system('./backup.sh')
+                #    print("Eseguito script di backup")
+                #    self.last_backup_time = datetime.now()
 
                 db = Database(self.db_config)
 
