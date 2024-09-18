@@ -2,6 +2,9 @@ from sensor_reader import SensorReader
 import os
 from dotenv import load_dotenv
 
+# Carica le variabili d'ambiente dal file .env
+load_dotenv()
+
 def main():
     """Funzione principale per eseguire il programma."""
     port = '/dev/ttyACM0'  # Porta seriale
