@@ -20,16 +20,17 @@
         h1 {
             color: #333;
             margin: 20px 0;
-            font-size: 24px;
+            font-size: 24px; /* Ridotto un po' per risparmiare spazio */
             text-align: center;
+            letter-spacing: 1px;
         }
 
         .cards-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 10px; /* Ridotto il gap tra le card */
             width: 90%;
-            max-width: 1200px;
+            max-width: 1000px; /* Ridotto per avere meno larghezza complessiva */
             justify-content: center;
             margin-bottom: 20px;
         }
@@ -37,95 +38,128 @@
         .card {
             background-color: #ffffff;
             color: #333;
-            border-radius: 6px;
-            padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 10px; /* Ridotto il padding per risparmiare spazio */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
             text-align: center;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            flex: 1 1 calc(50% - 10px);
-            min-width: 140px;
+            font-size: 14px; /* Ridotta la dimensione del testo */
+            border: none;
+            flex: 1 1 calc(30% - 10px);
+            min-width: 120px; /* Ridotta la larghezza minima */
+            max-width: 180px; /* Impostato un limite massimo per evitare che le card siano troppo grandi */
             box-sizing: border-box;
             cursor: pointer;
-            transition: background-color 0.3s, color 0.3s;
+            justify-content: center;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            height: auto; /* Eliminata l'altezza fissa */
+            transition: none; /* Rimosso qualsiasi effetto di transizione */
         }
 
+        .card p {
+            margin: 0; /* Rimosso margine per ottimizzare lo spazio verticale */
+            word-wrap: break-word; /* Assicura che il testo lungo vada a capo */
+            font-size: 12px; /* Ridotto il testo interno */
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15); /* Mantenuto l'ombra al passaggio del mouse */
+        }
+
+        .card:active {
+            transform: none; /* Assicura che non ci sia movimento quando cliccato */
+            box-shadow: none; /* Rimuove qualsiasi cambiamento di ombra al clic */
+        }
+
+        /* Specific styles for each card type */
         .card.temperature {
-            background-color: #cbe5ff; /* Bright red for temperature */
+            background: linear-gradient(135deg, #f9d423 0%, #ff4e50 100%);
+            color: #fff;
         }
 
         .card.humidity {
-            background-color: #ccffcc; /* Bright green for humidity */
+            background: linear-gradient(135deg, #24c6dc 0%, #514a9d 100%);
+            color: #fff;
         }
 
         .card.raspberry-pi {
-            background-color: #ffffcc; /* Bright yellow for Raspberry Pi */
+            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+            color: #fff;
         }
 
         .card.transports {
-            background-color: #ccccff; /* Bright blue for transports */
+            background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+            color: #fff;
         }
 
         .card.devices {
-            background-color: #f2ccff; /* Bright purple for devices */
+            background: linear-gradient(135deg, #83a4d4 0%, #b6fbff 100%);
+            color: #fff;
         }
 
-        .card.alarm {
-            background-color: #ffcccc; /* Bright pink for alarm */
-            transition: background-color 0.3s, color 0.3s;
-        }
-
+        /* Alarm card with dynamic green/red background */
         .card.alarm.green {
-            background-color: #ccffcc; /* Light green for alarm ON */
-            color: green;
+            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+            color: #fff;
         }
 
         .card.alarm.red {
-            background-color: #ffcccc; /* Light pink for alarm OFF */
-            color: red;
-        }
-
-        .footer {
-            margin-top: 20px;
-            padding: 15px;
-            background: #333;
+            background: linear-gradient(135deg, #ff6a6a 0%, #ee0979 100%);
             color: #fff;
-            text-align: center;
-            width: 100%;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            font-size: 14px;
-            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s, color 0.3s;
         }
 
-        @media (max-width: 600px) {
-            .card {
-                flex: 1 1 calc(50% - 10px);
-                padding: 10px;
-                font-size: 12px;
-            }
-        }
-
-        /* Dark Mode Styles */
+        /* Dark mode styles */
         body.dark-mode {
             background-color: #121212;
             color: #ffffff;
         }
 
         body.dark-mode .card {
-            background-color: #1e1e1e;
-            color: #ffffff;
-            border: 1px solid #444;
+            background-color: #1e1e1e; /* Colore scuro per la modalità scura */
+            color: #ffffff; /* Colore del testo in modalità scura */
         }
 
-        body.dark-mode .footer {
-            background-color: #222;
-            color: #ddd;
+        body.dark-mode .card.temperature {
+            background: linear-gradient(135deg, #b5b5b5 0%, #404040 100%); /* Gradiente molto più scuro per la card temperature */
         }
 
-        /* Apple-style Toggle Switch */
+        body.dark-mode .card.humidity {
+            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
+        }
+
+        body.dark-mode .card.raspberry-pi {
+            background: linear-gradient(135deg, #1f4a3f 0%, #093a5c 100%); /* Gradiente molto più scuro per la card raspberry-pi */
+        }
+
+        body.dark-mode .card.transports {
+            background: linear-gradient(135deg, #1d2a5b 0%, #313d5e 100%); /* Gradiente molto più scuro per la card transports */
+        }
+
+        body.dark-mode .card.devices {
+            background: linear-gradient(135deg, #4e6b9b 0%, #8ab8b0 100%); /* Gradiente molto più scuro per la card devices */
+        }
+
+        body.dark-mode .card.alarm.green {
+            background: linear-gradient(135deg, #1b6b3f 0%, #124b2f 100%); /* Gradiente molto più scuro per la card alarm green */
+        }
+
+        body.dark-mode .card.alarm.red {
+            background: linear-gradient(135deg, #7e3e3e 0%, #a61e1e 100%); /* Gradiente molto più scuro per la card alarm red */
+        }
+
+        .footer {
+            margin-top: 20px;
+            padding: 10px; /* Ridotto padding per risparmiare spazio */
+            background: #333;
+            color: #fff;
+            text-align: center;
+            width: 100%;
+            font-size: 12px; /* Ridotta la dimensione del testo */
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
         .switch {
             position: absolute;
             top: 20px;
@@ -172,11 +206,29 @@
         input:checked + .slider:before {
             transform: translateX(26px);
         }
+
+        @media (max-width: 600px) {
+            .card {
+                flex: 1 1 calc(45% - 10px); /* Ridotto l'ingombro per schermi piccoli */
+                padding: 10px; /* Ridotto padding anche su dispositivi mobili */
+                font-size: 12px; /* Testo ridotto per dispositivi mobili */
+                max-width: 140px; /* Limite di larghezza per schermi piccoli */
+            }
+
+            h1 {
+                font-size: 20px; /* Ridotta dimensione titolo per schermi piccoli */
+            }
+
+            .footer {
+                font-size: 10px; /* Ridotta dimensione testo footer per schermi piccoli */
+            }
+        }
     </style>
 </head>
 
+
 <body>
-    <h1>Alex's House</h1>
+    <h1>Alex's Brain</h1>
 
     <!-- Dark Mode Toggle Switch -->
     <label class="switch">
@@ -206,7 +258,7 @@
 
         <!-- Transports Card -->
         <div class="card transports" id="transportsCard">
-            <h2>Transportation</h2>
+            <h2>Travel</h2>
         </div>
 
         <!-- Device Card -->
@@ -361,8 +413,8 @@
         // Add click event listener to the alarm card
         document.getElementById('alarmCard').addEventListener('click', toggleAlarm);
 
-        // Load dark mode preference from local storage
-        function loadTheme() {
+         // Function to load the current theme from localStorage
+         function loadTheme() {
             const darkMode = localStorage.getItem("darkMode");
             const bodyElement = document.body;
             const toggleDarkMode = document.getElementById("toggleDarkMode");
@@ -376,31 +428,30 @@
             }
         }
 
-        // Save dark mode preference to local storage
-        function saveTheme(isDarkMode) {
-            if (isDarkMode) {
+        // Function to toggle dark mode
+        function toggleDarkMode() {
+            const bodyElement = document.body;
+            const darkModeEnabled = bodyElement.classList.toggle("dark-mode");
+
+            if (darkModeEnabled) {
                 localStorage.setItem("darkMode", "enabled");
             } else {
                 localStorage.setItem("darkMode", "disabled");
             }
         }
 
-        // Toggle dark mode
-        document.getElementById("toggleDarkMode").addEventListener("change", function () {
-            const bodyElement = document.body;
-            bodyElement.classList.toggle("dark-mode");
-            const isDarkMode = bodyElement.classList.contains("dark-mode");
-            saveTheme(isDarkMode);
-        });
+        // Load the theme when the page loads
+        document.addEventListener("DOMContentLoaded", loadTheme);
 
+        // Add event listener for the dark mode toggle switch
+        document.getElementById("toggleDarkMode").addEventListener("change", toggleDarkMode);
         // Fetch the last alarm status and load the dark mode theme when the page loads
         window.onload = () => {
             loadTheme();
             updateUI();
             fetchLastAlarmStatus();
-        };
+        }
     </script>
-
 </body>
 
 </html>
