@@ -962,7 +962,7 @@ def get_trains_data(cursor, destination, limit=4):
     """Recupera i treni prima e dopo l'orario corrente per una destinazione specificata e restituisce i risultati come JSON."""
     try:
         now = datetime.now()
-
+        db.create_table_if_not_exists_trains()
         # Query per i treni passati
         query_old = """
         SELECT train_number, destination, time, delay, platform, stops, timestamp
