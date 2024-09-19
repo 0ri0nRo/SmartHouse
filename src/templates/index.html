@@ -20,17 +20,23 @@
         h1 {
             color: #333;
             margin: 20px 0;
-            font-size: 24px; /* Ridotto un po' per risparmiare spazio */
+            font-size: 30px;
             text-align: center;
             letter-spacing: 1px;
+            font-size: 20px;
+        }
+
+        /* Stile per il tema scuro */
+        body.dark-mode h1 {
+            color: #ffffff; /* Colore bianco quando è attivo il tema scuro */
         }
 
         .cards-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px; /* Ridotto il gap tra le card */
+            gap: 10px;
             width: 90%;
-            max-width: 1000px; /* Ridotto per avere meno larghezza complessiva */
+            max-width: 1000px;
             justify-content: center;
             margin-bottom: 20px;
         }
@@ -39,40 +45,31 @@
             background-color: #ffffff;
             color: #333;
             border-radius: 10px;
-            padding: 10px; /* Ridotto il padding per risparmiare spazio */
+            padding: 10px;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
             text-align: center;
-            font-size: 14px; /* Ridotta la dimensione del testo */
+            font-size: 12px;
             border: none;
             flex: 1 1 calc(30% - 10px);
-            min-width: 120px; /* Ridotta la larghezza minima */
-            max-width: 180px; /* Impostato un limite massimo per evitare che le card siano troppo grandi */
+            min-width: 160px; /* Larghezza minima uniformata */
+            max-width: 200px; /* Larghezza massima uniformata */
+            height: 140px; /* Altezza uniforme aumentata per maggiore spazio */
             box-sizing: border-box;
             cursor: pointer;
-            justify-content: center;
-            align-items: center;
             display: flex;
             flex-direction: column;
-            height: auto; /* Eliminata l'altezza fissa */
-            transition: none; /* Rimosso qualsiasi effetto di transizione */
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
         }
 
         .card p {
-            margin: 0; /* Rimosso margine per ottimizzare lo spazio verticale */
-            word-wrap: break-word; /* Assicura che il testo lungo vada a capo */
-            font-size: 12px; /* Ridotto il testo interno */
+            margin: 1;
+            word-wrap: break-word;
+            font-size: 12px;
         }
 
-        .card:hover {
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15); /* Mantenuto l'ombra al passaggio del mouse */
-        }
-
-        .card:active {
-            transform: none; /* Assicura che non ci sia movimento quando cliccato */
-            box-shadow: none; /* Rimuove qualsiasi cambiamento di ombra al clic */
-        }
-
-        /* Specific styles for each card type */
         .card.temperature {
             background: linear-gradient(135deg, #f9d423 0%, #ff4e50 100%);
             color: #fff;
@@ -98,7 +95,6 @@
             color: #fff;
         }
 
-        /* Alarm card with dynamic green/red background */
         .card.alarm.green {
             background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
             color: #fff;
@@ -116,46 +112,34 @@
         }
 
         body.dark-mode .card {
-            background-color: #1e1e1e; /* Colore scuro per la modalità scura */
-            color: #ffffff; /* Colore del testo in modalità scura */
+            background-color: #1e1e1e;
+            color: #ffffff;
         }
 
-        body.dark-mode .card.temperature {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
-        }
-
-        body.dark-mode .card.humidity {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
-        }
-
-        body.dark-mode .card.raspberry-pi {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
-        }
-
-        body.dark-mode .card.transports {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
-        }
-
+        body.dark-mode .card.temperature,
+        body.dark-mode .card.humidity,
+        body.dark-mode .card.raspberry-pi,
+        body.dark-mode .card.transports,
         body.dark-mode .card.devices {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%); /* Gradiente molto più scuro per la card humidity */
+            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%);
         }
 
         body.dark-mode .card.alarm.green {
-            background: linear-gradient(135deg, #1b6b3f 0%, #124b2f 100%); /* Gradiente molto più scuro per la card alarm green */
+            background: linear-gradient(135deg, #1b6b3f 0%, #124b2f 100%);
         }
 
         body.dark-mode .card.alarm.red {
-            background: linear-gradient(135deg, #7e3e3e 0%, #a61e1e 100%); /* Gradiente molto più scuro per la card alarm red */
+            background: linear-gradient(135deg, #7e3e3e 0%, #a61e1e 100%);
         }
 
         .footer {
             margin-top: 20px;
-            padding: 10px; /* Ridotto padding per risparmiare spazio */
+            padding: 10px;
             background: #333;
             color: #fff;
             text-align: center;
             width: 100%;
-            font-size: 12px; /* Ridotta la dimensione del testo */
+            font-size: 12px;
             box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
             transition: background-color 0.3s, color 0.3s;
         }
@@ -209,19 +193,35 @@
 
         @media (max-width: 600px) {
             .card {
-                flex: 1 1 calc(45% - 10px); /* Ridotto l'ingombro per schermi piccoli */
-                padding: 10px; /* Ridotto padding anche su dispositivi mobili */
-                font-size: 12px; /* Testo ridotto per dispositivi mobili */
-                max-width: 140px; /* Limite di larghezza per schermi piccoli */
+                flex: 1 1 calc(45% - 10px);
+                padding: 10px;
+                font-size: 12px;
+                max-width: 140px;
             }
-
-            h1 {
-                font-size: 20px; /* Ridotta dimensione titolo per schermi piccoli */
-            }
-
             .footer {
-                font-size: 10px; /* Ridotta dimensione testo footer per schermi piccoli */
+                font-size: 10px;
             }
+        }
+
+        /* Specific styles for temperature and humidity cards */
+        .card.temperature h2#temperatureValue,
+        .card.humidity h2#humidityValue {
+            font-size: 28px; /* Maggiore dimensione per i numeri */
+            font-weight: bold;
+            margin: 2px 0;
+        }
+
+        .card.temperature .unit,
+        .card.humidity .unit {
+            font-size: 18px; /* Maggiore dimensione per le unità */
+            margin-top: 0;
+        }
+
+        /* Posizionamento e dimensione della scritta */
+        .card.temperature h2,
+        .card.humidity h2 {
+            font-size: 16px; /* Maggiore dimensione per la scritta */
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -272,6 +272,7 @@
             <h2 id="alarmStatus">OFF</h2>
         </div>
     </div>
+
 
     <script>
         // Funzione per aprire nuove pagine in base alla card cliccata
@@ -332,8 +333,8 @@
             if (!data) return;
 
             // Update current temperature and humidity
-            document.getElementById("temperatureValue").textContent = `${parseFloat(data.temperature.current).toFixed(2)} °C`;
-            document.getElementById("humidityValue").textContent = `${parseFloat(data.humidity.current).toFixed(2)} %`;
+            document.getElementById("temperatureValue").textContent = `${parseFloat(data.temperature.current).toFixed(1)} °C`;
+            document.getElementById("humidityValue").textContent = `${parseFloat(data.humidity.current).toFixed(0)} %`;
 
             // Update min/max temperature and humidity
             document.getElementById("tempMinMax").textContent =
