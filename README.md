@@ -1,5 +1,7 @@
 # Temperature and Humidity Charts
 <img width="1680" alt="Screenshot 2024-09-20 at 21 30 03" src="https://github.com/user-attachments/assets/9c1e88c6-ed1d-4128-927f-3bc9e1a29067">
+<img width="1675" alt="Screenshot 2024-09-20 at 21 29 58" src="https://github.com/user-attachments/assets/d5cb9349-3d1a-48fd-85a8-10da778b51e7">
+
 
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
 
@@ -9,6 +11,9 @@ This project provides a web interface to visualize temperature and humidity data
 - **Interactive Charts**: Displays temperature and humidity data over time using Chart.js.
 - **Dynamic Icons**: Shows icons representing the current weather (sun/moon) and temperature (hot/cold).
 - **Responsive Design**: Optimized for various screen sizes.
+
+<img width="1680" alt="Screenshot 2024-09-20 at 21 30 10" src="https://github.com/user-attachments/assets/6757fbcf-9e97-489f-a08d-951fe0200b58">
+
 
 ## Prerequisites
 
