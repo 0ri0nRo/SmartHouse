@@ -49,7 +49,7 @@ class SensorReader:
         
         self.last_alarm_time = datetime.now()
         self.last_backup_time = datetime.now()
-
+        self.db = Database(self.db_config)
 
 
     def read_data(self):
@@ -63,7 +63,6 @@ class SensorReader:
                 temperature = float(temperature)
                 humidity = float(humidity)
                 distance = int(distance)
-                print(temperature)
                 #print("Eseguo script di backup")
                 # Esegui il backup se è passato più di 24 ore dall'ultima esecuzione
                 #if datetime.now() - self.last_backup_time >= timedelta(minutes=1):
@@ -71,9 +70,8 @@ class SensorReader:
                 #    print("Eseguito script di backup")
                 #    self.last_backup_time = datetime.now()
 
-                db = Database(self.db_config)
 
-                last_alarm = db.get_last_alarm_status()
+                last_alarm = self.db.get_last_alarm_status()
                 status = last_alarm["status"]
                  # Ottieni il timestamp corrente come oggetto datetime
                 check_timestamp = datetime.now()
@@ -94,15 +92,18 @@ class SensorReader:
                     # Controlla se i valori sono cambiati
                     if temperature != self.last_temperature or humidity != self.last_humidity:
                         # Salva i nuovi valori nel database
-                        db.save_to_db(temperature, humidity)
+                        self.db.save_to_db(temperature, humidity)
                         
                         # Aggiorna gli ultimi valori salvati
                         self.last_temperature = temperature
                         self.last_humidity = humidity
-                        
-                    else:
-                        pass
-         
+                
+                current_time = datetime.now()
+                if current_time.hour == 00 and current_time.minute == 00:
+                    print("Eseguo aggregazione dei dati a mezzanotte.")
+                    self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
+                    self.last_aggregation_time = current_time  # Aggiorna l'ultimo tempo di aggregazione
+
         except Exception as e:
             pass
 

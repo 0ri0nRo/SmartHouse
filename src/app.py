@@ -326,7 +326,6 @@ def index():
     # Gestisci i casi in cui last_entry è None
     last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
     last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
-
     return render_template('index.html', labels=labels, temperatures=temperatures, last_temperature=last_temperature, last_humidity=last_humidity)
 
 

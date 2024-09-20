@@ -252,3 +252,62 @@ class Database:
         except Error as e:
             print(f"Errore durante il recupero dell'ultima temperatura: {e}")
             return None
+        
+    def create_temp_table_and_aggregate_data(self):
+        """Crea una tabella temporanea per le medie orarie, cancella i dati esistenti e aggiorna la tabella originale."""
+        try:
+            # Crea la tabella temporanea
+            create_temp_table_query = """
+            CREATE TEMP TABLE IF NOT EXISTS temp_sensor_averages (
+                hour TIMESTAMP PRIMARY KEY,
+                avg_temperature_c FLOAT NOT NULL,
+                avg_humidity FLOAT NOT NULL
+            );
+            """
+            self.cursor.execute(create_temp_table_query)
+
+            # Calcola le medie per ciascuna ora e inseriscile nella tabella temporanea
+            insert_averages_query = """
+            INSERT INTO temp_sensor_averages (hour, avg_temperature_c, avg_humidity)
+            SELECT
+                date_trunc('hour', timestamp) AS hour,
+                AVG(temperature_c) AS avg_temperature_c,
+                AVG(humidity) AS avg_humidity
+            FROM
+                sensor_readings
+            GROUP BY
+                hour
+            ORDER BY
+                hour;
+            """
+            self.cursor.execute(insert_averages_query)
+
+            # Cancella i dati esistenti dalla tabella originale
+            delete_original_query = "DELETE FROM sensor_readings;"
+            self.cursor.execute(delete_original_query)
+
+            # Inserisci i dati aggregati dalla tabella temporanea nella tabella originale
+            insert_into_original_query = """
+            INSERT INTO sensor_readings (temperature_c, humidity, timestamp)
+            SELECT 
+                avg_temperature_c, 
+                avg_humidity, 
+                hour
+            FROM 
+                temp_sensor_averages;
+            """
+            self.cursor.execute(insert_into_original_query)
+
+
+            # Cancella i dati esistenti dalla tabella temporanea
+            delete_original_query = "DROP TABLE temp_sensor_averages;"
+            self.cursor.execute(delete_original_query)
+
+            # Commit per salvare tutte le operazioni
+            self.connection.commit()
+
+            print("Dati aggregati inseriti correttamente nella tabella originale.")
+        
+        except Error as e:
+            print(f"Errore durante l'aggregazione dei dati: {e}")
+            self.connection.rollback()  # Ripristina lo stato del database in caso di errore
