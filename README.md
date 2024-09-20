@@ -1,4 +1,5 @@
 # Temperature and Humidity Charts
+<img width="1680" alt="Screenshot 2024-09-20 at 21 30 03" src="https://github.com/user-attachments/assets/9c1e88c6-ed1d-4128-927f-3bc9e1a29067">
 
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
 
