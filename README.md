@@ -46,3 +46,21 @@ This command will:
 - Create and start a container based on the built image.
 - Expose the application on port 5000.
 
+## Restoring the SQL Backup
+
+If you need to restore your PostgreSQL database from a `.sql` backup file, follow these steps:
+
+### 1. Copy the Backup File into the Docker Container
+
+First, ensure the backup file (e.g., `backup.sql`) is located in the `src` directory. Then, use the following `docker cp` command to copy it into the PostgreSQL container:
+
+```bash
+docker cp ./src/backup.sql <container_id>:/backup.sql
+```
+
+### 2. Restore the Backup in PostgreSQL
+After copying the backup file into the container, you can restore it using the following command:
+
+```bash
+docker exec -i <container_id> psql -U postgres -d <YOUR_DATABASE> -f /backup.sql
+```
