@@ -79,6 +79,8 @@ myenv/
 # npm package-lock files
 package-lock.json
 
+/proxy
+
 # Yarn lock files
 yarn.lock
 

@@ -309,7 +309,7 @@ def get_devices():
 
 
 
-@app.route('/main')
+@app.route('/')
 def index():
     """Visualizza i dati nella pagina principale."""
     data, last_entry = get_data()
