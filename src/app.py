@@ -77,6 +77,111 @@ def scan_network(network='192.168.178.0/24'):
 
     return devices
 
+@app.route('/api/devices/stats', methods=['GET'])
+def get_device_stats():
+    """Restituisce statistiche sui dispositivi di rete."""
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor()
+        
+        # Query per ottenere il conteggio totale delle connessioni per ogni IP
+        cursor.execute("""
+        SELECT
+            hostname,
+            COUNT(*) AS connection_count
+        FROM
+            network_devices
+        GROUP BY
+            hostname
+        ORDER BY
+            connection_count DESC;
+        """)
+        
+        stats = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        # Formatta i risultati in un dizionario con slicing dell'hostname
+        result = []
+        for stat in stats:
+            hostname = stat[0][:-10]  # Slicing per rimuovere gli ultimi 10 caratteri
+            if hostname == "":
+                hostname = "Fritzbox-modem1234567890"  # Valore di default se vuoto
+
+            if stat[1] >= 150:
+                result.append({
+                    'ip_address': hostname,
+                    'connection_count': stat[1]
+                })
+            else:
+                pass
+        
+        return jsonify(result), 200
+    except Error as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/devices/most_connected_days', methods=['GET'])
+def get_most_connected_days():
+    """Restituisce i giorni maggiormente connessi per i top 10 dispositivi con connection_count maggiore."""
+    try:
+        connection = psycopg2.connect(**db_config)
+        cursor = connection.cursor()
+
+        # Query per ottenere il conteggio delle connessioni per ciascun IP e giorno della settimana
+        cursor.execute("""
+        SELECT
+            hostname,
+            EXTRACT(DOW FROM timestamp) AS day_of_week, -- 0=Sunday, 1=Monday, ..., 6=Saturday
+            COUNT(*) AS connection_count
+        FROM
+            network_devices
+        GROUP BY
+            hostname, day_of_week
+        ORDER BY
+            hostname, day_of_week;
+        """)
+
+        stats = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        # Raccogliere i conteggi totali per ciascun dispositivo
+        total_counts = {}
+        for stat in stats:
+            hostname = stat[0][:-10]  # Slicing per rimuovere gli ultimi 10 caratteri
+            if hostname == "":
+                hostname = "Fritzbox-Modem"  # Valore di default se vuoto
+
+            connection_count = stat[2]
+            total_counts[hostname] = total_counts.get(hostname, 0) + connection_count
+
+        # Ordina i dispositivi per connection_count e prendi i top 10
+        top_devices = sorted(total_counts.items(), key=lambda item: item[1], reverse=True)[:10]
+
+        # Formatta i risultati per i top 10 dispositivi
+        result = {}
+        for hostname, _ in top_devices:
+            result[hostname] = [0] * 7  # Inizializza un array per i giorni della settimana
+
+        # Riempi i conteggi dei giorni per i top 10 dispositivi
+        for stat in stats:
+            hostname = stat[0][:-10]  # Slicing per rimuovere gli ultimi 10 caratteri
+            if hostname == "":
+                hostname = "Fritzbox-Modem"  # Valore di default se vuoto
+
+            day_of_week = int(stat[1])  # Converti in intero
+            connection_count = stat[2]
+
+            if hostname in result:  # Controlla se il dispositivo è nei top 10
+                result[hostname][day_of_week] += connection_count  # Somma il conteggio per il giorno
+
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
 def get_monthly_temperature_data():
     """Recupera la temperatura media per ogni giorno per ogni mese dell'anno corrente."""
     monthly_data = {}
@@ -194,7 +299,7 @@ def get_devices():
                 'ip_address': device['ip_address'],
                 'hostname': device['hostname'][:-10],
                 'status': device['status'],
-                'timestamp': device['timestamp'].isoformat()[:-7]
+                'last_seen': device['timestamp'].isoformat()[:-7]
             })
 
         return jsonify(devices_list)
