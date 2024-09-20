@@ -98,11 +98,10 @@ class SensorReader:
                         self.last_temperature = temperature
                         self.last_humidity = humidity
                 
-                current_time = datetime.now()
-                if current_time.hour == 00 and current_time.minute == 00:
-                    print("Eseguo aggregazione dei dati a mezzanotte.")
-                    self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
-                    self.last_aggregation_time = current_time  # Aggiorna l'ultimo tempo di aggregazione
+                    current_time = datetime.now()
+                    if current_time.hour == 00 and current_time.minute == 00:
+                        self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
+                        self.last_aggregation_time = current_time  # Aggiorna l'ultimo tempo di aggregazione
 
         except Exception as e:
             pass
