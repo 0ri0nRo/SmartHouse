@@ -10,29 +10,29 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f7f7f7;
+            background-color: #f4f4f9;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             min-height: 100vh;
         }
 
         h1 {
-            color: #222;
-            margin: 40px 0 20px;
+            color: #333;
+            margin: 20px;
             font-size: 28px;
             text-align: center;
-            letter-spacing: 1px;
         }
 
         .container {
-            width: 90%;
-            max-width: 800px;
-            margin-bottom: 60px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 800px;
+            margin: 20px;
         }
 
         table {
@@ -75,44 +75,42 @@
             color: #3f51b5;
         }
 
-        canvas {
-            margin-top: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        .chart-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
         }
 
-        @media (max-width: 600px) {
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 500px; /* Reduced height for better mobile view */
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+
             h1 {
                 font-size: 24px;
             }
+
             th, td {
-                font-size: 14px;
-            }
-            .container {
-                padding: 300px;
+                font-size: 14px; /* Adjust font size for mobile */
             }
         }
-        
+
         @media (max-width: 480px) {
+            h1 {
+                font-size: 20px; /* Smaller font for very small screens */
+            }
+
             .chart-container {
-                height: 300px;
-            }
-
-            .controls label,
-            .controls select,
-            .controls input,
-            .controls button {
-                font-size: 12px;
-            }
-
-            .controls select, 
-            .controls input {
-                max-width: 150px; /* Adjust width for smaller screens */
-            }
-
-            .controls button {
-                font-size: 12px;
-                padding: 6px 12px; /* Make buttons smaller */
+                height: 500px; /* Further reduce chart height for mobile */
             }
         }
     </style>
@@ -133,10 +131,19 @@
                 <!-- Device rows will be inserted here -->
             </tbody>
         </table>
-        <canvas id="connectionChart"></canvas>
-        <canvas id="mostConnectedDaysChart"></canvas>
-    </div>
 
+        <div style="height: 500px">
+            <div class="chart-container">
+                <canvas id="connectionChart"></canvas>
+            </div>
+        </div>
+
+        <div style="height: 500px">
+            <div class="chart-container">
+                <canvas id="mostConnectedDaysChart"></canvas>
+            </div>
+        </div>
+    </div>
     <script>
         async function fetchDevices() {
             const response = await fetch('/api/devices');
@@ -156,10 +163,9 @@
 
             devices.forEach(device => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${device.hostname}</td>
-                    <td>${formatTimestamp(device.last_seen)}</td>
-                `;
+                row.innerHTML = 
+                    `<td>${device.hostname}</td>
+                    <td>${formatTimestamp(device.last_seen)}</td>`;
                 tableBody.appendChild(row);
             });
         }
@@ -194,6 +200,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             display: true,
@@ -226,6 +233,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
