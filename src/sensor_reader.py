@@ -88,7 +88,7 @@ class SensorReader:
                         # Aggiorna il timestamp dell'ultimo allarme
                         self.last_alarm_time = check_timestamp
 
-                if temperature <= 45:
+                if temperature <= 45 or temperature <=8:
                     # Controlla se i valori sono cambiati
                     if temperature != self.last_temperature or humidity != self.last_humidity:
                         # Salva i nuovi valori nel database
