@@ -17,8 +17,10 @@ mkdir -p $BACKUP_DIR
 # Cancella tutto il contenuto della directory di backup
 rm -f $BACKUP_DIR/*
 
-# Esegui il backup
-docker exec $CONTAINER_ID pg_dump -U postgres sensor_data > $BACKUP_FILE
+# Esegui il backup escludendo la tabella "network_devices"
+docker exec $CONTAINER_ID pg_dump -U postgres --exclude-table=network_devices sensor_data > $BACKUP_FILE
 
 # Rimuovi i backup più vecchi di 7 giorni
 find $BACKUP_DIR -type f -name "*.sql" -mtime +7 -exec rm {} \;
+
+echo "Backup completato. File salvato in: $BACKUP_FILE"
