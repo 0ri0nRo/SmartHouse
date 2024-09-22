@@ -9,7 +9,7 @@ CONTAINER_ID=$(docker ps -q --filter "ancestor=$IMAGE_NAME")
 # Variabili
 BACKUP_DIR="backup"       # Sostituisci con il percorso in cui desideri salvare i backup
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="$BACKUP_DIR/backup_$TIMESTAMP.sql"
+BACKUP_FILE="$BACKUP_DIR/backup.sql"
 
 # Crea la directory di backup se non esiste
 mkdir -p $BACKUP_DIR
