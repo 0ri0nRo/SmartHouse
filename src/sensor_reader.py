@@ -88,7 +88,7 @@ class SensorReader:
                         # Aggiorna il timestamp dell'ultimo allarme
                         self.last_alarm_time = check_timestamp
 
-                if temperature <= 45 or temperature <=8:
+                if temperature <= 45 or temperature <=8 or humidity <= 90:
                     # Controlla se i valori sono cambiati
                     if temperature != self.last_temperature or humidity != self.last_humidity:
                         # Salva i nuovi valori nel database
@@ -99,9 +99,9 @@ class SensorReader:
                         self.last_humidity = humidity
                 
                     current_time = datetime.now()
-                    if current_time.hour == 00 and current_time.minute == 00:
+                    if current_time - self.last_aggregation_time >= timedelta(minutes=60):
                         self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
-                        self.last_aggregation_time = current_time  # Aggiorna l'ultimo tempo di aggregazione
+                        self.last_aggregation_time = current_time  # Aggiorna il tempo dell'ultima aggregazione
 
         except Exception as e:
             pass
