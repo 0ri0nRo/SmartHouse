@@ -91,6 +91,8 @@ def get_device_stats():
             COUNT(*) AS connection_count
         FROM
             network_devices
+        WHERE
+            hostname NOT IN ('raspberrypi.fritz.box', 'Fritzbox-Modem.fritz.box', 'fritz.box')
         GROUP BY
             hostname
         ORDER BY
@@ -108,7 +110,7 @@ def get_device_stats():
             if hostname == "":
                 hostname = "Fritzbox-modem1234567890"  # Valore di default se vuoto
 
-            if stat[1] >= 150:
+            if stat[1] >= 100:
                 result.append({
                     'ip_address': hostname,
                     'connection_count': stat[1]
@@ -136,6 +138,8 @@ def get_most_connected_days():
             COUNT(*) AS connection_count
         FROM
             network_devices
+        WHERE
+            hostname NOT IN ('raspberrypi.fritz.box', 'Fritzbox-Modem.fritz.box', 'fritz.box')
         GROUP BY
             hostname, day_of_week
         ORDER BY
