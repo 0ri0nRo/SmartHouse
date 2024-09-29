@@ -217,8 +217,6 @@ def get_monthly_temperature_data():
                 monthly_data[month] = {}
             
             monthly_data[month][day] = avg_temperature
-        
-        print(f"Monthly temperature data fetched: {monthly_data}")
 
         cursor.close()
         connection.close()
@@ -259,12 +257,10 @@ def get_data():
             ORDER BY hour ASC;
         """)
         data = cursor.fetchall()
-        print(f"Data fetched: {data}")
 
         # Ottieni l'ultima temperatura e umidità
         cursor.execute("SELECT temperature_c, humidity FROM sensor_readings ORDER BY timestamp DESC LIMIT 1")
         last_entry = cursor.fetchone()
-        print(f"Last entry fetched: {last_entry}")
 
         cursor.close()
         connection.close()
@@ -526,8 +522,6 @@ def get_daily_temperature_for_month(month):
         
         rows = cursor.fetchall()
         
-        # Debug: Stampa i dati recuperati
-        print("Dati recuperati:", rows)
         
         # Organizza i dati in un dizionario
         for row in rows:
@@ -537,9 +531,6 @@ def get_daily_temperature_for_month(month):
         
         cursor.close()
         connection.close()
-        
-        # Debug: Stampa i dati organizzati
-        print("Dati giornalieri:", daily_data)
         
     except Error as e:
         print(f"Errore durante il recupero dei dati: {e}")
@@ -553,9 +544,6 @@ def api_daily_temperature(month):
         return jsonify({'error': 'Mese non valido. Deve essere tra 1 e 12.'}), 400
     
     data = get_daily_temperature_for_month(month)
-    
-    # Debug: Stampa i dati restituiti
-    print("Dati API:", data)
     
     if not data:
         return jsonify({'error': 'Nessun dato disponibile per il mese selezionato.'}), 404
@@ -940,7 +928,6 @@ def temperature_average(start_datetime, end_datetime):
         # Validate and parse datetime strings
         start_datetime = datetime.fromisoformat(start_datetime)
         end_datetime = datetime.fromisoformat(end_datetime)
-        print(f"Parsed start_datetime: {start_datetime}, end_datetime: {end_datetime}")
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)'}), 400
 
@@ -1003,7 +990,6 @@ def umid_average(start_datetime, end_datetime):
         # Validate and parse datetime strings
         start_datetime = datetime.fromisoformat(start_datetime)
         end_datetime = datetime.fromisoformat(end_datetime)
-        print(f"Parsed start_datetime: {start_datetime}, end_datetime: {end_datetime}")
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS)'}), 400
 

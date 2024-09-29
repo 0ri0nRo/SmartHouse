@@ -75,10 +75,10 @@ class SensorReader:
                 status = last_alarm["status"]
                  # Ottieni il timestamp corrente come oggetto datetime
                 check_timestamp = datetime.now()
-
+                print(f"status: {status}, distance: {distance}")
                 # Verifica se è passato abbastanza tempo dall'ultimo allarme
                 if status == "true" and distance < 80:
-                    #print(f"pre - invio allarme, {check_timestamp} \n")
+                    print(f"pre - invio allarme, {check_timestamp} \n")
 
                     # Verifica se è passato abbastanza tempo dall'ultimo allarme
                     if (check_timestamp - self.last_alarm_time) >= timedelta(seconds=10):  # Intervallo di 10 secondi
@@ -88,7 +88,7 @@ class SensorReader:
                         # Aggiorna il timestamp dell'ultimo allarme
                         self.last_alarm_time = check_timestamp
 
-                if temperature <= 45 or temperature <=8 or humidity <= 90:
+                if temperature <= 45 and temperature >=8 and humidity <= 90:
                     # Controlla se i valori sono cambiati
                     if temperature != self.last_temperature or humidity != self.last_humidity:
                         # Salva i nuovi valori nel database
@@ -98,10 +98,10 @@ class SensorReader:
                         self.last_temperature = temperature
                         self.last_humidity = humidity
                 
-                    current_time = datetime.now()
-                    if current_time - self.last_aggregation_time >= timedelta(minutes=60):
-                        self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
-                        self.last_aggregation_time = current_time  # Aggiorna il tempo dell'ultima aggregazione
+                    #current_time = datetime.now()
+                    #if current_time - self.last_aggregation_time >= timedelta(minutes=60):
+                        #self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
+                        #self.last_aggregation_time = current_time  # Aggiorna il tempo dell'ultima aggregazione
 
         except Exception as e:
             pass
