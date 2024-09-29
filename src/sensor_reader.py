@@ -97,7 +97,7 @@ class SensorReader:
                         # Aggiorna gli ultimi valori salvati
                         self.last_temperature = temperature
                         self.last_humidity = humidity
-                
+                        self.db.create_temp_table_and_aggregate_data()
                     #current_time = datetime.now()
                     #if current_time - self.last_aggregation_time >= timedelta(minutes=60):
                         #self.db.create_temp_table_and_aggregate_data()  # Esegui l'aggregazione
