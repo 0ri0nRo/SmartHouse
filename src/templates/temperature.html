@@ -470,7 +470,8 @@
         async function renderTemperatureChart(startDate, endDate) {
             const data = await fetchTemperatureData(startDate, endDate);
 
-            const labels = data.map(entry => new Date(entry.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            // Utilizzare sia la data che l'ora per l'asse X
+            const labels = data.map(entry => new Date(entry.hour).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }));
             const temperatures = data.map(entry => entry.avg_temperature);
 
             const ctx = document.getElementById('temperatureChart').getContext('2d');
@@ -479,9 +480,9 @@
             temperatureChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: labels, // Date e ora combinate
                     datasets: [{
-                        label: `Temperature from ${startDate} to ${endDate}`,
+                        label: `Temperature from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`,
                         data: temperatures,
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
                         borderColor: 'rgba(75, 192, 192, 1)',
@@ -495,7 +496,7 @@
                         x: {
                             title: {
                                 display: true,
-                                text: 'Time'
+                                text: 'Date and Time'
                             },
                             ticks: {
                                 autoSkip: true,
