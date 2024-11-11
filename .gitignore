@@ -1,0 +1,96 @@
+# Node modules (if using Node.js for any reason)
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.venv/
+# Dependency directories
+jspm_packages/
+
+.picos-files/
+
+# Build output
+/dist
+/build
+/coverage
+
+# Docker files
+docker-compose.override.yml
+Dockerfile.dev
+
+# Environment files
+.env
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.project
+
+# Mac specific files
+*.DS_Store
+
+# Windows specific files
+*.log
+*.pid
+*.seed
+*.suo
+*.user
+*.userossc
+*.suo
+*.sln
+*.vscode/
+
+# General temporary files
+*.tmp
+*.bak
+*.swp
+
+# Python specific files (if used)
+*.pyc
+__pycache__/
+
+/backup
+
+# JetBrains IDEs (IntelliJ, PyCharm, etc.)
+*.iml
+.idea/
+
+# Coverage reports
+coverage/
+*.lcov
+
+venv/
+.env
+# Build directories
+build/
+dist/
+tmp/
+myenv/
+# npm package-lock files
+package-lock.json
+
+/proxy
+
+# Yarn lock files
+yarn.lock
+
+# Other files to ignore
+*.tgz
+*.gz
+
+# Exclude any file or folder related to personal configuration
+*.local
+*.sublime-workspace
+*.sublime-project

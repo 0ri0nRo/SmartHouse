@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Security</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #333;
+            margin: 20px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 90%;
+            width: 800px;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        thead {
+            background-color: #3f51b5;
+        }
+
+        th, td {
+            padding: 15px 10px;
+            color: #fff;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        th {
+            color: #fff;
+        }
+
+        tbody tr {
+            background-color: #f9f9f9;
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        td {
+            color: #333;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        td:first-child {
+            font-weight: 500;
+            color: #3f51b5;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 500px; /* Reduced height for better mobile view */
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            th, td {
+                font-size: 14px; /* Adjust font size for mobile */
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 20px; /* Smaller font for very small screens */
+            }
+
+            .chart-container {
+                height: 500px; /* Further reduce chart height for mobile */
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>Device Security</h1>
+    <div class="container">
+        <table id="devicesTable">
+            <thead>
+                <tr>
+                    <th>Hostname</th>
+                    <th>Last Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Device rows will be inserted here -->
+            </tbody>
+        </table>
+
+        <div style="height: 500px">
+            <div class="chart-container">
+                <canvas id="connectionChart"></canvas>
+            </div>
+        </div>
+
+        <div style="height: 500px">
+            <div class="chart-container">
+                <canvas id="mostConnectedDaysChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function fetchDevices() {
+            const response = await fetch('/api/devices');
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        async function updateDeviceTable() {
+            const devices = await fetchDevices();
+            const tableBody = document.querySelector('#devicesTable tbody');
+            tableBody.innerHTML = '';
+
+            devices.forEach(device => {
+                const row = document.createElement('tr');
+                row.innerHTML = 
+                    `<td>${device.hostname}</td>
+                    <td>${formatTimestamp(device.last_seen)}</td>`;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function fetchDeviceStats() {
+            const response = await fetch('/api/devices/stats');
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        }
+
+        async function fetchMostConnectedDays() {
+            const response = await fetch('/api/devices/most_connected_days');
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        }
+
+        async function updateConnectionChart() {
+            const stats = await fetchDeviceStats();
+            const labels = stats.map(stat => stat.ip_address);
+            const data = stats.map(stat => stat.connection_count);
+
+            const ctx = document.getElementById('connectionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Connection Counts',
+                        data: data,
+                        backgroundColor: labels.map(() => getRandomColor()),
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+
+        async function updateMostConnectedDaysChart() {
+            const data = await fetchMostConnectedDays();
+            const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const datasets = [];
+
+            for (const ip in data) {
+                datasets.push({
+                    label: ip,
+                    data: data[ip],
+                    backgroundColor: getRandomColor(),
+                });
+            }
+
+            const ctx = document.getElementById('mostConnectedDaysChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        window.onload = async () => {
+            await updateDeviceTable();
+            await updateConnectionChart();
+            await updateMostConnectedDaysChart();
+        };
+    </script>
+</body>
+
+</html>

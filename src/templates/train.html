@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trains - Future and Past</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        h2 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            font-size: 1.2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .icon-info {
+            display: inline-block;
+            margin-left: 10px;
+            cursor: pointer;
+            color: #007bff;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .icon-info:hover {
+            color: #0056b3;
+        }
+
+        .popup {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .popup.active {
+            display: block;
+        }
+
+        .popup-close {
+            text-align: right;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.3rem;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+            }
+
+            th, td {
+                font-size: 0.8rem;
+                padding: 6px;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Trains</h1>
+
+        <!-- Dropdown menu and input field for destination selection -->
+        <label for="destination-select">Select or enter a destination:</label>
+        <select id="destination-select">
+            <option value="">Select...</option>
+            <option value="COLLEFERRO">COLLEFERRO</option>
+            <option value="TORVERGATA">TORVERGATA</option>
+            <option value="FROSINONE">FROSINONE</option>
+            <!-- Add more destinations as needed -->
+        </select>
+        <input type="text" id="destination-input" placeholder="Enter destination" />
+
+        <h2>Future Trains</h2>
+        <table id="future-trains">
+            <thead>
+                <tr>
+                    <th>Train Number</th>
+                    <th>Destination</th>
+                    <th>Time</th>
+                    <th>Delay</th>
+                    <th>Platform</th>
+                    <th>Stops</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Future train data will be inserted here -->
+            </tbody>
+        </table>
+        
+        <h2>Past Trains</h2>
+        <table id="past-trains">
+            <thead>
+                <tr>
+                    <th>Train Number</th>
+                    <th>Destination</th>
+                    <th>Time</th>
+                    <th>Delay</th>
+                    <th>Platform</th>
+                    <th>Stops</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Past train data will be inserted here -->
+            </tbody>
+        </table>
+
+        <!-- Popup for displaying train stops -->
+        <div id="popup" class="popup">
+            <div class="popup-close" onclick="closePopup()">×</div>
+            <div id="popup-content"></div>
+        </div>
+
+        <div class="alert" id="error-message" style="display: none;">
+            Error retrieving train data. Check the console for details.
+        </div>
+    </div>
+
+    <script>
+        // Function to format date and time
+        function formatDateTime(dateTime) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateTime).toLocaleDateString(undefined, options);
+        }
+
+        async function fetchTrainData(destination) {
+            try {
+                const response = await fetch(`/trains_data/${destination}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            } catch (error) {
+                document.getElementById('error-message').style.display = 'block';
+                console.error('Error fetching train data:', error);
+                throw error;
+            }
+        }
+
+        function displayTrains(data) {
+            const futureTrainsTable = document.getElementById('future-trains').getElementsByTagName('tbody')[0];
+            const pastTrainsTable = document.getElementById('past-trains').getElementsByTagName('tbody')[0];
+
+            // Clear existing tables
+            futureTrainsTable.innerHTML = '';
+            pastTrainsTable.innerHTML = '';
+
+            // Function to create an info icon with popup for stops
+            function createInfoIcon(stops) {
+                const icon = document.createElement('span');
+                icon.className = 'icon-info';
+                icon.innerText = 'i';
+                icon.onclick = function () {
+                    showPopup(stops, icon);
+                };
+                return icon;
+            }
+
+            // Process future trains
+            data.result.forEach(train => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${train.train_number}</td>
+                    <td>${train.destination}</td>
+                    <td>${train.time}</td>
+                    <td>${train.delay}</td>
+                    <td>${train.platform || 'N/A'}</td>
+                `;
+                const stopsCell = document.createElement('td');
+                stopsCell.appendChild(createInfoIcon(train.stops));
+                row.appendChild(stopsCell);
+                futureTrainsTable.appendChild(row);
+            });
+
+            // Process past trains
+            data.result_old.forEach(train => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${train.train_number}</td>
+                    <td>${train.destination}</td>
+                    <td>${train.time}</td>
+                    <td>${train.delay}</td>
+                    <td>${train.platform || 'N/A'}</td>
+                `;
+                const stopsCell = document.createElement('td');
+                stopsCell.appendChild(createInfoIcon(train.stops));
+                row.appendChild(stopsCell);
+                pastTrainsTable.appendChild(row);
+            });
+        }
+
+        function showPopup(stops, icon) {
+            const popup = document.getElementById('popup');
+            const popupContent = document.getElementById('popup-content');
+            popupContent.innerText = stops;
+
+            // Position the popup
+            const iconRect = icon.getBoundingClientRect();
+            popup.style.left = `${iconRect.left}px`;
+            popup.style.top = `${iconRect.bottom + window.scrollY}px`;
+
+            popup.classList.add('active');
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('popup');
+            popup.classList.remove('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const destinationSelect = document.getElementById('destination-select');
+            const destinationInput = document.getElementById('destination-input');
+
+            // Function to update train data based on selected destination
+            async function updateTrainData() {
+                let destination = destinationSelect.value || destinationInput.value.trim();
+                if (destination) {
+                    try {
+                        const trainData = await fetchTrainData(destination);
+                        displayTrains(trainData);
+                    } catch (error) {
+                        // Error already handled in fetchTrainData function
+                    }
+                }
+            }
+
+            // Add change event to dropdown and input field
+            destinationSelect.addEventListener('change', () => {
+                destinationInput.value = ''; // Clear input field if a predefined destination is selected
+                updateTrainData();
+            });
+
+            destinationInput.addEventListener('input', () => {
+                destinationSelect.value = ''; // Clear selection if a custom destination is entered
+                updateTrainData();
+            });
+
+            // Initialize page without data until the user selects or enters a destination
+        });
+    </script>
+</body>
+</html>
