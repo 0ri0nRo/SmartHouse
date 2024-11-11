@@ -1,0 +1,9 @@
+SMTP_SERVER = smtp.gmail.com
+SMTP_PORT = 587
+EMAIL_USERNAME =
+EMAIL_PASSWORD = 
+DB_HOST = db
+DB_DATABASE = sensor_data
+DB_USER = postgres
+DB_PASSWORD = 1234
+TO_EMAIL =

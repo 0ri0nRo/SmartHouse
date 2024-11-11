@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Humidity Charts</title>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin: 20px;
+            font-size: 28px;
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 90%;
+            width: 800px;
+            margin: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .controls label {
+            font-size: 16px;
+            color: #555;
+            margin-right: 10px;
+        }
+
+        .controls select, 
+        .controls input {
+            padding: 6px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 0 5px;
+            background-color: #f9f9f9;
+            color: #333;
+            max-width: 200px; /* Ensure inputs don't stretch too wide */
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            background-color: #007bff;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin: 5px;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .controls button:focus {
+            outline: none;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 100%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .controls label,
+            .controls select,
+            .controls input,
+            .controls button {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chart-container {
+                height: 300px;
+            }
+
+            .controls label,
+            .controls select,
+            .controls input,
+            .controls button {
+                font-size: 12px;
+            }
+
+            .controls select, 
+            .controls input {
+                max-width: 150px; /* Adjust width for smaller screens */
+            }
+
+            .controls button {
+                font-size: 12px;
+                padding: 6px 12px; /* Make buttons smaller */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Humidity Charts</h1>
+    <div class="container">
+
+        <!-- Chart for Today's Humidity -->
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="todayHumidityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart for Monthly Average Humidity -->
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="monthlyAverageHumidityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart for Daily Humidity -->
+        <!-- Controls for selecting month and year -->
+        <div class="controls">
+            <label for="monthSelector">Select Month:</label>
+            <select id="monthSelector">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+
+            <label for="yearSelector">Select Year:</label>
+            <select id="yearSelector">
+                <!-- Years will be dynamically generated by JavaScript -->
+            </select>
+
+            <button id="updateChartsButton">Update</button>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="dailyHumidityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Controls for fetching data by date range -->
+        <div class="controls">
+            <label for="startDate">Start Date:</label>
+            <input type="datetime-local" id="startDate" />
+
+            <label for="endDate">End Date:</label>
+            <input type="datetime-local" id="endDate" />
+
+            <button id="fetchDataButton">Fetch Data</button>
+        </div>
+
+        <!-- Chart for Humidity by Date Range -->
+        <div class="chart-card">
+            <div class="chart-container">
+                <canvas id="humidityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dailyHumidityChart = null;
+        let monthlyAverageHumidityChart = null;
+        let todayHumidityChart = null;
+        let humidityChart = null;
+
+        async function fetchDailyHumidityData(month, year) {
+            try {
+                const response = await fetch(`/api/monthly_average_humidity/${month}/${year}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching daily humidity data:', error);
+                return {};
+            }
+        }
+
+        async function fetchMonthlyAverageHumidityData(year) {
+            try {
+                const response = await fetch(`/api/monthly_average_humidity/${year}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching monthly average humidity data:', error);
+                return {};
+            }
+        }
+
+        async function fetchTodayHumidityData() {
+            try {
+                const response = await fetch(`/api/today_humidity`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching today humidity data:', error);
+                return {};
+            }
+        }
+
+        async function fetchHumidityData(startDate, endDate) {
+            try {
+                const response = await fetch(`/api/humidity_average/${startDate}/${endDate}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching humidity data:', error);
+                return [];
+            }
+        }
+
+        function clearChart(chart) {
+            if (chart) {
+                chart.destroy();
+            }
+        }
+
+        async function renderDailyHumidityChart(month, year) {
+            try {
+                const data = await fetchDailyHumidityData(month, year);
+                console.log('Fetched data for daily humidity chart:', data);
+
+                const days = Array.from({ length: 31 }, (_, i) => i + 1);
+                const humidities = days.map(day => data[day] || null);
+
+                const ctx = document.getElementById('dailyHumidityChart').getContext('2d');
+                clearChart(dailyHumidityChart);
+
+                dailyHumidityChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: days.map(day => `${day}`),
+                        datasets: [{
+                            label: `Daily Humidity for ${getMonthName(month)} ${year}`,
+                            data: humidities,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Day of the Month'
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    maxRotation: 45,
+                                    minRotation: 30
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Humidity (%)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        return `Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering daily humidity chart:', error);
+            }
+        }
+
+        async function renderMonthlyAverageHumidityChart(year) {
+            try {
+                const data = await fetchMonthlyAverageHumidityData(year);
+                console.log('Fetched data for monthly average humidity chart:', data);
+
+                const months = Array.from({ length: 12 }, (_, i) => i + 1);
+                const humidities = months.map(month => data[month] || null);
+
+                const ctx = document.getElementById('monthlyAverageHumidityChart').getContext('2d');
+                clearChart(monthlyAverageHumidityChart);
+
+                monthlyAverageHumidityChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: months.map(month => getMonthName(month)),
+                        datasets: [{
+                            label: `Average Humidity for ${year}`,
+                            data: humidities,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 12,
+                                    maxRotation: 45,
+                                    minRotation: 30
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Humidity (%)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        return `Average Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering monthly average humidity chart:', error);
+            }
+        }
+
+        async function renderTodayHumidityChart() {
+            try {
+                const data = await fetchTodayHumidityData();
+                console.log('Fetched data for today\'s humidity chart:', data);
+
+                const hours = Object.keys(data).map(hour => parseInt(hour, 10)).sort((a, b) => a - b);
+                const humidities = hours.map(hour => data[hour] || null);
+
+                const ctx = document.getElementById('todayHumidityChart').getContext('2d');
+                clearChart(todayHumidityChart);
+
+                todayHumidityChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hours.map(hour => `${hour}:00`),
+                        datasets: [{
+                            label: 'Humidity Today',
+                            data: humidities,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hour of the Day'
+                                },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    maxRotation: 45,
+                                    minRotation: 30
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Humidity (%)'
+                                },
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        return `Humidity: ${tooltipItem.raw !== null ? tooltipItem.raw + '%' : 'No data'}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error rendering today\'s humidity chart:', error);
+            }
+        }
+
+        async function renderHumidityChart(startDate, endDate) {
+            const data = await fetchHumidityData(startDate, endDate);
+
+            // Utilizzare sia la data che l'ora per l'asse X
+            const labels = data.map(entry => new Date(entry.hour).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }));
+            const humidities = data.map(entry => entry.avg_humidity);
+
+            const ctx = document.getElementById('humidityChart').getContext('2d');
+            clearChart(humidityChart);
+
+            humidityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels, // Date e ora combinate
+                    datasets: [{
+                        label: `Humidity from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`,
+                        data: humidities,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date and Time'
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 10,
+                                maxRotation: 45,
+                                minRotation: 30
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Humidity (%)'
+                            },
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem) {
+                                    return `Humidity: ${tooltipItem.raw} %`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function getMonthName(month) {
+            const months = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            return months[month - 1];
+        }
+
+        async function initializeYearSelector() {
+            const currentYear = new Date().getFullYear();
+            const yearSelector = document.getElementById('yearSelector');
+
+            for (let year = currentYear - 5; year <= currentYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.text = year;
+                yearSelector.add(option);
+            }
+            yearSelector.value = currentYear; // Set the default value to the current year
+        }
+
+        async function initializeMonthSelector() {
+            const currentMonth = new Date().getMonth() + 1;
+            const monthSelector = document.getElementById('monthSelector');
+            monthSelector.value = currentMonth; // Set the default value to the current month
+        }
+
+        async function updateCharts() {
+            const month = parseInt(document.getElementById('monthSelector').value, 10);
+            const year = parseInt(document.getElementById('yearSelector').value, 10);
+
+            await renderTodayHumidityChart();
+            await renderDailyHumidityChart(month, year);
+            await renderMonthlyAverageHumidityChart(year);
+        }
+
+        document.getElementById('updateChartsButton').addEventListener('click', updateCharts);
+
+        document.getElementById('fetchDataButton').addEventListener('click', () => {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (startDate && endDate) {
+                renderHumidityChart(startDate, endDate);
+            } else {
+                alert('Please select both start and end dates.');
+            }
+        });
+
+        // Initialize year and month selectors and default chart view
+        (async function () {
+            await initializeYearSelector();
+            await initializeMonthSelector();
+            await updateCharts();
+        })();
+    </script>
+</body>
+
+</html>
