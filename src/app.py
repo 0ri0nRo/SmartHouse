@@ -1389,8 +1389,6 @@ def get_hourly_gas_concentration():
     
     return hourly_data
 
-
-
 # Initialize the last run time for the aggregation function to None
 last_aggregation_time = None
 
@@ -1414,6 +1412,7 @@ def api_gas_concentration_today():
         return jsonify({'error': 'Nessun dato disponibile'}), 404
 
     return jsonify(data)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
