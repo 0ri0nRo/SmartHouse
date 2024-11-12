@@ -544,44 +544,44 @@
 
         async function fetchAirQuality() {
             try {
-                const response = await fetch('/air_quality_data');
-                const { air_quality_index, timestamp } = await response.json();
+                // Modifica URL per ottenere i dati dall'indirizzo specificato
+                const response = await fetch('http://192.168.178.154:5000/api/air_quality');
+                const data = await response.json();
 
+                // Estrai il primo elemento (se l'array contiene più elementi, aggiorna qui in base alle tue esigenze)
+                const { air_quality_index, air_quality_description, timestamp } = data[0];
+
+                // Seleziona gli elementi HTML da aggiornare
                 const airQualityCard = document.getElementById("airQualityCard");
                 const airQualityIndexElement = document.getElementById("airQualityIndex");
                 const airQualityStatus = document.getElementById("airQualityStatus");
 
-                // Imposta l'indice di qualità dell'aria
+                // Aggiorna l'indice e la descrizione di qualità dell'aria
                 airQualityIndexElement.textContent = `${air_quality_index.toFixed(1)}`;
-                airQualityStatus.textContent = `Updated at: ${formatTimestamp(timestamp)}`;
+                airQualityStatus.textContent = `${air_quality_description}`;
 
-                // Cambia colore della card in base alla qualità dell'aria
+                // Rimuovi le classi di qualità precedenti
                 airQualityCard.classList.remove("ottimo", "buono", "moderato", "scadente", "molto-scadente", "pericoloso");
 
-                // Categorizzazione in base all'index
+                // Aggiorna il colore della card in base al valore di air_quality_index
                 if (air_quality_index <= 20) {
                     airQualityCard.classList.add("molto-scadente");
-                    airQualityStatus.textContent = "very low";
                 } else if (air_quality_index <= 40) {
                     airQualityCard.classList.add("scadente");
-                    airQualityStatus.textContent = "low";
                 } else if (air_quality_index <= 60) {
                     airQualityCard.classList.add("moderato");
-                    airQualityStatus.textContent = "moderate";
                 } else if (air_quality_index <= 80) {
                     airQualityCard.classList.add("buono");
-                    airQualityStatus.textContent = "good";
                 } else if (air_quality_index <= 100) {
                     airQualityCard.classList.add("buono");
-                    airQualityStatus.textContent = "good";
                 } else {
                     airQualityCard.classList.add("ottimo");
-                    airQualityStatus.textContent = "excellent";
                 }
             } catch (error) {
                 console.error('Error fetching air quality data:', error);
             }
         }
+
 
 
         // Aggiorna anche la qualità dell'aria all'inizializzazione
