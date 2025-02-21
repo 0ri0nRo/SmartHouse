@@ -22,3 +22,6 @@ requests
 beautifulsoup4
 flask 
 python-dotenv
+pymongo[srv]
+pymongo
+pytest

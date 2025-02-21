@@ -1,5 +1,4 @@
 services:
-  
   db:
     image: postgres:latest
     environment:
@@ -13,14 +12,26 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:4.4.18
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo-data:/data/db
+
   main:
     build:
       context: ./src
       dockerfile: Dockerfile
     command: python3 main.py
-    privileged: true  # Aggiungi questa riga
+    privileged: true
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"  # Monta la porta seriale
+      - "/dev/ttyACM0:/dev/ttyACM0"
     depends_on:
       - db
     environment:
@@ -41,7 +52,9 @@ services:
     depends_on:
       - db
       - main
+      - mongodb
     environment:
+      - MONGO_URI=mongodb://root:example@mongodb:27017/
       - DB_HOST=db
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
@@ -51,7 +64,7 @@ services:
 
   network_scanner:
     build:
-      context: ./src  # Assumi che scanner.py si trovi in questa directory
+      context: ./src
       dockerfile: Dockerfile
     command: python3 scanner.py
     depends_on:
@@ -66,3 +79,4 @@ services:
 
 volumes:
   postgres_data:
+  mongo-data:
