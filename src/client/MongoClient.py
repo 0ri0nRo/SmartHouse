@@ -50,7 +50,7 @@ class MongoDBHandler:
         except Exception as e:
             print(f"Errore durante l'aggiornamento del documento: {e}")
 
-    def add_shopping_item(self, item_name, quantity, location, timestamp_str):
+    def add_shopping_item(self, item_name, quantity, store, timestamp_str):
         try:
             # Convertire la stringa timestamp in un oggetto datetime
             timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d")
@@ -61,7 +61,7 @@ class MongoDBHandler:
         document = {
             "item_name": item_name,
             "quantity": quantity,
-            "location": location,
+            "store": store,
             "timestamp": timestamp  
         }
         self.insert_document(document)
@@ -123,7 +123,7 @@ class MongoDBHandler:
                 "_id": str(doc["_id"]),  # Assicurati di convertire ObjectId in stringa
                 "item_name": doc["item_name"],
                 "quantity": doc["quantity"],
-                "location": doc["location"],
+                "store": doc["store"],
                 "timestamp": doc["timestamp"].strftime("%Y-%m-%d")
             } for doc in documents]
             

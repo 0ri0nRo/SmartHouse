@@ -1,64 +1,64 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista della Spesa</title>
+    <title>Shopping List</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script defer src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
 <body>
     <div class="container">
-        <h1>🛒 Lista della Spesa</h1>
+        <h1>🛒 Shopping List</h1>
 
-        <!-- Form per aggiungere un nuovo elemento -->
+        <!-- Form to add a new item -->
         <div class="form-container">
-            <input type="text" id="item_name" placeholder="Nome articolo" required>
-            <input type="text" id="location" placeholder="Posizione" required>
-            <input type="number" id="quantity" placeholder="Quantità" required>
+            <input type="text" id="item_name" placeholder="Item Name" required>
+            <input type="text" id="store" placeholder="Store" required>
+            <input type="number" id="quantity" placeholder="Quantity" required>
             <input type="date" id="needed_by">
-            <button class="btn add-btn" onclick="addItem()">Aggiungi</button>
+            <button class="btn add-btn" onclick="addItem()">Add</button>
         </div>
 
-        <!-- Tabella degli elementi -->
-        <h2>Lista Attuale</h2>
+        <!-- Table for the current items -->
+        <h2>Current List</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Nome</th>
-                    <th>Posizione</th>
-                    <th>Quantità</th>
-                    <th>Data</th>
-                    <th>Azioni</th>
+                    <th>Name</th>
+                    <th>Store</th>
+                    <th>Quantity</th>
+                    <th>Date</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="shopping_list_body">
-                <tr><td colspan="5">Caricamento...</td></tr>
+                <tr><td colspan="5">Loading...</td></tr>
             </tbody>
         </table>
 
-        <!-- Selezione intervallo di tempo -->
-        <h2>Filtra per Data</h2>
+        <!-- Time range selection -->
+        <h2>Filter by Date</h2>
         <div class="filter-container">
             <input type="date" id="start_timestamp">
             <input type="date" id="end_timestamp">
-            <button class="btn filter-btn" onclick="loadItemsByTimestamp()">Filtra</button>
+            <button class="btn filter-btn" onclick="loadItemsByTimestamp()">Filter</button>
         </div>
 
-        <!-- Tabella filtrata -->
-        <h2>Risultati Filtrati</h2>
+        <!-- Filtered results table -->
+        <h2>Filtered Results</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Nome</th>
-                    <th>Posizione</th>
-                    <th>Quantità</th>
-                    <th>Data</th>
-                    <th>Azioni</th>
+                    <th>Name</th>
+                    <th>Store</th>
+                    <th>Quantity</th>
+                    <th>Date</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="filtered_items_body">
-                <tr><td colspan="5">Nessun elemento trovato.</td></tr>
+                <tr><td colspan="5">No items found.</td></tr>
             </tbody>
         </table>
     </div>

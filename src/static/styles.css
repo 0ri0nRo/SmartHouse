@@ -1,22 +1,35 @@
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #f7f7f7;
-    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
     margin: 0;
     padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
 }
 
 .container {
-    width: 80%;
-    margin: 20px auto;
-    background: white;
-    padding: 20px;
+    background: #ffffff;
     border-radius: 12px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 90%;
+    width: 800px;
+    margin: 20px;
 }
 
 h1, h2 {
     color: #333;
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 22px;
+    margin-top: 20px;
 }
 
 .form-container, .filter-container {
@@ -28,13 +41,16 @@ h1, h2 {
 }
 
 input, button {
-    padding: 10px;
+    padding: 8px;
     border-radius: 6px;
     border: 1px solid #ddd;
-    font-size: 16px;
+    font-size: 14px;
+    max-width: 200px; /* Ensures inputs don't stretch too wide */
+    background-color: #f9f9f9;
+    color: #333;
 }
 
-.btn {
+button {
     cursor: pointer;
     transition: 0.3s;
 }
@@ -42,19 +58,23 @@ input, button {
 .add-btn {
     background-color: #28a745;
     color: white;
+    padding: 10px 16px;
 }
 
 .add-btn:hover {
     background-color: #218838;
+    transform: scale(1.05);
 }
 
 .filter-btn {
     background-color: #007bff;
     color: white;
+    padding: 10px 16px;
 }
 
 .filter-btn:hover {
     background-color: #0056b3;
+    transform: scale(1.05);
 }
 
 table {
@@ -86,11 +106,85 @@ button.delete-btn {
     background-color: #dc3545;
     color: white;
     border: none;
-    padding: 8px;
+    padding: 8px 16px;
     cursor: pointer;
     border-radius: 4px;
+    transition: 0.3s;
 }
 
 button.delete-btn:hover {
     background-color: #c82333;
+    transform: scale(1.05);
+}
+
+/* Media Query for Mobile Devices */
+@media (max-width: 768px) {
+    .container {
+        width: 100%;
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 22px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    .form-container, .filter-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    input, button {
+        width: 100%;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    table {
+        font-size: 14px;
+    }
+
+    th, td {
+        padding: 8px;
+    }
+
+    button.delete-btn {
+        padding: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 18px;
+    }
+
+    h2 {
+        font-size: 16px;
+    }
+
+    .form-container, .filter-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    input, button {
+        padding: 8px;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    th, td {
+        padding: 6px;
+    }
+
+    button.delete-btn {
+        padding: 5px;
+    }
 }

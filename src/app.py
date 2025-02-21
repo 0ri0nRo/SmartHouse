@@ -1428,7 +1428,7 @@ def api_gas_concentration_today():
 def insert_documents():
     documents = request.json
     db_handler = MongoDBHandler(URI, 'local', 'lista_spesa')
-    db_handler.add_shopping_item(documents['item_name'], documents['quantity'], documents['location'], documents['timestamp'])
+    db_handler.add_shopping_item(documents['item_name'], documents['quantity'], documents['store'], documents['timestamp'])
     return jsonify({"message": "Documents inserted successfully"}), 201
 
 @app.route('/todolist/today', methods=['GET'])
