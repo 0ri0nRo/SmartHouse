@@ -13,9 +13,20 @@ from scraper import TrainScraper
 import os
 from database.database import Database
 from datetime import datetime, timedelta
+from datetime import datetime
+from client.MongoClient import MongoDBHandler
+from dotenv import load_dotenv
+import os
+from bson import ObjectId
+from flask import render_template
+from flask import Flask, jsonify, request
+from pymongo import MongoClient, errors
 
-# Carica le variabili di ambiente dal file .env
 load_dotenv()
+URI = os.getenv('MONGO_URI')
+app = Flask(__name__)
+db_handler = MongoDBHandler(URI, 'local', 'lista_spesa')
+
 
 app = Flask(__name__)
 # Configurazione del database
@@ -1412,6 +1423,59 @@ def api_gas_concentration_today():
         return jsonify({'error': 'Nessun dato disponibile'}), 404
 
     return jsonify(data)
+
+@app.route('/todolist/insert', methods=['POST'])
+def insert_documents():
+    documents = request.json
+    db_handler = MongoDBHandler(URI, 'local', 'lista_spesa')
+    db_handler.add_shopping_item(documents['item_name'], documents['quantity'], documents['location'], documents['timestamp'])
+    return jsonify({"message": "Documents inserted successfully"}), 201
+
+@app.route('/todolist/today', methods=['GET'])
+def get_documents_today():
+    db_handler = MongoDBHandler(URI, 'local', 'lista_spesa')
+    documents = db_handler.read_today_items()
+    return jsonify(documents), 200
+
+@app.route('/lista-spesa', methods=['GET'])
+def get_todolist():
+    # Assuming you want to return a JSON response instead of rendering an HTML template
+    return render_template("index-lista.html") , 200
+
+@app.route('/todolist/delete/<item_id>', methods=['DELETE'])
+def delete_item(item_id):
+    """Elimina un item dalla lista della spesa"""
+    try:
+        # Controlla se l'ID è valido
+        if not ObjectId.is_valid(item_id):
+            return jsonify({"message": "Invalid item ID"}), 400
+
+        # Esegui la cancellazione tramite la funzione delete_item
+        result = db_handler.delete_item(item_id)
+
+        # Se il risultato ha "deleted_count" maggiore di 0, significa che l'elemento è stato cancellato
+        if result.get("deleted_count", 0) > 0:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 404  # Restituisci un errore 404 se l'elemento non è stato trovato
+
+    except Exception as e:
+        return jsonify({"message": f"Error deleting item: {e}"}), 500
+
+@app.route('/todolist/update/<start_timestamp>/<end_timestamp>', methods=['GET'])
+def search_by_timestamp(start_timestamp, end_timestamp):
+    try:
+        # Usando la funzione range_timestamp per ottenere i documenti
+        documents = db_handler.range_timestamp(start_timestamp, end_timestamp)
+        
+        if not documents:
+            return jsonify({"message": "Nessun elemento trovato."}), 404
+        
+        # Restituiamo i risultati in formato JSON
+        return jsonify(documents), 200
+    except Exception as e:
+        return jsonify({"message": f"Error: {e}"}), 500 
+
 
 
 if __name__ == '__main__':
