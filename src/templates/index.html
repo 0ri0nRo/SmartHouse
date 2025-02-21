@@ -54,6 +54,27 @@
         .card.air-quality.pericoloso {
             background: linear-gradient(135deg, #b71c1c 0%, #e53935 100%);
         }
+        .card.list {
+        background: linear-gradient(135deg, #ffca28 0%, #ff9800 100%);
+        color: #fff;
+    }
+
+    .card.list button {
+        background-color: #ffffff;
+        color: #333;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        padding: 10px;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: background-color 0.3s;
+    }
+
+    .card.list button:hover {
+        background-color: #ff5722;
+        color: #fff;
+    }
 
 
         .cards-container {
@@ -360,6 +381,10 @@
             <h2>Home Alarm</h2>
             <h2 id="alarmStatus">OFF</h2>
         </div>
+
+        <div class="card list" id="shoppingListCard">
+            <h2>Shopping List</h2>
+        </div>
     </div>
 
 
@@ -541,6 +566,10 @@
         document.getElementById("toggleDarkMode").addEventListener("change", toggleDarkMode);
         // Fetch the last alarm status and load the dark mode theme when the page loads
 
+        // Aggiungi l'evento di click per il bottone della lista della spesa
+        document.getElementById("shoppingListCard").addEventListener("click", () => {
+            window.location.href = "/lista-spesa";  // Indirizza alla pagina della lista della spesa
+        });
 
         async function fetchAirQuality() {
             try {
