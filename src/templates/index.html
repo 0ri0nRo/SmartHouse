@@ -54,10 +54,6 @@
         .card.air-quality.pericoloso {
             background: linear-gradient(135deg, #b71c1c 0%, #e53935 100%);
         }
-    .card.list {
-        background: linear-gradient(135deg, #8E44AD 0%, #FF69B4 100%);
-        color: #fff;
-        }
 
 
     .card.list button {
@@ -151,6 +147,10 @@
             background: linear-gradient(135deg, #ff6a6a 0%, #ee0979 100%);
             color: #fff;
         }
+        .card.list {
+        background: linear-gradient(135deg, #b76ad8 0%, #FF69B4 100%);
+        color: #fff;
+        }
 
         /* Dark mode styles */
         body.dark-mode {
@@ -166,7 +166,9 @@
         body.dark-mode .card.temperature,
         body.dark-mode .card.humidity,
         body.dark-mode .card.raspberry-pi,
+        body.dark-mode .card.list,
         body.dark-mode .card.transports,
+        body.dark-mode .card.groceries,
         body.dark-mode .card.air-quality,
         body.dark-mode .card.card.air-quality.good,
         body.dark-mode .card.card.air-quality.moderate,
@@ -181,6 +183,8 @@
         body.dark-mode .card.alarm.red {
             background: linear-gradient(135deg, #7e3e3e 0%, #a61e1e 100%);
         }
+
+        
 
         .footer {
             margin-top: 20px;
@@ -377,15 +381,16 @@
             <h2>Home Security</h2>
         </div>
 
+        <div class="card list" id="shoppingListCard">
+            <h2>Shopping List</h2>
+        </div>
+
         <!-- Alarm Card -->
         <div class="card alarm" id="alarmCard">
             <h2>Home Alarm</h2>
             <h2 id="alarmStatus">OFF</h2>
         </div>
 
-        <div class="card list" id="shoppingListCard">
-            <h2>Shopping List</h2>
-        </div>
     </div>
 
 
