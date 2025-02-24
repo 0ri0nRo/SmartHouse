@@ -1,163 +1,122 @@
 import network
 import time
-import urequests  # Import the library to make HTTP requests in MicroPython
-from machine import Pin
-from datetime import datetime
-from mq2 import MQ2  # Import the MQ2 class
-import utime
-
-# Wi-Fi credentials
-ssid = ""
-password = ""
-
-# Function to connect to Wi-Fi
-def connect_wifi():
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    wlan.connect(ssid, password)
-    print("Connecting to Wi-Fi...")
-    while not wlan.isconnected():
-        time.sleep(1)
-    print("Connected to Wi-Fi")
-    print("IP Address:", wlan.ifconfig()[0])
-
+import urequests
+import gc
+from mq2 import MQ2
 from time import gmtime, localtime, mktime
 from datetime import datetime
 
-# Function to get the timestamp in local Rome time (CET/CEST)
-def get_timestamp():
-    # Get the current UTC time
-    t = gmtime()
-    
-    # Apply the time zone offset for Rome (UTC +1 for CET or UTC +2 for CEST)
-    current_month = t[1]
-    is_dst = (3 <= current_month <= 10)  # Daylight Saving Time is between March and October in Rome
-    
-    # Rome's timezone offset: UTC +2 during DST (CEST), UTC +1 otherwise (CET)
-    time_offset = 2 if is_dst else 1
-    t_local = localtime(mktime(t) + time_offset * 3600)  # Apply time offset in seconds
+# Wi-Fi credentials
+SSID = ''
+PASSWORD = ''
 
-    # Format the timestamp for local time in Rome
-    timestamp = "{}, {:02d} {:3s} {:04d} {:02d}:{:02d}:{:02d} CET".format(
+# Server settings
+URL = "http://192.168.178.154:5000/api/air_quality"
+HEADERS = {"Content-Type": "application/json"}
+
+def connect_wifi():
+    wlan = network.WLAN(network.STA_IF)
+    if not wlan.isconnected():
+        wlan.active(True)
+        wlan.connect(SSID, PASSWORD)
+        print("Connecting to Wi-Fi...")
+        while not wlan.isconnected():
+            time.sleep(1)
+    print("Connected to Wi-Fi, IP:", wlan.ifconfig()[0])
+
+def get_timestamp():
+    t = gmtime()
+    is_dst = 3 <= t[1] <= 10
+    time_offset = 2 if is_dst else 1
+    t_local = localtime(mktime(t) + time_offset * 3600)
+
+    return "{}, {:02d} {:3s} {:04d} {:02d}:{:02d}:{:02d} CET".format(
         ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][t_local[6]],
         t_local[2], ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][t_local[1]-1],
         t_local[0], t_local[3], t_local[4], t_local[5]
     )
-    return timestamp
 
-# Function to calculate the general air quality based on gas values (equal weighting)
-def calculate_air_quality(smoke_value, lpg_value, methane_value, hydrogen_value):
-    
-    # Adjusted thresholds based on typical use cases for an MQ2 sensor
-    smoke_thresholds = [50, 150, 300]  # Example values in PPM or appropriate unit
-    lpg_thresholds = [20, 50, 100]
-    methane_thresholds = [15, 40, 80]
-    hydrogen_thresholds = [10, 25, 60]
+def calculate_air_quality(smoke, lpg, methane, hydrogen):
+    thresholds = {
+        'smoke': [50, 150, 300],
+        'lpg': [20, 50, 100],
+        'methane': [15, 40, 80],
+        'hydrogen': [10, 25, 60]
+    }
 
-    # Function to get the gas score based on the thresholds
-    def get_gas_score(value, thresholds):
-        if value <= thresholds[0]:
-            return 1  # Good
-        elif value <= thresholds[1]:
-            return 2  # Moderate
-        elif value <= thresholds[2]:
-            return 3  # Poor
-        else:
-            return 4  # Very Poor
+    def get_gas_score(value, limits):
+        return sum(value > limit for limit in limits) + 1
 
-    # Get the score for each gas
-    smoke_score = get_gas_score(smoke_value, smoke_thresholds)
-    lpg_score = get_gas_score(lpg_value, lpg_thresholds)
-    methane_score = get_gas_score(methane_value, methane_thresholds)
-    hydrogen_score = get_gas_score(hydrogen_value, hydrogen_thresholds)
+    scores = [
+        get_gas_score(smoke, thresholds['smoke']),
+        get_gas_score(lpg, thresholds['lpg']),
+        get_gas_score(methane, thresholds['methane']),
+        get_gas_score(hydrogen, thresholds['hydrogen'])
+    ]
 
-    # Calculate the air quality as an average score
-    total_score = (smoke_score + lpg_score + methane_score + hydrogen_score) / 4
+    avg_score = sum(scores) / 4
 
-    # Determine the air quality based on the average score
-    if total_score <= 1.5:
-        air_quality_index = 100  # Good
-        air_quality_description = "Good"
-    elif total_score <= 2.5:
-        air_quality_index = 75  # Moderate
-        air_quality_description = "Moderate"
-    elif total_score <= 3.5:
-        air_quality_index = 50  # Poor
-        air_quality_description = "Poor"
-    else:
-        air_quality_index = 25  # Very Poor
-        air_quality_description = "Very Poor"
+    if avg_score <= 1.5:
+        return 100, "Good"
+    elif avg_score <= 2.5:
+        return 75, "Moderate"
+    elif avg_score <= 3.5:
+        return 50, "Poor"
+    return 25, "Very Poor"
 
-    return air_quality_index, air_quality_description
-
-# Function to send the data to the server via POST
 def send_data(payload):
-    url = "my/secret/route/"  # Server URL
-    headers = {"Content-Type": "application/json"}  # Headers for JSON content
     try:
-        print(f"Sending data: {payload}")
-        response = urequests.post(url, json=payload, headers=headers)  # Send the POST request
-        print(f"HTTP Status Code: {response.status_code}")  # Print the HTTP status code
-        print("Response:", response.text)  # Print the response from the server
+        print("Sending data:", payload)
+        response = urequests.post(URL, json=payload, headers=HEADERS)
+        print("HTTP Status Code:", response.status_code)
         if response.status_code == 200:
-            print("Data sent to server successfully")
-        else:
-            print("Failed to send data to server")
+            print("Data sent successfully")
+        response.close()
     except Exception as e:
         print("Error sending data:", e)
 
-# Main function
 def main():
-    connect_wifi()  # Connect to Wi-Fi
+    connect_wifi()
 
-    # Initialize the MQ2 sensor on pin 26
     sensor = MQ2(pinData=26, baseVoltage=3.3)
     sensor.calibrate()
 
-    # Variables to store previous values
-    previous_values = None
+    prev_values = (-1, -1, -1, -1)
 
     while True:
-        # Read the values for each gas from the MQ2 sensor
-        smoke_value = sensor.readSmoke()
-        lpg_value = sensor.readLPG()
-        methane_value = sensor.readMethane()
-        hydrogen_value = sensor.readHydrogen()
-        
-        # Ensure that the values are not None before calculating
-        if None in [smoke_value, lpg_value, methane_value, hydrogen_value]:
-            print("Error: One or more sensor values are invalid.")
+        values = (
+            sensor.readSmoke(),
+            sensor.readLPG(),
+            sensor.readMethane(),
+            sensor.readHydrogen()
+        )
+
+        if None in values:
+            print("Invalid sensor readings. Retrying...")
+            time.sleep(2)
             continue
 
-        # If the values are the same as the previous ones, skip sending the data
-        if previous_values == (smoke_value, lpg_value, methane_value, hydrogen_value):
+        if values == prev_values:
             print("No change in sensor values. Skipping data send.")
-            print(f"Old value: {previous_values}, timestamp: {get_timestamp()}")
+            print("Old value:", prev_values, "Timestamp:", get_timestamp())
         else:
-            # Calculate the general air quality
-            air_quality_index, air_quality_description = calculate_air_quality(
-                smoke_value, lpg_value, methane_value, hydrogen_value
-            )
+            air_quality_index, air_quality_description = calculate_air_quality(*values)
 
-            # Create the payload with all the data
             payload = {
-                "smoke": smoke_value,
-                "lpg": lpg_value,
-                "methane": methane_value,
-                "hydrogen": hydrogen_value,
+                "smoke": values[0],
+                "lpg": values[1],
+                "methane": values[2],
+                "hydrogen": values[3],
                 "air_quality_index": air_quality_index,
-                "air_quality_description": air_quality_description,  # Add description
+                "air_quality_description": air_quality_description,
                 "timestamp": get_timestamp()
             }
 
-            # Send the payload to the server via POST
             send_data(payload)
+            prev_values = values
 
-            # Store the current values as the previous ones
-            previous_values = (smoke_value, lpg_value, methane_value, hydrogen_value)
+        gc.collect()
+        time.sleep(2)
 
-        time.sleep(2)  # Wait 2 seconds before the next reading
-
-# Start the program
 main()
 
