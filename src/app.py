@@ -1292,7 +1292,7 @@ def air_quality_func():
                 cursor.execute(query, (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp))
                 connection.commit()
 
-                return jsonify({'message': 'Dati di qualità dell\'aria salvati correttamente.'}), 201
+                return jsonify({'message': 'Dati di qualita\' dell\'aria salvati correttamente.'}), 201
             else:
                 return jsonify({'error': 'Uno o più campi necessari sono mancanti nel body della richiesta.'}), 400
 
