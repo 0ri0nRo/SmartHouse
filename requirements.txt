@@ -1,6 +1,0 @@
-pytest
-pymongo[srv]
-pymongo
-pytest
-python-dotenv
-flask
