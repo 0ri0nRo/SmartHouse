@@ -95,6 +95,38 @@
             cursor: pointer;
         }
 
+        .quick-links {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e9f5ff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .quick-links h3 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: #007bff;
+        }
+
+        .quick-links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .quick-links li {
+            margin: 5px 0;
+        }
+
+        .quick-links a {
+            text-decoration: none;
+            color: #0056b3;
+        }
+
+        .quick-links a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.3rem;
@@ -170,6 +202,23 @@
         </table>
 
         <!-- Popup for displaying train stops -->
+        <div id="popup" class="popup">
+            <div class="popup-close" onclick="closePopup()">×</div>
+            <div id="popup-content"></div>
+        </div>
+
+        <div class="alert" id="error-message" style="display: none;">
+            Error retrieving train data. Check the console for details.
+        </div>
+        <div class="quick-links">
+            <h3>Quick Links</h3>
+            <ul>
+                <li><a href="https://www.trenitalia.com/it/informazioni/Infomobilita/notizie-infomobilita.html" target="_blank">Trenitalia InfoMobility</a></li>
+                <li><a href="https://www.metropolitanadiroma.it/notizie-metro-roma.html" target="_blank">Metropolitana di Roma</a></li>
+                <li><a href="https://www.italotreno.it/" target="_blank">Italo Treno</a></li>
+            </ul>
+        </div>
+
         <div id="popup" class="popup">
             <div class="popup-close" onclick="closePopup()">×</div>
             <div id="popup-content"></div>
