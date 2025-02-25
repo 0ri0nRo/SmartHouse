@@ -11,7 +11,7 @@ import psycopg2
 import psycopg2.extras
 from scraper import TrainScraper
 import os
-from database.database import Database
+from client.PostgresClient import PostgresHandler 
 from datetime import datetime, timedelta
 from datetime import datetime
 from client.MongoClient import MongoDBHandler
@@ -20,7 +20,6 @@ import os
 from bson import ObjectId
 from flask import render_template
 from flask import Flask, jsonify, request
-from pymongo import MongoClient, errors
 
 load_dotenv()
 URI = os.getenv('MONGO_URI')
@@ -37,7 +36,7 @@ db_config = {
     'password': os.getenv('DB_PASSWORD')
 }
 
-db = Database(db_config)
+db = PostgresHandler(db_config)
 
 
 def scan_network(network='192.168.178.0/24'):

@@ -1,10 +1,7 @@
 import serial
-import json
-import re
-import time
 import psycopg2
 from datetime import datetime, timedelta
-from database.database import Database
+from client.PostgresClient import PostgresHandler
 import psutil
 from send_email import EmailSender, invia_allarme_email
 import os
@@ -38,7 +35,7 @@ class SensorReader:
         self.last_temperature = None
         self.last_humidity = None
         self.last_record_time = datetime.now()  # Timestamp dell'ultima registrazione
-        self.db = Database(self.db_config)
+        self.db = PostgresHandler(self.db_config)
         
         # Configurazione dell'email
         self.smtp_server = os.getenv('SMTP_SERVER')
@@ -49,7 +46,7 @@ class SensorReader:
         
         self.last_alarm_time = datetime.now()
         self.last_backup_time = datetime.now()
-        self.db = Database(self.db_config)
+        self.db = PostgresHandler(self.db_config)
 
 
     def read_data(self):

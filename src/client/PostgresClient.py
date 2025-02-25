@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2 import Error
 from datetime import datetime
 
-class Database:
+class PostgresHandler:
     def __init__(self, db_config):
         """Inizializza la connessione al database PostgreSQL e crea la tabella se non esiste."""
         self.db_config = db_config

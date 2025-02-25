@@ -3,7 +3,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import time
 import os
-from database.database import Database
+from client.PostgresClient import PostgresHandler
 
 db_config = {
     'host': os.getenv('DB_HOST'),
@@ -53,7 +53,7 @@ class EmailSender:
             server.quit()  # Chiudi la connessione al server
 
 
-db = Database(db_config=db_config)
+db = PostgresHandler(db_config=db_config)
 def invia_allarme_email(email_sender):
     """Questa funzione richiama invia_email con un messaggio di allarme predefinito."""
     to_email = os.getenv('TO_EMAIL')
