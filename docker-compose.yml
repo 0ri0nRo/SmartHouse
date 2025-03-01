@@ -60,6 +60,9 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=1234
       - TZ=Europe/Rome
+    volumes:
+      - ./src/backup.sh:/usr/local/bin/backup.sh
+      - ./backup:/backup  # Monta la cartella di backup nella directory del contenitore
     restart: unless-stopped
 
   network_scanner:

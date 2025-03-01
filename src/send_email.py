@@ -4,6 +4,9 @@ from email.mime.multipart import MIMEMultipart
 import time
 import os
 from client.PostgresClient import PostgresHandler
+from email.mime.base import MIMEBase
+from email import encoders  
+
 
 db_config = {
     'host': os.getenv('DB_HOST'),
@@ -90,6 +93,63 @@ def invia_allarme_email(email_sender):
 
     # Utilizza la funzione generale per inviare l'email
     email_sender.invia_email(to_email, subject, body)
+
+
+def invia_backup_email(email_sender):
+    """Invia un'email con tutti i file di backup `.sql`."""
+    to_email = os.getenv('TO_EMAIL')
+    subject = f'Backup del Database - {email_sender.get_current_timestamp()}'
+    body = """
+    <html><body>
+    <p>In allegato trovi i backup del database.</p>
+    <p>Cordiali saluti,<br>
+    Alexandru Home Assistant & Automatic Alarms</p>
+    </body></html>
+    """
+    backup_folder = '/backup'
+    
+    # Cerca tutti i file .sql nella cartella di backup
+    backup_files = [f for f in os.listdir(backup_folder) if f.endswith('.sql')]
+    if not backup_files:
+        print('Nessun file .sql trovato per l\'invio.')
+        return
+
+    # Crea l'email
+    msg = MIMEMultipart()
+    msg['From'] = email_sender.username
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'html'))
+
+    # Aggiunge ogni file .sql come allegato
+    for backup_file in backup_files:
+        backup_path = os.path.join(backup_folder, backup_file)
+        try:
+            with open(backup_path, 'rb') as file:
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload(file.read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename={backup_file}')
+                msg.attach(part)
+        except Exception as e:
+            print(f'Errore nell\'allegare il file {backup_file}: {e}')
+            continue
+
+    # Invia l'email
+    try:
+        server = smtplib.SMTP(email_sender.smtp_server, email_sender.smtp_port)
+        server.starttls()
+        server.login(email_sender.username, email_sender.password)
+        server.sendmail(email_sender.username, to_email, msg.as_string())
+        print('Email con il backup inviata con successo!')
+    except Exception as e:
+        print(f'Errore nell\'invio dell\'email: {e}')
+    finally:
+        server.quit()
+
+# Esempio di utilizzo della funzione invia_backup_email
+# invia_backup_email(email_sender)
+
 
 # Configurazione del server SMTP e credenziali
 smtp_server = os.getenv('SMTP_SERVER')

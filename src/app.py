@@ -20,6 +20,8 @@ import os
 from bson import ObjectId
 from flask import render_template
 from flask import Flask, jsonify, request
+import subprocess
+from send_email import EmailSender, invia_backup_email
 
 load_dotenv()
 URI = os.getenv('MONGO_URI')
@@ -38,6 +40,12 @@ db_config = {
 
 db = PostgresHandler(db_config)
 
+# Configurazione dell'email
+smtp_server = os.getenv('SMTP_SERVER')
+smtp_port = os.getenv('SMTP_PORT')
+username = os.getenv('EMAIL_USERNAME')
+password = os.getenv('EMAIL_PASSWORD')
+email_sender = EmailSender(smtp_server, smtp_port, username, password)
 
 def scan_network(network='192.168.178.0/24'):
     """Scansiona la rete utilizzando nmap e salva i dispositivi nel database."""
@@ -1475,7 +1483,31 @@ def search_by_timestamp(start_timestamp, end_timestamp):
     except Exception as e:
         return jsonify({"message": f"Error: {e}"}), 500 
 
+@app.route('/api_run_backup', methods=['POST'])
+def run_backup():
+    """Esegue il backup tramite backup.sh e invia un'email."""
+    try:
+        # Percorso del file di backup all'interno del contenitore Docker
+        backup_script_path = '/usr/local/bin/backup.sh'
 
+        # Verifica se il file di backup esiste nel percorso previsto
+        if not os.path.exists(backup_script_path):
+            return jsonify({'error': 'Il file di backup non è stato trovato.'}), 404
+
+        # Esegue il backup
+        result = subprocess.run([backup_script_path], capture_output=True, text=True)
+        
+        # Log di output per il debug
+        print('Output backup:', result.stdout)
+        print('Errori backup:', result.stderr)
+
+        if result.returncode == 0:
+            invia_backup_email(email_sender)  # Funzione per inviare email
+            return jsonify({'message': 'Backup eseguito con successo.', 'output': result.stdout}), 200
+        else:
+            return jsonify({'error': 'Errore durante l\'esecuzione del backup.', 'output': result.stderr}), 500
+    except Exception as e:
+        return jsonify({'error': f'Si è verificato un errore: {e}'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
