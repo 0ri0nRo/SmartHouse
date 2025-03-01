@@ -18,6 +18,29 @@
             align-items: center;
             transition: background-color 0.3s, color 0.3s;
         }
+        /* Stili per il pulsante di backup */
+button {
+    background-color: #4CAF50;  /* Colore di sfondo verde */
+    color: white;  /* Colore del testo bianco */
+    font-size: 16px;  /* Dimensione del font */
+    padding: 15px 32px;  /* Spaziatura interna */
+    border: none;  /* Rimuove il bordo predefinito */
+    border-radius: 8px;  /* Angoli arrotondati */
+    cursor: pointer;  /* Cambia il cursore quando ci si passa sopra */
+    transition: all 0.3s ease;  /* Transizione fluida per gli effetti hover */
+}
+
+/* Effetto hover per il pulsante */
+button:hover {
+    background-color: #45a049;  /* Colore di sfondo più scuro al passaggio del mouse */
+}
+
+/* Effetto active (quando il pulsante viene cliccato) */
+button:active {
+    background-color: #388e3c;  /* Colore di sfondo ancora più scuro quando il pulsante è premuto */
+    transform: scale(0.98);  /* Leggera riduzione della dimensione per l'effetto di "clic" */
+}
+
         .card-container {
             display: flex;
             flex-wrap: wrap;
@@ -236,7 +259,23 @@
                         console.error('Error fetching data:', error);
                     });
             }
+            // Add a button to run backup
+            const backupButton = document.createElement('button');
+            backupButton.textContent = 'Run Backup';
+            backupButton.style.marginTop = '20px';
+            backupButton.addEventListener('click', function () {
+                axios.post('/api_run_backup')
+                    .then(response => {
+                        alert('Backup started successfully!');
+                    })
+                    .catch(error => {
+                        console.error('Error starting backup:', error);
+                        alert('Failed to start backup.');
+                    });
+            });
 
+            // Append the button to the body or a specific container
+            document.body.appendChild(backupButton);
             // Initial data fetch
             fetchData();
         });
