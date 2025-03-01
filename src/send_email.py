@@ -60,7 +60,7 @@ db = PostgresHandler(db_config=db_config)
 def invia_allarme_email(email_sender):
     """Questa funzione richiama invia_email con un messaggio di allarme predefinito."""
     to_email = os.getenv('TO_EMAIL')
-    subject = 'ALLARME SCATTATO alle {timestamp}'
+    subject = 'Alarm Triggered! at {timestamp}'
     devices_html = "<ul>"
     devices = db.get_devices_from_db()
     for ip_address, details in devices.items():
@@ -73,18 +73,19 @@ def invia_allarme_email(email_sender):
     devices_html += "</ul>"
     body = (
     "<html>"
-    "<body>"
-    "<p>Un allarme è stato attivato nel sistema di sicurezza. Ecco i dettagli dei dispositivi connessi:</p>"
+    "<body style='font-family: Arial, sans-serif; color: #333;'>"
+    "<h2 style='color: #d9534f;'>Alarm Triggered!</h2>"
+    "<p>An alarm has been triggered in the security system. Here are the details of the connected devices:</p>"
     f"{devices_html}"
     "</ul>"
-    "<h3>Istruzioni da Seguire:</h3>"
+    "<h3>Instructions to Follow:</h3>"
     "<ol>"
-    "<li><strong>Verifica il Sensore</strong>: Controlla fisicamente il sensore e assicurati che non ci siano ostacoli che possano causare falsi allarmi.</li>"
-    "<li><strong>Controlla il Sistema</strong>: Accedi al sistema di monitoraggio per verificare eventuali ulteriori informazioni sull'allarme.</li>"
-    "<li><strong>Sicurezza Prima di Tutto</strong>: Se l'allarme è stato attivato per una vera emergenza, segui le procedure di sicurezza e allontanati dall'area finché non sei sicuro che sia sicura.</li>"
-    "<li><strong>Controllo Fisico</strong>: Chiedi alla persona più probabile di controllare fisicamente il sensore e assicurati che non ci siano ostacoli che possano causare falsi allarmi.</li>"
+    "<li><strong>Check the Sensor:</strong> Physically inspect the sensor and ensure there are no obstructions that could cause false alarms.</li>"
+    "<li><strong>Check the System:</strong> Access the monitoring system to verify any additional information about the alarm.</li>"
+    "<li><strong>Safety First:</strong> If the alarm was triggered by a real emergency, follow safety procedures and evacuate the area until it is safe.</li>"
+    "<li><strong>Physical Check:</strong> Ask the most likely person to physically check the sensor and ensure there are no obstructions that could cause false alarms.</li>"
     "</ol>"
-    "<p>Cordiali saluti,<br>"
+    "<p>Best regards,<br>"
     "Alexandru Home Assistant & Automatic Alarms</p>"
     "</body>"
     "</html>"
@@ -98,20 +99,22 @@ def invia_allarme_email(email_sender):
 def invia_backup_email(email_sender):
     """Invia un'email con tutti i file di backup `.sql`."""
     to_email = os.getenv('TO_EMAIL')
-    subject = f'Backup del Database - {email_sender.get_current_timestamp()}'
+    subject = f'Backup Database - {email_sender.get_current_timestamp()}'
     body = """
-    <html><body>
-    <p>In allegato trovi i backup del database.</p>
-    <p>Cordiali saluti,<br>
-    Alexandru Home Assistant & Automatic Alarms</p>
-    </body></html>
+        <html><body>
+            <p>Dear Alex,</p>
+            <p>Please find attached the latest database backups for your reference.</p>
+            <p>If you encounter any issues or have questions, feel free to reach out.</p>
+            <p>Kind regards,<br>
+            Alexandru Home Assistant & Automated Alarms</p>
+        </body></html>
     """
     backup_folder = '/backup'
     
     # Cerca tutti i file .sql nella cartella di backup
     backup_files = [f for f in os.listdir(backup_folder) if f.endswith('.sql')]
     if not backup_files:
-        print('Nessun file .sql trovato per l\'invio.')
+        print('No file .sql find.')
         return
 
     # Crea l'email
@@ -132,7 +135,7 @@ def invia_backup_email(email_sender):
                 part.add_header('Content-Disposition', f'attachment; filename={backup_file}')
                 msg.attach(part)
         except Exception as e:
-            print(f'Errore nell\'allegare il file {backup_file}: {e}')
+            print(f'Error on file to attach {backup_file}: {e}')
             continue
 
     # Invia l'email
@@ -141,20 +144,15 @@ def invia_backup_email(email_sender):
         server.starttls()
         server.login(email_sender.username, email_sender.password)
         server.sendmail(email_sender.username, to_email, msg.as_string())
-        print('Email con il backup inviata con successo!')
+        print('Email send!')
     except Exception as e:
-        print(f'Errore nell\'invio dell\'email: {e}')
+        print(f'Errore on sending email: {e}')
     finally:
         server.quit()
 
-# Esempio di utilizzo della funzione invia_backup_email
-# invia_backup_email(email_sender)
 
-
-# Configurazione del server SMTP e credenziali
 smtp_server = os.getenv('SMTP_SERVER')
 smtp_port = os.getenv('SMTP_PORT')
 username = os.getenv('EMAIL_USERNAME')
 password = os.getenv('EMAIL_PASSWORD')
-# Creazione dell'oggetto EmailSender
 email_sender = EmailSender(smtp_server, smtp_port, username, password)
