@@ -63,6 +63,7 @@ services:
     volumes:
       - ./src/backup.sh:/usr/local/bin/backup.sh
       - ./backup:/backup  # Monta la cartella di backup nella directory del contenitore
+      - ./src/static:/app/static
     restart: unless-stopped
 
   network_scanner:
