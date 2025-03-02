@@ -47,6 +47,12 @@ username = os.getenv('EMAIL_USERNAME')
 password = os.getenv('EMAIL_PASSWORD')
 email_sender = EmailSender(smtp_server, smtp_port, username, password)
 
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.ico')
+
+
 def scan_network(network='192.168.178.0/24'):
     """Scansiona la rete utilizzando nmap e salva i dispositivi nel database."""
 
