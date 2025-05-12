@@ -11,7 +11,7 @@ SSID = ''
 PASSWORD = ''
 
 # Server settings
-URL = "http://192.168.178.154:5000/api/air_quality"
+URL = "http://192.168.178.101:5000/api/air_quality"
 HEADERS = {"Content-Type": "application/json"}
 
 def connect_wifi():

@@ -87,7 +87,7 @@
         // Fetch and display daily air quality data
         async function fetchDailyAirQualityData() {
             try {
-                const response = await fetch('http://192.168.178.154:5000/api/air_quality_today');
+                const response = await fetch('http://192.168.178.101:5000/api/air_quality_today');
                 const data = await response.json();
 
                 const hours = Object.keys(data).map(hour => `${hour}:00`);
@@ -129,7 +129,7 @@
         // Fetch and display hourly gas concentration data
         async function fetchHourlyGasConcentrationData() {
             try {
-                const response = await fetch('http://192.168.178.154:5000/api/gas_concentration_today');
+                const response = await fetch('http://192.168.178.101:5000/api/gas_concentration_today');
                 const data = await response.json();
 
                 const hours = Object.keys(data).map(hour => `${hour}:00`);
