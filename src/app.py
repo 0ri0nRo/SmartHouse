@@ -1535,9 +1535,9 @@ def ssh_exec():
         if not private_key_str or not command:
             return jsonify({"error": "Chiave privata o comando mancante"}), 400
 
-        HOST = "192.168.178.101"
-        PORT = 22
-        USERNAME = "alex"
+        HOST_PI = os.getenv('HOST_PI')
+        PORT_PI = os.getenv('PORT_PI')
+        USERNAME_PI = os.getenv('USERNAME_PI')
 
         key_file = StringIO(private_key_str)
         private_key = None
@@ -1558,7 +1558,7 @@ def ssh_exec():
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        client.connect(hostname=HOST, port=PORT, username=USERNAME, pkey=private_key)
+        client.connect(hostname=HOST_PI, port=PORT_PI, username=USERNAME_PI, pkey=private_key)
 
         stdin, stdout, stderr = client.exec_command(command)
         output = stdout.read().decode('utf-8')
