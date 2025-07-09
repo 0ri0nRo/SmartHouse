@@ -25,3 +25,5 @@ python-dotenv
 pymongo[srv]
 pymongo
 pytest
+paramiko
+flask-cors

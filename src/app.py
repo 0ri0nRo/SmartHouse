@@ -22,7 +22,16 @@ from flask import render_template
 from flask import Flask, jsonify, request
 import subprocess
 from send_email import EmailSender, invia_backup_email
+from flask_cors import CORS
+import paramiko
+from io import StringIO
 
+app = Flask(__name__)
+CORS(app)  # Abilita CORS per il frontend
+
+SSH_HOST = 'raspberrypi.local'  # o IP es: '192.168.1.100'
+SSH_USER = 'pi'
+SSH_KEY_PATH = '/home/utente/.ssh/id_ed25519'  # percorso chiave privata
 load_dotenv()
 URI = os.getenv('MONGO_URI')
 app = Flask(__name__)
@@ -1514,6 +1523,53 @@ def run_backup():
             return jsonify({'error': 'Errore durante l\'esecuzione del backup.', 'output': result.stderr}), 500
     except Exception as e:
         return jsonify({'error': f'Si è verificato un errore: {e}'}), 500
+
+@app.route('/api/ssh_exec', methods=['POST'])
+def ssh_exec():
+    try:
+        data = request.get_json()
+        private_key_str = data.get('privateKey')
+        command = data.get('command')
+        passphrase = data.get('passphrase') or None  # può essere stringa vuota o None
+
+        if not private_key_str or not command:
+            return jsonify({"error": "Chiave privata o comando mancante"}), 400
+
+        HOST = "192.168.178.101"
+        PORT = 22
+        USERNAME = "alex"
+
+        key_file = StringIO(private_key_str)
+        private_key = None
+
+        for key_class in [paramiko.ECDSAKey, paramiko.RSAKey, paramiko.Ed25519Key, paramiko.DSSKey]:
+            try:
+                key_file.seek(0)
+                private_key = key_class.from_private_key(key_file, password=passphrase)
+                break
+            except paramiko.PasswordRequiredException:
+                return jsonify({"error": "Questa chiave richiede una passphrase."}), 400
+            except paramiko.SSHException:
+                continue
+
+        if private_key is None:
+            return jsonify({"error": "Formato della chiave non supportato o chiave corrotta."}), 400
+
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        client.connect(hostname=HOST, port=PORT, username=USERNAME, pkey=private_key)
+
+        stdin, stdout, stderr = client.exec_command(command)
+        output = stdout.read().decode('utf-8')
+        error = stderr.read().decode('utf-8')
+
+        client.close()
+
+        return jsonify({"output": output if output else error})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

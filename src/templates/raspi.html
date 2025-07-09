@@ -1,284 +1,327 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi Stats</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f2f2f2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        /* Stili per il pulsante di backup */
-button {
-    background-color: #4CAF50;  /* Colore di sfondo verde */
-    color: white;  /* Colore del testo bianco */
-    font-size: 16px;  /* Dimensione del font */
-    padding: 15px 32px;  /* Spaziatura interna */
-    border: none;  /* Rimuove il bordo predefinito */
-    border-radius: 8px;  /* Angoli arrotondati */
-    cursor: pointer;  /* Cambia il cursore quando ci si passa sopra */
-    transition: all 0.3s ease;  /* Transizione fluida per gli effetti hover */
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Raspberry Pi Stats</title>
 
-/* Effetto hover per il pulsante */
-button:hover {
-    background-color: #45a049;  /* Colore di sfondo più scuro al passaggio del mouse */
-}
+  <!-- Chart.js & Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-/* Effetto active (quando il pulsante viene cliccato) */
-button:active {
-    background-color: #388e3c;  /* Colore di sfondo ancora più scuro quando il pulsante è premuto */
-    transform: scale(0.98);  /* Leggera riduzione della dimensione per l'effetto di "clic" */
-}
+  <!-- Styles -->
+  <style>
+    :root {
+      --bg-color: #f9f9fb;
+      --font-color: #333;
+      --card-bg: #ffffff;
+      --shadow: rgba(0, 0, 0, 0.05) 0px 4px 12px;
+      --primary: #a29bfe;
+      --primary-hover: #6c5ce7;
+      --accent1: #e3f2fd;
+      --accent2: #fce4ec;
+      --accent3: #e8f5e9;
+      --accent4: #f3e5f5;
+    }
 
-        .card-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            width: 90%;
-            max-width: 1200px;
-            justify-content: center;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .card {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 10px;
-            text-align: center;
-            box-sizing: border-box;
-            width: calc(50% - 20px); /* Width for two cards per row */
-            max-width: 400px; /* Maximum width for larger screens */
-        }
-        .card.cpu-usage {
-            background: #e3f2fd; /* Light Blue for CPU Usage */
-        }
-        .card.temperature {
-            background: #fce4ec; /* Light Pink for Temperature */
-        }
-        .card.disk-usage {
-            background: #e8f5e9; /* Light Green for Disk Usage */
-        }
-        .card.memory-usage {
-            background: #f3e5f5; /* Light Purple for Memory Usage */
-        }
-        canvas {
-            max-width: 100%;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #333;
-            margin: 20px 0;
-            font-size: 24px;
-            text-align: center;
-        }
-        .card h2 {
-            margin-top: 0;
-            margin: 20px 0;
-            font-size: 24px;
-            text-align: center;
-        }
-        .value {
-            font-size: 1.2em;
-            margin: 10px 0;
-            text-align: center;
-        }
-        /* Flexbox layout for card rows */
-        @media (max-width: 900px) {
-            .card {
-                width: calc(50% - 10px); /* Adjust width for smaller screens */
-            }
-        }
-        @media (max-width: 600px) {
-            .card {
-                width: calc(100% - 20px); /* Full width for very small screens */
-            }
-        }
-    </style>
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 30px 0 20px;
+      color: #444;
+    }
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      padding: 0 20px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      width: calc(50% - 30px);
+      max-width: 400px;
+      transition: transform 0.3s ease;
+      text-align: center;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .card.cpu-usage    { background: var(--accent1); }
+    .card.temperature  { background: var(--accent2); }
+    .card.disk-usage   { background: var(--accent3); }
+    .card.memory-usage { background: var(--accent4); }
+
+    canvas {
+      width: 100% !important;
+      max-height: 200px;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      font-size: 16px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    #buttonContainer {
+      margin: 30px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .container input[type="file"],
+    .container input[type="text"],
+    .container input[type="password"] {
+      width: 90%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    .container button {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    pre#resultOutput {
+      background: #f1f1f1;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-top: 15px;
+    }
+
+    @media (max-width: 900px) {
+      .card {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>Raspberry Pi Stats</h1>
-    <div class="card-container">
-        <div class="card cpu-usage">
-            <h2>CPU Usage</h2>
-            <div class="value" id="cpuUsageValue">Loading...</div>
-        </div>
-        <div class="card temperature">
-            <h2>Temperature</h2>
-            <div class="value" id="temperatureValue">Loading...</div>
-        </div>
-        <div class="card disk-usage">
-            <h2>Disk Usage</h2>
-            <canvas id="diskUsageChart"></canvas>
-        </div>
-        <div class="card memory-usage">
-            <h2>Memory Usage</h2>
-            <canvas id="memoryUsageChart"></canvas>
-        </div>
+
+  <h1>Raspberry Pi Stats</h1>
+
+  <div class="card-container">
+    <div class="card cpu-usage">
+      <h2>CPU Usage</h2>
+      <div class="value" id="cpuUsageValue">Loading...</div>
     </div>
+    <div class="card temperature">
+      <h2>Temperature</h2>
+      <div class="value" id="temperatureValue">Loading...</div>
+    </div>
+    <div class="card disk-usage">
+      <h2>Disk Usage</h2>
+      <canvas id="diskUsageChart"></canvas>
+    </div>
+    <div class="card memory-usage">
+      <h2>Memory Usage</h2>
+      <canvas id="memoryUsageChart"></canvas>
+    </div>
+  </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
-            const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
+  <div id="buttonContainer">
+    <button id="backupButton">Run Backup</button>
+  </div>
 
-            let diskUsageChart = new Chart(ctxDisk, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Used', 'Free'],
-                    datasets: [{
-                        label: 'Disk Usage',
-                        data: [],
-                        backgroundColor: ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)'],
-                        borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (context.parsed !== null) {
-                                        label += `: ${context.parsed.toFixed(2)} GB`;
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        legend: {
-                            position: 'top',
-                        },
-                        datalabels: {
-                            display: true,
-                            anchor: 'end',
-                            align: 'start',
-                            formatter: (value, context) => {
-                                return `${context.chart.data.labels[context.dataIndex]}: ${value.toFixed(2)} GB`;
-                            },
-                            color: '#000',
-                            font: {
-                                weight: 'bold'
-                            },
-                            offset: 10
-                        }
-                    }
-                }
-            });
+  <div class="container">
+    <h2>SSH Command Executor</h2>
+    <input type="file" id="privateKeyInput" />
+    <input type="password" id="passphraseInput" placeholder="Enter passphrase (if any)" />
+    <input type="text" id="commandInput" placeholder="Enter SSH command to run" />
+    <button id="runSSHCommandBtn">Execute Command</button>
+    <pre id="resultOutput">Output will appear here...</pre>
+  </div>
 
-            let memoryUsageChart = new Chart(ctxMemory, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Used Memory', 'Free Memory'],
-                    datasets: [{
-                        label: 'Memory Usage',
-                        data: [],
-                        backgroundColor: ['rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)'],
-                        borderColor: ['rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (context.parsed !== null) {
-                                        label += `: ${context.parsed.toFixed(2)} GB`;
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        legend: {
-                            position: 'top',
-                        },
-                        datalabels: {
-                            display: true,
-                            anchor: 'end',
-                            align: 'start',
-                            formatter: (value, context) => {
-                                return `${context.chart.data.labels[context.dataIndex]}: ${value.toFixed(2)} GB`;
-                            },
-                            color: '#000',
-                            font: {
-                                weight: 'bold'
-                            },
-                            offset: 10
-                        }
-                    }
-                }
-            });
+  <script>
+    const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
+    const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
 
-            function fetchData() {
-                axios.get('/api_raspberry_pi_stats')
-                    .then(response => {
-                        const data = response.data;
-                        console.log('Data fetched:', data); // Debugging line
+    const diskUsageChart = new Chart(ctxDisk, {
+      type: 'doughnut',
+      data: {
+        labels: ['Used', 'Free'],
+        datasets: [{
+          label: 'Disk Usage',
+          data: [],
+          backgroundColor: ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)'],
+          borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          datalabels: {
+            display: true,
+            formatter: (value, context) => `${context.chart.data.labels[context.dataIndex]}: ${value.toFixed(2)} GB`,
+            color: '#000',
+            font: { weight: 'bold' }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
 
-                        if (data) {
-                            // Update CPU Usage value
-                            const cpuUsage = parseFloat(data.cpuUsage).toFixed(2);
-                            document.getElementById('cpuUsageValue').textContent = `${cpuUsage} %`;
+    const memoryUsageChart = new Chart(ctxMemory, {
+      type: 'doughnut',
+      data: {
+        labels: ['Used Memory', 'Free Memory'],
+        datasets: [{
+          label: 'Memory Usage',
+          data: [],
+          backgroundColor: ['rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)'],
+          borderColor: ['rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          datalabels: {
+            display: true,
+            formatter: (value, context) => `${context.chart.data.labels[context.dataIndex]}: ${value.toFixed(2)} GB`,
+            color: '#000',
+            font: { weight: 'bold' }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
 
-                            // Update Temperature value
-                            const temperature = parseFloat(data.temperature).toFixed(2);
-                            document.getElementById('temperatureValue').textContent = `${temperature} °C`;
+    function fetchData() {
+      axios.get('/api_raspberry_pi_stats')
+        .then(response => {
+          const data = response.data;
+          document.getElementById('cpuUsageValue').textContent = `${parseFloat(data.cpuUsage).toFixed(2)} %`;
+          document.getElementById('temperatureValue').textContent = `${parseFloat(data.temperature).toFixed(2)} °C`;
 
-                            // Update Disk Usage Chart
-                            const diskUsed = parseFloat(data.diskUsed).toFixed(2);
-                            const diskFree = parseFloat(data.diskFree).toFixed(2);
-                            diskUsageChart.data.datasets[0].data = [diskUsed, diskFree];
-                            diskUsageChart.update();
+          diskUsageChart.data.datasets[0].data = [
+            parseFloat(data.diskUsed),
+            parseFloat(data.diskFree)
+          ];
+          diskUsageChart.update();
 
-                            // Update Memory Usage Chart
-                            const memoryUsed = parseFloat(data.memoryUsed).toFixed(2);
-                            const memoryTotal = parseFloat(data.memoryTotal).toFixed(2);
-                            memoryUsageChart.data.datasets[0].data = [memoryUsed, memoryTotal - memoryUsed];
-                            memoryUsageChart.update();
-                        } else {
-                            console.error('Data is undefined or null');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching data:', error);
-                    });
-            }
-            // Add a button to run backup
-            const backupButton = document.createElement('button');
-            backupButton.textContent = 'Run Backup';
-            backupButton.style.marginTop = '20px';
-            backupButton.addEventListener('click', function () {
-                axios.post('/api_run_backup')
-                    .then(response => {
-                        alert('Backup started successfully!');
-                    })
-                    .catch(error => {
-                        console.error('Error starting backup:', error);
-                        alert('Failed to start backup.');
-                    });
-            });
-
-            // Append the button to the body or a specific container
-            document.body.appendChild(backupButton);
-            // Initial data fetch
-            fetchData();
+          const usedMem = parseFloat(data.memoryUsed);
+          const totalMem = parseFloat(data.memoryTotal);
+          memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
+          memoryUsageChart.update();
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
         });
-    </script>
+    }
+
+    document.getElementById('backupButton').addEventListener('click', () => {
+      axios.post('/api_run_backup')
+        .then(() => alert('Backup started successfully!'))
+        .catch(() => alert('Failed to start backup.'));
+    });
+
+    document.getElementById('runSSHCommandBtn').addEventListener('click', () => {
+      const fileInput = document.getElementById('privateKeyInput');
+      const command = document.getElementById('commandInput').value.trim();
+      const passphrase = document.getElementById('passphraseInput').value.trim();
+      const output = document.getElementById('resultOutput');
+
+      if (!fileInput.files.length) {
+        output.textContent = "Error: Please select a private key file.";
+        return;
+      }
+      if (!command) {
+        output.textContent = "Error: Please enter a command.";
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function () {
+        const privateKey = reader.result;
+        axios.post('/api/ssh_exec', {
+          privateKey,
+          command,
+          passphrase: passphrase || ""  // passphrase vuota se non specificata
+        })
+        .then(res => {
+          output.textContent = res.data.output || "Command executed. No output.";
+        })
+        .catch(err => {
+          output.textContent = "Error: " + (err.response?.data?.error || err.message);
+        });
+      };
+      reader.readAsText(file);
+    });
+
+    // Initial data fetch
+    fetchData();
+  </script>
 </body>
 </html>
