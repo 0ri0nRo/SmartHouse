@@ -188,9 +188,6 @@
     </div>
   </div>
 
-  <div id="buttonContainer">
-    <button id="backupButton">Run Backup</button>
-  </div>
 
   <div class="container">
     <h2>SSH Command Executor</h2>
@@ -200,7 +197,11 @@
     <button id="runSSHCommandBtn">Execute Command</button>
     <pre id="resultOutput">Output will appear here...</pre>
   </div>
-
+  
+  <div id="buttonContainer">
+    <button id="backupButton">Run Backup</button>
+  </div>
+  
   <script>
     const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
     const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
