@@ -28,10 +28,6 @@ from io import StringIO
 
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per il frontend
-
-SSH_HOST = 'raspberrypi.local'  # o IP es: '192.168.1.100'
-SSH_USER = 'pi'
-SSH_KEY_PATH = '/home/utente/.ssh/id_ed25519'  # percorso chiave privata
 load_dotenv()
 URI = os.getenv('MONGO_URI')
 app = Flask(__name__)
