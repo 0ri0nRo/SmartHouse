@@ -1,5 +1,4 @@
-from flask import Flask, render_template, jsonify, request, jsonify, render_template, send_from_directory
-import psycopg2
+from flask import Flask, render_template, jsonify, request, jsonify, send_from_directory
 from psycopg2 import Error
 import psycopg2.extras
 import os
@@ -8,18 +7,13 @@ from datetime import datetime
 import psutil
 import nmap
 import psycopg2
-import psycopg2.extras
 from scraper import TrainScraper
-import os
 from client.PostgresClient import PostgresHandler 
 from datetime import datetime, timedelta
 from datetime import datetime
 from client.MongoClient import MongoDBHandler
 from dotenv import load_dotenv
-import os
 from bson import ObjectId
-from flask import render_template
-from flask import Flask, jsonify, request
 import subprocess
 from send_email import EmailSender, invia_backup_email
 from flask_cors import CORS
