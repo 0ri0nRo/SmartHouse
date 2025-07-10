@@ -3,7 +3,6 @@ from psycopg2 import Error
 import psycopg2.extras
 import os
 from dotenv import load_dotenv
-from datetime import datetime
 import psutil
 import nmap
 import psycopg2
@@ -12,7 +11,6 @@ from client.PostgresClient import PostgresHandler
 from datetime import datetime, timedelta
 from datetime import datetime
 from client.MongoClient import MongoDBHandler
-from dotenv import load_dotenv
 from bson import ObjectId
 import subprocess
 from send_email import EmailSender, invia_backup_email
