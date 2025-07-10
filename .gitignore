@@ -1,6 +1,6 @@
 # Node modules (if using Node.js for any reason)
 node_modules/
-
+nginx/
 # Logs
 *.log
 npm-debug.log*
