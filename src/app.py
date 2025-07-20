@@ -1570,23 +1570,33 @@ def ssh_exec():
 
 @app.route('/api/expenses', methods=['POST', 'GET'])
 def add_expense():
-    try:
-        data = request.get_json()
-        description = data.get('description')  # Cambiato da 'name'
-        date = data.get('date')
-        amount = data.get('amount')
-        category = data.get('category')
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            description = data.get('description')  # Cambiato da 'name'
+            date = data.get('date')
+            amount = data.get('amount')
+            category = data.get('category')
 
-        if not all([description, date, amount, category]):
-            return jsonify({"error": "Missing one or more fields"}), 400
+            if not all([description, date, amount, category]):
+                return jsonify({"error": "Missing one or more fields"}), 400
 
-        result = manager.add_expense(description, date, amount, category)
-        return jsonify(result), 201
+            manager.add_expense(description, date, amount, category)
+            return jsonify({"message": "Expense added successfully"}), 201
 
-    except ValueError as ve:
-        return jsonify({"error": str(ve)}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    elif request.method == 'GET':
+        try:
+            summary = manager.get_summary_expenses()  # Default sheet name is '2025 expenses'
+            return jsonify(summary), 200
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
