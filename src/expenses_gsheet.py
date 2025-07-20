@@ -50,8 +50,59 @@ class GoogleSheetExpenseManager:
 
         cell_range = f"A{first_empty_row}:F{first_empty_row}"
         ws.update(cell_range, [new_row])
-        print(f"✅ Expense '{name}' added to sheet '{ws.title}' on row {first_empty_row}")
+        print(f"Expense '{name}' added to sheet '{ws.title}' on row {first_empty_row}")
 
+    def get_summary_expenses(self, summary_sheet_name="2025 Expenses"):
+        """
+        Estrae i dati dal foglio riepilogativo (es. '2025 expenses') e restituisce un dizionario
+        con le spese per categoria e mese, inclusi totale e media.
+        Restituisce solo le categorie specificate.
+        """
+        valid_categories = {
+            "Housing", "Leisure", "Health", "Transport", "University", "Bar", "Clothing",
+            "Groceries", "Gifts", "Fees", "Bills", "Buoni pasto", "Other", "Restaurants", "Vacation"
+        }
+
+        try:
+            ws = self.sheet.worksheet(summary_sheet_name)
+        except gspread.WorksheetNotFound:
+            raise ValueError(f"Worksheet '{summary_sheet_name}' not found in spreadsheet.")
+
+        all_values = ws.get_all_values()
+        if not all_values or len(all_values) < 2:
+            raise ValueError("Worksheet is empty or has insufficient data.")
+
+        headers = all_values[0]  # Month names and Total/Average
+        data_rows = all_values[1:]
+
+        summary = {}
+
+        for row in data_rows:
+            if len(row) < 15:
+                continue  # Skip incomplete or malformed rows
+
+            category = row[0]
+            if category not in valid_categories:
+                continue  # Skip categories non valide
+
+            try:
+                monthly_data = row[1:13]  # Jan to Dec
+                total = row[13]
+                average = row[14]
+
+                summary[category] = {
+                    "monthly": {
+                        headers[i + 1]: float(monthly_data[i]) if monthly_data[i] else 0.0
+                        for i in range(12)
+                    },
+                    "total": float(total) if total else 0.0,
+                    "average": float(average) if average else 0.0
+                }
+            except (ValueError, IndexError) as e:
+                print(f"⚠️ Skipped row '{row}' due to parsing error: {e}")
+                continue
+
+        return summary
 
 # --- Script execution ---
 if __name__ == "__main__":
