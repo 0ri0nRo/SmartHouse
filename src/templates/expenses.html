@@ -8,6 +8,9 @@
   <!-- Axios -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
+  <!-- Pikaday CSS -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
+
   <style>
     :root {
       --bg-color: #f9f9fb;
@@ -64,17 +67,18 @@
 
     input[type="text"],
     input[type="number"],
-    input[type="date"] {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-color: #fff;
-        color: #333;
-        padding: 12px;
-        font-size: 16px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        }
+    input[type="text"].datepicker {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-color: #fff;
+      color: #333;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
     select {
       width: 100%;
       padding: 12px;
@@ -140,6 +144,11 @@
       color: red;
     }
 
+    /* For placeholder */
+    input.datepicker::placeholder {
+      color: #999;
+    }
+
     @media (max-width: 480px) {
       h1 {
         font-size: 20px;
@@ -171,7 +180,8 @@
     <form id="expenseForm">
       <input type="text" id="desc" placeholder="Description" required />
       <input type="number" step="0.01" id="amount" placeholder="Amount (€)" required />
-      <input type="date" id="date" required />
+      <input type="text" id="date" class="datepicker" placeholder="Date" autocomplete="off" required />
+
       <select id="category" required>
         <option value="" disabled selected>Choose category</option>
         <option>Housing</option>
@@ -194,9 +204,36 @@
     </form>
   </div>
 
+  <!-- Pikaday JS -->
+  <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
   <script>
+    // Initialize Pikaday on the date input field
+    const picker = new Pikaday({
+      field: document.getElementById('date'),
+      format: 'YYYY-MM-DD',
+      toString(date, format) {
+        const day = ("0" + date.getDate()).slice(-2);
+        const month = ("0" + (date.getMonth() + 1)).slice(-2);
+        const year = date.getFullYear();
+        return `${year}-${month}-${day}`;
+      },
+      parse(dateString, format) {
+        const parts = dateString.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+      },
+      i18n: {
+        previousMonth : 'Previous Month',
+        nextMonth     : 'Next Month',
+        months        : ['January','February','March','April','May','June','July','August','September','October','November','December'],
+        weekdays      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+        weekdaysShort : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+      }
+    });
+
     const form = document.getElementById('expenseForm');
-    const expensesList = document.getElementById('expensesList');
     const messageEl = document.getElementById('message');
     const errorEl = document.getElementById('error');
 
@@ -211,17 +248,18 @@
       const category = document.getElementById('category').value;
 
       if (!description || !amount || !date || !category) {
-        errorEl.textContent = "Compila tutti i campi.";
+        errorEl.textContent = "Please fill all fields.";
         return;
       }
 
       axios.post('/api/expenses', { description, amount, date, category })
         .then(() => {
-          messageEl.textContent = "Spesa aggiunta con successo!";
+          messageEl.textContent = "Expense added successfully!";
           form.reset();
+          picker.setDate(null); // reset the picker as well
         })
         .catch(err => {
-          errorEl.textContent = "Errore nell'aggiunta della spesa.";
+          errorEl.textContent = "Error adding the expense.";
           console.error(err);
         });
     });
