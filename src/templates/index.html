@@ -96,7 +96,7 @@
             flex: 1 1 calc(30% - 10px);
             min-width: 160px; /* Larghezza minima uniformata */
             max-width: 200px; /* Larghezza massima uniformata */
-            height: 140px; /* Altezza uniforme aumentata per maggiore spazio */
+            height: 110px; /* Altezza uniforme aumentata per maggiore spazio */
             box-sizing: border-box;
             cursor: pointer;
             display: flex;
@@ -141,11 +141,34 @@
         .card.alarm.green {
             background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
             color: #fff;
+            display: flex;
         }
 
         .card.alarm.red {
             background: linear-gradient(135deg, #ff6a6a 0%, #ee0979 100%);
             color: #fff;
+        }
+        .card.alarm {
+            background-color: #ffffff;
+            color: #333;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 12px;
+            border: none;
+            flex: 1 1 calc(30% - 10px);
+            min-width: 160px; /* Larghezza minima uniformata */
+            max-width: 200px; /* Larghezza massima uniformata */
+            height: 110px; /* Altezza uniforme aumentata per maggiore spazio */
+            box-sizing: border-box;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
         }
         .card.list {
         background: linear-gradient(135deg, #b76ad8 0%, #FF69B4 100%);
@@ -170,6 +193,7 @@
         body.dark-mode .card.transports,
         body.dark-mode .card.groceries,
         body.dark-mode .card.air-quality,
+        body.dark-mode .card.card#expensesCard,
         body.dark-mode .card.card.air-quality.good,
         body.dark-mode .card.card.air-quality.moderate,
         body.dark-mode .card.devices {
@@ -228,7 +252,10 @@
             color: #fff;
             cursor: pointer;
         }
-
+        .card#expensesCard {
+            background: linear-gradient(135deg, #009688 0%, #FFD700 100%);
+            color: #fff;
+        }
         .card.air-quality.good {
             background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
         }
@@ -385,20 +412,15 @@
             <h2>Shopping List</h2>
         </div>
 
+        <div class="card list" id="expensesCard">
+            <h2>Expenses</h2>
+        </div>
         <!-- Alarm Card -->
         <div class="card alarm" id="alarmCard">
             <h2>Home Alarm</h2>
             <h2 id="alarmStatus">OFF</h2>
         </div>
-        <div class="card list" id="shoppingListCard">
-        <h2>Shopping List</h2>
-        </div>
-
-        <!-- Nuovo bottone aggiunto qui -->
-        <button id="newButton" style="margin-top: 10px; padding: 10px 20px; border-radius: 5px; border: none; background-color: #2196f3; color: white; cursor: pointer;">
-            Nuovo Bottone
-        </button>
-
+        
 
     </div>
 
@@ -417,7 +439,11 @@
             window.location.href = "/raspi";
         });
 
-        document.getElementById("transportsCard").addEventListener("click", () => {
+        document.getElementById("expensesCard").addEventListener("click", () => {
+            window.location.href = "/expenses";
+        });
+
+                document.getElementById("transportsCard").addEventListener("click", () => {
             window.location.href = "/train";
         });
 
