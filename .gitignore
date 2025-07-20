@@ -17,6 +17,9 @@ jspm_packages/
 /build
 /coverage
 
+# Api google sheet files
+gcredentials.json
+
 # Docker files
 docker-compose.override.yml
 Dockerfile.dev
