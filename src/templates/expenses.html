@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expenses Manager</title>
+
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Styles -->
+  <style>
+    :root {
+      --bg-color: #f9f9fb;
+      --font-color: #333;
+      --card-bg: #ffffff;
+      --shadow: rgba(0, 0, 0, 0.05) 0px 4px 12px;
+      --primary: #a29bfe;
+      --primary-hover: #6c5ce7;
+      --accent1: #e3f2fd;
+      --accent2: #fce4ec;
+      --accent3: #e8f5e9;
+      --accent4: #f3e5f5;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 30px 0 20px;
+      color: #444;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      background: var(--card-bg);
+      padding: 25px 20px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 50px;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"], input[type="number"], input[type="date"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      font-size: 16px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+      align-self: center;
+      width: 150px;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background-color: var(--accent1);
+      font-weight: 600;
+    }
+
+    tbody tr:hover {
+      background-color: var(--accent3);
+      cursor: default;
+    }
+
+    #message {
+      margin-bottom: 20px;
+      color: green;
+      font-weight: 600;
+    }
+
+    #error {
+      margin-bottom: 20px;
+      color: red;
+      font-weight: 600;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>Expenses Manager</h1>
+
+  <div class="container">
+
+    <div id="message"></div>
+    <div id="error"></div>
+
+    <form id="expenseForm">
+      <input type="text" id="desc" placeholder="Description" required />
+      <input type="number" step="0.01" id="amount" placeholder="Amount (€)" required />
+      <input type="date" id="date" required />
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Amount (€)</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="expensesList">
+        <!-- Expenses will be loaded here -->
+      </tbody>
+    </table>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('expenseForm');
+    const expensesList = document.getElementById('expensesList');
+    const messageEl = document.getElementById('message');
+    const errorEl = document.getElementById('error');
+
+    // Carica le spese da API
+    function loadExpenses() {
+      axios.get('/api/expenses')
+        .then(res => {
+          const expenses = res.data;
+          expensesList.innerHTML = '';
+          expenses.forEach(expense => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${expense.description}</td>
+              <td>${parseFloat(expense.amount).toFixed(2)}</td>
+              <td>${new Date(expense.date).toLocaleDateString()}</td>
+            `;
+            expensesList.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          errorEl.textContent = "Errore nel caricamento delle spese.";
+          console.error(err);
+        });
+    }
+
+    // Invio nuovo expense
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      errorEl.textContent = '';
+      messageEl.textContent = '';
+
+      const description = document.getElementById('desc').value.trim();
+      const amount = document.getElementById('amount').value;
+      const date = document.getElementById('date').value;
+
+      if (!description || !amount || !date) {
+        errorEl.textContent = "Compila tutti i campi.";
+        return;
+      }
+
+      axios.post('/api/expenses', { description, amount, date })
+        .then(() => {
+          messageEl.textContent = "Spesa aggiunta con successo!";
+          form.reset();
+          loadExpenses();
+        })
+        .catch(err => {
+          errorEl.textContent = "Errore nell'aggiunta della spesa.";
+          console.error(err);
+        });
+    });
+
+    // Caricamento iniziale
+    loadExpenses();
+  </script>
+</body>
+</html>

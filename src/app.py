@@ -17,16 +17,21 @@ from send_email import EmailSender, invia_backup_email
 from flask_cors import CORS
 import paramiko
 from io import StringIO
+from expense_manager import GoogleSheetExpenseManager
 
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+credentials_path = os.path.join(BASE_DIR, "gcredentials.json")  # Modifica se serve
+sheet_name = "My NW"  # Cambia con il tuo nome foglio
+
+manager = GoogleSheetExpenseManager(credentials_path, sheet_name)
 app = Flask(__name__)
 CORS(app)  # Abilita CORS per il frontend
 load_dotenv()
+
 URI = os.getenv('MONGO_URI')
-app = Flask(__name__)
 db_handler = MongoDBHandler(URI, 'local', 'lista_spesa')
 
-
-app = Flask(__name__)
 # Configurazione del database
 db_config = {
     'host': os.getenv('DB_HOST'),
@@ -49,6 +54,10 @@ email_sender = EmailSender(smtp_server, smtp_port, username, password)
 def favicon():
     return send_from_directory('static', 'favicon.ico')
 
+@app.route('/expenses')
+def expenses():
+    """Visualizza la pagina Hello World."""
+    return render_template('expenses.html')
 
 def scan_network(network='192.168.178.0/24'):
     """Scansiona la rete utilizzando nmap e salva i dispositivi nel database."""
@@ -1556,6 +1565,26 @@ def ssh_exec():
 
         return jsonify({"output": output if output else error})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/expenses', methods=['POST'])
+def add_expense():
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        date = data.get('date')      # es. "2025-07-22"
+        amount = data.get('amount')  # es. "5" o "5,00"
+        category = data.get('category')
+
+        if not all([name, date, amount, category]):
+            return jsonify({"error": "Missing one or more fields"}), 400
+
+        result = manager.add_expense(name, date, amount, category)
+        return jsonify(result), 201
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
