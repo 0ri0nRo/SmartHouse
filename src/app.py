@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from psycopg2 import Error
 import psycopg2.extras
 import os
@@ -17,7 +17,7 @@ from send_email import EmailSender, invia_backup_email
 from flask_cors import CORS
 import paramiko
 from io import StringIO
-from expense_manager import GoogleSheetExpenseManager
+from expenses_gsheet import GoogleSheetExpenseManager
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1568,25 +1568,26 @@ def ssh_exec():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/expenses', methods=['POST'])
+@app.route('/api/expenses', methods=['POST', 'GET'])
 def add_expense():
     try:
         data = request.get_json()
-        name = data.get('name')
-        date = data.get('date')      # es. "2025-07-22"
-        amount = data.get('amount')  # es. "5" o "5,00"
+        description = data.get('description')  # Cambiato da 'name'
+        date = data.get('date')
+        amount = data.get('amount')
         category = data.get('category')
 
-        if not all([name, date, amount, category]):
+        if not all([description, date, amount, category]):
             return jsonify({"error": "Missing one or more fields"}), 400
 
-        result = manager.add_expense(name, date, amount, category)
+        result = manager.add_expense(description, date, amount, category)
         return jsonify(result), 201
 
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
