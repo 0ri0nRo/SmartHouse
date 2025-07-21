@@ -88,11 +88,12 @@ services:
       - "4443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/localhost.crt:/etc/nginx/certs/localhost.crt:ro
-      - ./nginx/localhost.key:/etc/nginx/certs/localhost.key:ro
+      - ./nginx/localhost-ecc.crt:/etc/nginx/certs/localhost-ecc.crt:ro
+      - ./nginx/localhost-ecc.key:/etc/nginx/certs/localhost-ecc.key:ro
     depends_on:
       - app
     restart: unless-stopped
+
 
 volumes:
   postgres_data:
