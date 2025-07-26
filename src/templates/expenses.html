@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expenses Manager</title>
+
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Pikaday -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css" />
+  <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f9f9fb;
+      --font-color: #333;
+      --card-bg: #ffffff;
+      --shadow: rgba(0, 0, 0, 0.05) 0px 4px 12px;
+      --primary: #7db5ff;
+      --primary-hover: #6c5ce7;
+      --accent1: #e3f2fd;
+      --accent2: #fce4ec;
+      --accent3: #e8f5e9;
+      --accent4: #f3e5f5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--font-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #444;
+      margin-top: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      margin: 0 10px 40px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input.datepicker {
+      appearance: none;
+      background-color: #fff;
+      color: #333;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    select {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      font-size: 16px;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #message, #error {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    #message {
+      color: green;
+    }
+
+    #error {
+      color: red;
+    }
+
+    canvas {
+      margin-top: 30px;
+      max-width: 100%;
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 20px;
+      }
+
+      .container {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Expenses Manager</h1>
+
+  <div class="container">
+    <div id="message"></div>
+    <div id="error"></div>
+
+    <form id="expenseForm">
+      <input type="text" id="desc" placeholder="Description" required />
+      <input type="number" step="0.01" id="amount" placeholder="Amount (€)" required />
+      <input type="text" id="date" class="datepicker" placeholder="Date" autocomplete="off" required />
+
+      <select id="category" required>
+        <option value="" disabled selected>Choose category</option>
+        <option>Housing</option>
+        <option>Leisure</option>
+        <option>Health</option>
+        <option>Transport</option>
+        <option>University</option>
+        <option>Bar</option>
+        <option>Clothing</option>
+        <option>Groceries</option>
+        <option>Gifts</option>
+        <option>Fees</option>
+        <option>Bills</option>
+        <option>Buoni pasto</option>
+        <option>Other</option>
+        <option>Restaurants</option>
+        <option>Vacation</option>
+      </select>
+
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <h2>📊 Summary (2025)</h2>
+
+    <canvas id="expensePieChart" width="400" height="400"></canvas>
+    <canvas id="monthlyBarChart" width="600" height="400" style="margin-top:40px;"></canvas>
+  </div>
+
+  <script>
+    // Setup Pikaday datepicker
+    const picker = new Pikaday({
+      field: document.getElementById('date'),
+      format: 'YYYY-MM-DD',
+      toString(date, format) {
+        const day = ("0" + date.getDate()).slice(-2);
+        const month = ("0" + (date.getMonth() + 1)).slice(-2);
+        const year = date.getFullYear();
+        return `${year}-${month}-${day}`;
+      },
+      parse(dateString, format) {
+        const parts = dateString.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+      }
+    });
+
+    const form = document.getElementById('expenseForm');
+    const messageEl = document.getElementById('message');
+    const errorEl = document.getElementById('error');
+    let pieChart = null;
+    let monthlyBarChart = null;
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      messageEl.textContent = '';
+      errorEl.textContent = '';
+
+      const description = document.getElementById('desc').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const date = document.getElementById('date').value;
+      const category = document.getElementById('category').value;
+
+      if (!description || !amount || !date || !category) {
+        errorEl.textContent = "Please fill all fields.";
+        return;
+      }
+
+      axios.post('/api/expenses', { description, amount, date, category })
+        .then(() => {
+          messageEl.textContent = "Expense added successfully!";
+          form.reset();
+          picker.setDate(null);
+          loadSummary();
+        })
+        .catch(err => {
+          errorEl.textContent = "Error adding the expense.";
+          console.error(err);
+        });
+    });
+
+    function loadSummary() {
+      axios.get('/api/expenses')
+        .then(res => {
+          const data = res.data;
+
+          const pieLabels = [];
+          const pieTotals = [];
+
+          const monthsOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthlyTotals = {};
+          monthsOrder.forEach(m => monthlyTotals[m] = 0);
+
+          for (const category in data) {
+            const { total, average, monthly } = data[category];
+
+            pieLabels.push(category);
+            pieTotals.push(total);
+
+            for (const month in monthly) {
+              if (monthlyTotals.hasOwnProperty(month)) {
+                monthlyTotals[month] += monthly[month];
+              }
+            }
+          }
+
+          renderPieChart(pieLabels, pieTotals);
+
+          const barLabels = monthsOrder;
+          const barData = barLabels.map(m => monthlyTotals[m]);
+
+          renderMonthlyBarChart(barLabels, barData);
+        })
+        .catch(err => {
+          console.error("Error fetching summary", err);
+          errorEl.textContent = "Error loading summary data.";
+        });
+    }
+
+    function renderPieChart(labels, data) {
+      const ctx = document.getElementById('expensePieChart').getContext('2d');
+      if (pieChart) pieChart.destroy();
+
+      pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Expenses by Category',
+            data,
+            backgroundColor: [
+              '#74b9ff', '#a29bfe', '#fab1a0', '#ff7675',
+              '#55efc4', '#ffeaa7', '#fd79a8', '#e17055',
+              '#00b894', '#0984e3', '#6c5ce7', '#d63031',
+              '#fdcb6e', '#00cec9', '#2d3436'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'right'
+            },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.label}: €${context.parsed.toFixed(2)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderMonthlyBarChart(labels, data) {
+      const ctx = document.getElementById('monthlyBarChart').getContext('2d');
+      if (monthlyBarChart) monthlyBarChart.destroy();
+
+      monthlyBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Spese Totali Mensili (€)',
+            data: data,
+            backgroundColor: '#0984e3',
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: val => `€${val}`
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: ctx => `€${ctx.parsed.y.toFixed(2)}`
+              }
+            },
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', loadSummary);
+  </script>
+</body>
+</html>

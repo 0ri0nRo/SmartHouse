@@ -425,8 +425,7 @@ class PostgresHandler:
                 avg_methane, 
                 avg_hydrogen, 
                 avg_air_quality_index, 
-                hour, 
-                'Aggregated Hourly Data'
+                hour
             FROM 
                 temp_air_quality_hourly;
             """
