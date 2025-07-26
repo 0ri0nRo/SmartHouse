@@ -1,20 +1,29 @@
-# Usa un'immagine base di Python
-FROM python:3.9
+# Use a base Python image
+FROM python:3.12-slim-bullseye
 
-# Imposta la directory di lavoro all'interno del contenitore
+# Set the working directory inside the container
 WORKDIR /app
 
-# Installa nmap
-RUN apt-get update && apt-get install -y nmap
+# Install system packages required for building native libraries like psycopg2
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    nmap \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Copia il file requirements.txt nella directory di lavoro
-COPY requirements.txt requirements.txt
+# Upgrade pip to the latest version
+RUN pip install --upgrade pip
 
-# Installa le dipendenze
-RUN pip install -r requirements.txt
+# Copy requirements.txt and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia tutto il contenuto della directory corrente nella directory di lavoro del contenitore
+# Copy all contents of the current directory into the working directory
 COPY . .
 
-# Comando per eseguire l'app quando il contenitore parte
+# Expose the app port if necessary (useful for Flask server)
+EXPOSE 5000
+
+# Command to run the application
 CMD ["python", "app.py"]
