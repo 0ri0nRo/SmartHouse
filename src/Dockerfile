@@ -1,29 +1,30 @@
-# Use a base Python image
 FROM python:3.12-alpine
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Install system packages required for building native libraries like psycopg2
-RUN apt-get update && apt-get install -y \
+# Install system dependencies for building Python packages
+RUN apk add --no-cache \
     gcc \
-    libpq-dev \
-    nmap \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    python3-dev \
+    linux-headers \
+    libffi-dev \
+    postgresql-dev \
+    nmap
 
-# Upgrade pip to the latest version
+# Upgrade pip
 RUN pip install --upgrade pip
 
-# Copy requirements.txt and install dependencies
+# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all contents of the current directory into the working directory
+# Copy the rest of the code
 COPY . .
 
-# Expose the app port if necessary (useful for Flask server)
+# Expose port if needed (e.g., for Flask)
 EXPOSE 5000
 
-# Command to run the application
+# Command to run the app
 CMD ["python", "app.py"]
