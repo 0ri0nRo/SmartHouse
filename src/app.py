@@ -1606,9 +1606,23 @@ def get_p48_value():
             credentials_path=credentials_path,
             sheet_name="My NW"
         )
-        value = fetcher.get_cell_value_p48()
-        value = float(value.replace(",", "."))
-        return jsonify({"P48_value": value}), 200
+
+        # Recupera il valore dalla cache (se esiste)
+        cached_value = fetcher.get_cached_value()
+
+        # Prova a ottenere il nuovo valore live e aggiornare la cache
+        try:
+            live_value = fetcher.get_cell_value_p48()
+            live_value = float(live_value.replace(",", "."))
+        except Exception as e:
+            live_value = None  # In caso di errore, continuiamo solo con il valore cache
+
+        response = {
+            "cached_value": float(cached_value.replace(",", ".")) if cached_value else None,
+            "P48_value": live_value
+        }
+        return jsonify(response), 200
+
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404
     except Exception as e:

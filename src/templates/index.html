@@ -490,21 +490,27 @@
         }
 
         async function fetchSaldoValue() {
-            try {
-                const response = await fetch('/api/p48');
-                const data = await response.json();
+    const saldoElement = document.getElementById("saldoValue");
 
-                const saldoElement = document.getElementById("saldoValue");
-                if (data.P48_value !== undefined && data.P48_value !== null) {
-                    saldoElement.textContent = `${parseFloat(data.P48_value).toFixed(2)} €`;
-                } else {
-                    saldoElement.textContent = "-- €";
-                }
-            } catch (error) {
-                console.error("Errore nel recuperare il saldo da P48:", error);
-                document.getElementById("saldoValue").textContent = "-- €";
-            }
+    try {
+        const response = await fetch('/api/p48');
+        const data = await response.json();
+
+        // Mostra il valore cached subito
+        if (data.cached_value !== undefined && data.cached_value !== null) {
+            saldoElement.textContent = `${parseFloat(data.cached_value).toFixed(2)} €`;
         }
+
+        // Sovrascrive solo se il valore aggiornato è disponibile
+        if (data.P48_value !== undefined && data.P48_value !== null) {
+            saldoElement.textContent = `${parseFloat(data.P48_value).toFixed(2)} €`;
+        }
+
+    } catch (error) {
+        console.error("Errore nel recuperare il saldo da P48:", error);
+        saldoElement.textContent = "-- €";
+    }
+}
 
 
         async function fetchDevices() {
