@@ -104,6 +104,40 @@ class GoogleSheetExpenseManager:
 
         return summary
 
+class SheetValueFetcher:
+    def __init__(self, credentials_path, sheet_name):
+        self.scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        self.credentials_path = credentials_path
+        self.sheet_name = sheet_name
+        self.client = self._authenticate()
+        self.sheet = self.client.open(self.sheet_name)
+
+    def _authenticate(self):
+        creds = ServiceAccountCredentials.from_json_keyfile_name(self.credentials_path, self.scope)
+        return gspread.authorize(creds)
+
+    def get_cell_value_p48(self):
+        """
+        Recupera il valore dalla cella P48 del foglio '<current_year> Expenses'.
+        """
+        current_year = datetime.now().year
+        summary_sheet_name = f"{current_year}"
+
+        try:
+            worksheet = self.sheet.worksheet(summary_sheet_name)
+        except gspread.WorksheetNotFound:
+            raise ValueError(f"Worksheet '{summary_sheet_name}' not found in spreadsheet.")
+
+        try:
+            value = worksheet.acell("P48").value
+            print(f"Valore in P48 ({summary_sheet_name}): {value}")
+            return value
+        except gspread.exceptions.CellNotFound:
+            raise ValueError("Cella P48 non trovata.")
+
 # --- Script execution ---
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))

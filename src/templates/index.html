@@ -158,9 +158,9 @@
             font-size: 12px;
             border: none;
             flex: 1 1 calc(30% - 10px);
-            min-width: 160px; /* Larghezza minima uniformata */
-            max-width: 200px; /* Larghezza massima uniformata */
-            height: 110px; /* Altezza uniforme aumentata per maggiore spazio */
+            /*min-width: 160px;  Larghezza minima uniformata */
+            /*max-width: 200px; /* Larghezza massima uniformata */
+            /*height: 110px; /* Altezza uniforme aumentata per maggiore spazio */
             box-sizing: border-box;
             cursor: pointer;
             display: flex;
@@ -190,6 +190,7 @@
         body.dark-mode .card.humidity,
         body.dark-mode .card.raspberry-pi,
         body.dark-mode .card.list,
+        body.dark-mode .card.card#saldoCard,
         body.dark-mode .card.transports,
         body.dark-mode .card.groceries,
         body.dark-mode .card.air-quality,
@@ -256,6 +257,12 @@
             background: linear-gradient(135deg, #009688 0%, #FFD700 100%);
             color: #fff;
         }
+
+        .card#saldoCard {
+            background: linear-gradient(135deg, #4c6faf 0%, #ab4ac3 100%);
+            color: #fff;
+        }
+
         .card.air-quality.good {
             background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
         }
@@ -415,6 +422,14 @@
         <div class="card list" id="expensesCard">
             <h2>Expenses</h2>
         </div>
+
+
+        <!-- Saldo Card -->
+        <div class="card list" id="saldoCard">
+            <h2>Saldo</h2>
+            <h2 id="saldoValue">-- €</h2>
+        </div>
+
         <!-- Alarm Card -->
         <div class="card alarm" id="alarmCard">
             <h2>Home Alarm</h2>
@@ -473,6 +488,24 @@
                 return null;
             }
         }
+
+        async function fetchSaldoValue() {
+            try {
+                const response = await fetch('/api/p48');
+                const data = await response.json();
+
+                const saldoElement = document.getElementById("saldoValue");
+                if (data.P48_value !== undefined && data.P48_value !== null) {
+                    saldoElement.textContent = `${parseFloat(data.P48_value).toFixed(2)} €`;
+                } else {
+                    saldoElement.textContent = "-- €";
+                }
+            } catch (error) {
+                console.error("Errore nel recuperare il saldo da P48:", error);
+                document.getElementById("saldoValue").textContent = "-- €";
+            }
+        }
+
 
         async function fetchDevices() {
             try {
@@ -658,6 +691,7 @@
         window.onload = () => {
             loadTheme();
             updateUI();
+            fetchSaldoValue();  // Chiamata per aggiornare il saldo
             fetchLastAlarmStatus();
             fetchAirQuality();  // Chiamata per aggiornare la qualità dell'aria
         };

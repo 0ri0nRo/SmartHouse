@@ -17,7 +17,7 @@ from send_email import EmailSender, invia_backup_email
 from flask_cors import CORS
 import paramiko
 from io import StringIO
-from expenses_gsheet import GoogleSheetExpenseManager
+from expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1597,6 +1597,21 @@ def add_expense():
             return jsonify({"error": str(ve)}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/p48', methods=['GET'])
+def get_p48_value():
+    try:
+        fetcher = SheetValueFetcher(
+            credentials_path=credentials_path,
+            sheet_name="My NW"
+        )
+        value = fetcher.get_cell_value_p48()
+        return jsonify({"P48_value": value}), 200
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
