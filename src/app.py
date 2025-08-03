@@ -1604,7 +1604,9 @@ def get_p48_value():
     try:
         fetcher = SheetValueFetcher(
             credentials_path=credentials_path,
-            sheet_name="My NW"
+            sheet_name="My NW",
+            redis_host=os.getenv("REDIS_HOST", "redis"),
+            redis_port=int(os.getenv("REDIS_PORT", 6379))
         )
 
         # Recupera il valore dalla cache (se esiste)

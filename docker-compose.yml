@@ -53,6 +53,7 @@ services:
       - db
       - main
       - mongodb
+      - redis
     environment:
       - MONGO_URI=mongodb://root:example@mongodb:27017/
       - DB_HOST=db
@@ -94,7 +95,13 @@ services:
       - app
     restart: unless-stopped
 
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
 
+    
 volumes:
   postgres_data:
   mongo-data:

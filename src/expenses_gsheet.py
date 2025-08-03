@@ -4,6 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import calendar
 import json
+import redis
 
 class GoogleSheetExpenseManager:
     def __init__(self, credentials_path, sheet_name):
@@ -107,19 +108,9 @@ class GoogleSheetExpenseManager:
 
 
 class SheetValueFetcher:
-    """
-    SheetValueFetcher is a helper class to safely access and cache
-    the value of cell P48 in a Google Sheet.
+    CACHE_KEY = "p48_value"  # chiave per Redis
 
-    Features:
-    - Authenticates via Google credentials
-    - Accesses the worksheet of the current year
-    - Reads and writes a local cache (JSON file)
-    """
-
-    CACHE_FILE = "p48_cache.json"
-
-    def __init__(self, credentials_path, sheet_name):
+    def __init__(self, credentials_path, sheet_name, redis_host='localhost', redis_port=6379):
         self.scope = [
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive"
@@ -128,6 +119,9 @@ class SheetValueFetcher:
         self.sheet_name = sheet_name
         self.client = self._authenticate()
         self.sheet = self.client.open(self.sheet_name)
+
+        # Connessione a Redis
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
 
     def _authenticate(self):
         """
@@ -141,50 +135,39 @@ class SheetValueFetcher:
 
     def get_cached_value(self):
         """
-        Returns the cached value from the JSON file, or None if not available.
-        If the file doesn't exist, it creates an empty one with null value.
+        Recupera il valore dalla cache Redis, oppure None se non esiste.
         """
-        if not os.path.exists(self.CACHE_FILE):
-            print("Cache file not found, creating a new one.")
-            self._update_cache(None)
-            return None
-
         try:
-            with open(self.CACHE_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("value")
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Error reading cache file: {e}")
+            value = self.redis_client.get(self.CACHE_KEY)
+            return value
+        except redis.RedisError as e:
+            print(f"Errore Redis get: {e}")
             return None
 
     def _update_cache(self, value):
         """
-        Update the cache file with a new value.
+        Aggiorna il valore in Redis.
         """
         try:
-            with open(self.CACHE_FILE, "w") as f:
-                json.dump({"value": value}, f)
-            print(f"Cache updated with value: {value}")
-        except Exception as e:
-            print(f"Error saving cache: {e}")
+            # Imposta il valore con TTL, ad esempio 10 minuti (600 secondi)
+            self.redis_client.set(self.CACHE_KEY, value, ex=600)
+            print(f"Cache Redis aggiornata con valore: {value}")
+        except redis.RedisError as e:
+            print(f"Errore Redis set: {e}")
 
     def get_cell_value_p48(self):
-        """
-        Fetch the value from cell P48 of the current year's worksheet
-        and update the local cache.
-        """
         current_year = datetime.now().year
         summary_sheet_name = f"{current_year}"
 
         try:
             worksheet = self.sheet.worksheet(summary_sheet_name)
         except gspread.WorksheetNotFound:
-            raise ValueError(f"Worksheet '{summary_sheet_name}' not found in spreadsheet.")
+            raise ValueError(f"Worksheet '{summary_sheet_name}' non trovata.")
 
         try:
             value = worksheet.acell("P48").value
             self._update_cache(value)
-            print(f"Value updated from P48 ({summary_sheet_name}): {value}")
+            print(f"Valore aggiornato da P48 ({summary_sheet_name}): {value}")
             return value
         except gspread.exceptions.CellNotFound:
-            raise ValueError("Cell P48 not found.")
+            raise ValueError("Cell P48 non trovata.")
