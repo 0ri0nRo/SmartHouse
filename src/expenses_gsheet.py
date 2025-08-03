@@ -3,6 +3,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import calendar
+import json
 
 class GoogleSheetExpenseManager:
     def __init__(self, credentials_path, sheet_name):
@@ -21,7 +22,7 @@ class GoogleSheetExpenseManager:
 
     def _get_month_worksheet(self, date_str):
         """
-        Given a date in format 'YYYY-MM-DD', returns the worksheet named with month abbreviation (e.g., 'Jul')
+        Given a date in 'YYYY-MM-DD' format, returns the worksheet named with the month abbreviation (e.g., 'Jul').
         """
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         month_abbr = calendar.month_abbr[date_obj.month]  # 'Jan', 'Feb', ..., 'Dec'
@@ -54,9 +55,9 @@ class GoogleSheetExpenseManager:
 
     def get_summary_expenses(self, summary_sheet_name="2025 Expenses"):
         """
-        Estrae i dati dal foglio riepilogativo (es. '2025 expenses') e restituisce un dizionario
-        con le spese per categoria e mese, inclusi totale e media.
-        Restituisce solo le categorie specificate.
+        Extracts data from the summary worksheet (e.g., '2025 Expenses') and returns a dictionary
+        with expenses per category and month, including total and average.
+        Only predefined categories are considered.
         """
         valid_categories = {
             "Housing", "Leisure", "Health", "Transport", "University", "Bar", "Clothing",
@@ -70,7 +71,7 @@ class GoogleSheetExpenseManager:
 
         all_values = ws.get_all_values()
         if not all_values or len(all_values) < 2:
-            raise ValueError("Worksheet is empty or has insufficient data.")
+            raise ValueError("Worksheet is empty or lacks sufficient data.")
 
         headers = all_values[0]  # Month names and Total/Average
         data_rows = all_values[1:]
@@ -83,7 +84,7 @@ class GoogleSheetExpenseManager:
 
             category = row[0]
             if category not in valid_categories:
-                continue  # Skip categories non valide
+                continue  # Skip invalid categories
 
             try:
                 monthly_data = row[1:13]  # Jan to Dec
@@ -104,29 +105,20 @@ class GoogleSheetExpenseManager:
 
         return summary
 
+
 class SheetValueFetcher:
     """
-    SheetValueFetcher is a utility class for accessing specific cell values from a Google Sheets spreadsheet.
+    SheetValueFetcher is a helper class to safely access and cache
+    the value of cell P48 in a Google Sheet.
 
-    Attributes:
-        credentials_path (str): Path to the JSON credentials file for Google API authentication.
-        sheet_name (str): Name of the Google Sheets spreadsheet to access.
-        scope (list): List of OAuth scopes required for accessing Google Sheets and Drive.
-        client (gspread.Client): Authenticated gspread client.
-        sheet (gspread.Spreadsheet): Reference to the opened spreadsheet.
-
-    Methods:
-        __init__(credentials_path, sheet_name):
-            Initializes the SheetValueFetcher with the given credentials and spreadsheet name.
-
-        _authenticate():
-            Authenticates with Google Sheets API using the provided credentials and returns a gspread client.
-
-        get_cell_value_p48():
-            Retrieves the value from cell P48 of the worksheet named '<current_year>' in the spreadsheet.
-            Raises:
-                ValueError: If the worksheet or cell is not found.
+    Features:
+    - Authenticates via Google credentials
+    - Accesses the worksheet of the current year
+    - Reads and writes a local cache (JSON file)
     """
+
+    CACHE_FILE = "p48_cache.json"
+
     def __init__(self, credentials_path, sheet_name):
         self.scope = [
             "https://spreadsheets.google.com/feeds",
@@ -138,12 +130,48 @@ class SheetValueFetcher:
         self.sheet = self.client.open(self.sheet_name)
 
     def _authenticate(self):
-        creds = ServiceAccountCredentials.from_json_keyfile_name(self.credentials_path, self.scope)
+        """
+        Authenticate the application with Google using the JSON credentials file.
+        """
+        creds = ServiceAccountCredentials.from_json_keyfile_name(
+            self.credentials_path,
+            self.scope
+        )
         return gspread.authorize(creds)
+
+    def get_cached_value(self):
+        """
+        Returns the cached value from the JSON file, or None if not available.
+        If the file doesn't exist, it creates an empty one with null value.
+        """
+        if not os.path.exists(self.CACHE_FILE):
+            print("Cache file not found, creating a new one.")
+            self._update_cache(None)
+            return None
+
+        try:
+            with open(self.CACHE_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("value")
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error reading cache file: {e}")
+            return None
+
+    def _update_cache(self, value):
+        """
+        Update the cache file with a new value.
+        """
+        try:
+            with open(self.CACHE_FILE, "w") as f:
+                json.dump({"value": value}, f)
+            print(f"Cache updated with value: {value}")
+        except Exception as e:
+            print(f"Error saving cache: {e}")
 
     def get_cell_value_p48(self):
         """
-        Recupera il valore dalla cella P48 del foglio '<current_year> Expenses'.
+        Fetch the value from cell P48 of the current year's worksheet
+        and update the local cache.
         """
         current_year = datetime.now().year
         summary_sheet_name = f"{current_year}"
@@ -155,25 +183,8 @@ class SheetValueFetcher:
 
         try:
             value = worksheet.acell("P48").value
-            print(f"Valore in P48 ({summary_sheet_name}): {value}")
+            self._update_cache(value)
+            print(f"Value updated from P48 ({summary_sheet_name}): {value}")
             return value
         except gspread.exceptions.CellNotFound:
-            raise ValueError("Cella P48 non trovata.")
-
-# --- Script execution ---
-if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    credentials_path = os.path.join(BASE_DIR, "gcredentials.json")
-
-    manager = GoogleSheetExpenseManager(
-        credentials_path=credentials_path,
-        sheet_name="My NW"  # Cambia con il nome reale del tuo Google Sheet
-    )
-
-    # Esempio di aggiunta spesa
-    manager.add_expense(
-        name="ProvaPython",
-        date="2025-07-22",
-        amount="5",
-        category="Fees"
-    )
+            raise ValueError("Cell P48 not found.")
