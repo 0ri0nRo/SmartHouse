@@ -1607,6 +1607,7 @@ def get_p48_value():
             sheet_name="My NW"
         )
         value = fetcher.get_cell_value_p48()
+        value = float(value.replace(",", "."))
         return jsonify({"P48_value": value}), 200
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404
