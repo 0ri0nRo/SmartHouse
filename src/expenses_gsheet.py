@@ -105,6 +105,28 @@ class GoogleSheetExpenseManager:
         return summary
 
 class SheetValueFetcher:
+    """
+    SheetValueFetcher is a utility class for accessing specific cell values from a Google Sheets spreadsheet.
+
+    Attributes:
+        credentials_path (str): Path to the JSON credentials file for Google API authentication.
+        sheet_name (str): Name of the Google Sheets spreadsheet to access.
+        scope (list): List of OAuth scopes required for accessing Google Sheets and Drive.
+        client (gspread.Client): Authenticated gspread client.
+        sheet (gspread.Spreadsheet): Reference to the opened spreadsheet.
+
+    Methods:
+        __init__(credentials_path, sheet_name):
+            Initializes the SheetValueFetcher with the given credentials and spreadsheet name.
+
+        _authenticate():
+            Authenticates with Google Sheets API using the provided credentials and returns a gspread client.
+
+        get_cell_value_p48():
+            Retrieves the value from cell P48 of the worksheet named '<current_year>' in the spreadsheet.
+            Raises:
+                ValueError: If the worksheet or cell is not found.
+    """
     def __init__(self, credentials_path, sheet_name):
         self.scope = [
             "https://spreadsheets.google.com/feeds",
