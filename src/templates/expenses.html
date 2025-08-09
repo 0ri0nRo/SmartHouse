@@ -16,17 +16,26 @@
   <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     :root {
-      --bg-color: #f9f9fb;
-      --font-color: #333;
+      --bg-gradient-from: #667eea;
+      --bg-gradient-to: #764ba2;
+      --bg-color: #f8fafc;
+      --font-color: #1e293b;
       --card-bg: #ffffff;
-      --shadow: rgba(0, 0, 0, 0.05) 0px 4px 12px;
-      --primary: #7db5ff;
-      --primary-hover: #6c5ce7;
-      --accent1: #e3f2fd;
-      --accent2: #fce4ec;
-      --accent3: #e8f5e9;
-      --accent4: #f3e5f5;
+      --shadow-light: rgba(0, 0, 0, 0.05) 0px 4px 20px;
+      --shadow-medium: rgba(0, 0, 0, 0.1) 0px 8px 32px;
+      --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --primary-hover: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      --success: #10b981;
+      --error: #ef4444;
+      --border: #e2e8f0;
+      --accent1: #f0f9ff;
+      --accent2: #fef7ff;
+      --text-muted: #64748b;
+      --radius: 16px;
+      --radius-sm: 12px;
     }
 
     * {
@@ -34,148 +43,418 @@
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       margin: 0;
       padding: 0;
-      background-color: var(--bg-color);
+      background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-to) 100%);
       color: var(--font-color);
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
+      position: relative;
     }
 
-    h1, h2 {
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .header {
       text-align: center;
-      color: #444;
-      margin-top: 20px;
+      margin: 40px 0 30px;
+      z-index: 1;
+      position: relative;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-top: 8px;
+      font-weight: 400;
     }
 
     .container {
       width: 100%;
-      max-width: 600px;
+      max-width: 720px;
       background: var(--card-bg);
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      margin: 0 10px 40px;
+      padding: 32px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-medium);
+      margin: 0 20px 40px;
+      backdrop-filter: blur(20px);
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--font-color);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-icon {
+      font-size: 1.4rem;
     }
 
     form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      position: relative;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
     }
 
     input[type="text"],
     input[type="number"],
-    input.datepicker {
-      appearance: none;
-      background-color: #fff;
-      color: #333;
-      padding: 12px;
+    input.datepicker,
+    select {
+      width: 100%;
+      padding: 16px;
       font-size: 16px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+      font-family: inherit;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background-color: white;
+      color: var(--font-color);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    input.datepicker:focus,
+    select:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      transform: translateY(-1px);
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+      font-weight: 400;
     }
 
     select {
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 12px center;
+      background-repeat: no-repeat;
+      background-size: 16px;
+      padding-right: 40px;
     }
 
-    button {
-      background-color: var(--primary);
+    .btn-primary {
+      grid-column: 1 / -1;
+      background: var(--primary);
       color: white;
       font-size: 16px;
-      padding: 14px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-      box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    button:hover {
-      background-color: var(--primary-hover);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    #message, #error {
       font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 12px;
+      padding: 18px 32px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .message-container {
+      margin-bottom: 20px;
+      min-height: 24px;
     }
 
     #message {
-      color: green;
+      color: var(--success);
+      font-weight: 500;
+      font-size: 14px;
+      padding: 12px 16px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius-sm);
+      margin: 0;
+      animation: slideIn 0.3s ease-out;
     }
 
     #error {
-      color: red;
+      color: var(--error);
+      font-weight: 500;
+      font-size: 14px;
+      padding: 12px 16px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-sm);
+      margin: 0;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .charts-section {
+      border-top: 1px solid var(--border);
+      padding-top: 32px;
+    }
+
+    .charts-grid {
+      display: grid;
+      gap: 32px;
+    }
+
+    .chart-container {
+      background: rgba(248, 250, 252, 0.5);
+      padding: 24px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .chart-container.pie-chart {
+      max-height: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--font-color);
+      margin-bottom: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .pie-chart-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    #expensePieChart {
+      max-width: 100% !important;
+      max-height: 400px !important;
+      width: auto !important;
+      height: auto !important;
     }
 
     canvas {
-      margin-top: 30px;
       max-width: 100%;
+      height: auto;
+    }
+
+    /* Loading animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .container {
+        padding: 24px 20px;
+        margin: 0 16px 40px;
+      }
+
+      form {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .charts-grid {
+        gap: 24px;
+      }
+
+      .chart-container {
+        padding: 20px 16px;
+      }
+
+      .chart-container.pie-chart {
+        max-height: 450px;
+      }
+
+      #expensePieChart {
+        max-height: 320px !important;
+      }
     }
 
     @media (max-width: 480px) {
-      h1 {
-        font-size: 20px;
+      .header {
+        margin: 20px 0;
       }
 
       .container {
-        padding: 16px;
+        padding: 20px 16px;
+        margin: 0 12px 30px;
       }
+
+      .section-title {
+        font-size: 1.1rem;
+      }
+    }
+
+    /* Enhanced focus styles for accessibility */
+    *:focus-visible {
+      outline: 2px solid #667eea;
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Expenses Manager</h1>
+  <div class="header">
+    <h1>💰 Expenses Manager</h1>
+    <div class="subtitle">Track your spending with style</div>
+  </div>
 
   <div class="container">
-    <div id="message"></div>
-    <div id="error"></div>
+    <div class="form-section">
+      <h2 class="section-title">
+        <span class="section-icon">➕</span>
+        Add New Expense
+      </h2>
+      
+      <div class="message-container">
+        <div id="message" style="display: none;"></div>
+        <div id="error" style="display: none;"></div>
+      </div>
 
-    <form id="expenseForm">
-      <input type="text" id="desc" placeholder="Description" required />
-      <input type="number" step="0.01" id="amount" placeholder="Amount (€)" required />
-      <input type="text" id="date" class="datepicker" placeholder="Date" autocomplete="off" required />
+      <form id="expenseForm">
+        <div class="form-group">
+          <input type="text" id="desc" placeholder="Description" required />
+        </div>
+        
+        <div class="form-group">
+          <input type="number" step="0.01" id="amount" placeholder="Amount (€)" required />
+        </div>
+        
+        <div class="form-group">
+          <input type="text" id="date" class="datepicker" placeholder="Select date" autocomplete="off" required />
+        </div>
 
-      <select id="category" required>
-        <option value="" disabled selected>Choose category</option>
-        <option>Housing</option>
-        <option>Leisure</option>
-        <option>Health</option>
-        <option>Transport</option>
-        <option>University</option>
-        <option>Bar</option>
-        <option>Clothing</option>
-        <option>Groceries</option>
-        <option>Gifts</option>
-        <option>Fees</option>
-        <option>Bills</option>
-        <option>Buoni pasto</option>
-        <option>Other</option>
-        <option>Restaurants</option>
-        <option>Vacation</option>
-      </select>
+        <div class="form-group">
+          <select id="category" required>
+            <option value="" disabled selected>Choose category</option>
+            <option>Housing</option>
+            <option>Leisure</option>
+            <option>Health</option>
+            <option>Transport</option>
+            <option>University</option>
+            <option>Bar</option>
+            <option>Clothing</option>
+            <option>Groceries</option>
+            <option>Gifts</option>
+            <option>Fees</option>
+            <option>Bills</option>
+            <option>Buoni pasto</option>
+            <option>Other</option>
+            <option>Restaurants</option>
+            <option>Vacation</option>
+          </select>
+        </div>
 
-      <button type="submit">Add Expense</button>
-    </form>
+        <button type="submit" class="btn-primary">Add Expense</button>
+      </form>
+    </div>
 
-    <h2>📊 Summary (2025)</h2>
+    <div class="charts-section">
+      <h2 class="section-title">
+        <span class="section-icon">📊</span>
+        Summary (2025)
+      </h2>
 
-    <canvas id="expensePieChart" width="400" height="400"></canvas>
-    <canvas id="monthlyBarChart" width="600" height="400" style="margin-top:40px;"></canvas>
+      <div class="charts-grid">
+        <div class="chart-container pie-chart">
+          <div class="chart-title">Expenses by Category</div>
+          <div class="pie-chart-wrapper">
+            <canvas id="expensePieChart" width="380" height="380"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Monthly Overview</div>
+          <canvas id="monthlyBarChart" width="600" height="400"></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -204,10 +483,24 @@
     let pieChart = null;
     let monthlyBarChart = null;
 
+    // Enhanced message display
+    function showMessage(text, type = 'success') {
+      const targetEl = type === 'success' ? messageEl : errorEl;
+      const otherEl = type === 'success' ? errorEl : messageEl;
+      
+      otherEl.style.display = 'none';
+      targetEl.textContent = text;
+      targetEl.style.display = 'block';
+      
+      setTimeout(() => {
+        targetEl.style.display = 'none';
+      }, 5000);
+    }
+
     form.addEventListener('submit', e => {
       e.preventDefault();
-      messageEl.textContent = '';
-      errorEl.textContent = '';
+      messageEl.style.display = 'none';
+      errorEl.style.display = 'none';
 
       const description = document.getElementById('desc').value.trim();
       const amount = parseFloat(document.getElementById('amount').value);
@@ -215,20 +508,30 @@
       const category = document.getElementById('category').value;
 
       if (!description || !amount || !date || !category) {
-        errorEl.textContent = "Please fill all fields.";
+        showMessage("Please fill all fields.", 'error');
         return;
       }
 
+      // Add loading state
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.innerHTML = '<span class="loading"></span> Adding...';
+      submitBtn.disabled = true;
+
       axios.post('/api/expenses', { description, amount, date, category })
         .then(() => {
-          messageEl.textContent = "Expense added successfully!";
+          showMessage("Expense added successfully!", 'success');
           form.reset();
           picker.setDate(null);
           loadSummary();
         })
         .catch(err => {
-          errorEl.textContent = "Error adding the expense.";
+          showMessage("Error adding the expense.", 'error');
           console.error(err);
+        })
+        .finally(() => {
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
         });
     });
 
@@ -266,44 +569,119 @@
         })
         .catch(err => {
           console.error("Error fetching summary", err);
-          errorEl.textContent = "Error loading summary data.";
+          showMessage("Error loading summary data.", 'error');
         });
     }
 
     function renderPieChart(labels, data) {
-      const ctx = document.getElementById('expensePieChart').getContext('2d');
-      if (pieChart) pieChart.destroy();
+  const ctx = document.getElementById('expensePieChart').getContext('2d');
+  if (pieChart) pieChart.destroy();
 
-      pieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Expenses by Category',
-            data,
-            backgroundColor: [
-              '#74b9ff', '#a29bfe', '#fab1a0', '#ff7675',
-              '#55efc4', '#ffeaa7', '#fd79a8', '#e17055',
-              '#00b894', '#0984e3', '#6c5ce7', '#d63031',
-              '#fdcb6e', '#00cec9', '#2d3436'
-            ]
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'right'
+  pieChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Expenses by Category',
+        data,
+        backgroundColor: [
+          '#667eea', '#764ba2', '#f093fb', '#f5576c',
+          '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
+          '#ffecd2', '#fcb69f', '#a8edea', '#fed6e3',
+          '#ff9a9e', '#fecfef', '#ffeaa7', '#74b9ff'
+        ],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 20,
+        hoverBorderColor: '#444',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: 20,
+      },
+      plugins: {
+        legend: {
+          position: 'right',
+          align: 'start',
+          display: false,
+          labels: {
+            padding: 20,
+            boxWidth: 20,
+            boxHeight: 20,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            font: {
+              size: 14,
+              family: 'Inter',
+              weight: '600',
+              color: '#374151', // dark gray text
             },
-            tooltip: {
-              callbacks: {
-                label: context => `${context.label}: €${context.parsed.toFixed(2)}`
-              }
+            color: '#374151',
+            cursor: 'pointer',
+            generateLabels(chart) {
+              const original = Chart.overrides.pie.plugins.legend.labels.generateLabels;
+              const labelsOriginal = original.call(this, chart);
+              // Optional: customize labels here if needed
+              return labelsOriginal;
+            }
+          },
+          onHover: (event, legendItem, legend) => {
+            event.native.target.style.cursor = 'pointer';
+            const index = legendItem.index;
+            const dataset = legend.chart.data.datasets[0];
+            legend.chart.setActiveElements([{ datasetIndex: 0, index }]);
+            legend.chart.update();
+          },
+          onLeave: (event, legendItem, legend) => {
+            event.native.target.style.cursor = 'default';
+            legend.chart.setActiveElements([]);
+            legend.chart.update();
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleFont: {
+            size: 15,
+            weight: '700',
+            family: 'Inter',
+          },
+          bodyFont: {
+            size: 14,
+            family: 'Inter',
+          },
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const value = context.parsed;
+              const percentage = ((value * 100) / total).toFixed(1);
+              return `€${value.toFixed(2)} (${percentage}%)`;
             }
           }
         }
-      });
+      },
+      animation: {
+        animateRotate: true,
+        duration: 1500,
+        easing: 'easeOutQuart',
+      },
+      elements: {
+        arc: {
+          borderWidth: 2,
+          hoverBorderWidth: 3,
+          borderColor: '#fff',
+          hoverOffset: 15,
+          hoverBorderColor: '#222',
+        }
+      }
     }
+  });
+}
+
 
     function renderMonthlyBarChart(labels, data) {
       const ctx = document.getElementById('monthlyBarChart').getContext('2d');
@@ -316,7 +694,11 @@
           datasets: [{
             label: 'Spese Totali Mensili (€)',
             data: data,
-            backgroundColor: '#0984e3',
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: '#667eea',
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
           }]
         },
         options: {
@@ -325,12 +707,35 @@
             y: {
               beginAtZero: true,
               ticks: {
-                callback: val => `€${val}`
+                callback: val => `€${val}`,
+                font: {
+                  family: 'Inter'
+                }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              ticks: {
+                font: {
+                  family: 'Inter'
+                }
+              },
+              grid: {
+                display: false
               }
             }
           },
           plugins: {
             tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleFont: {
+                family: 'Inter'
+              },
+              bodyFont: {
+                family: 'Inter'
+              },
               callbacks: {
                 label: ctx => `€${ctx.parsed.y.toFixed(2)}`
               }
@@ -338,6 +743,10 @@
             legend: {
               display: false
             }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
           }
         }
       });
