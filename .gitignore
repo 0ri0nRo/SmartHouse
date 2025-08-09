@@ -44,6 +44,8 @@ Thumbs.db
 # Mac specific files
 *.DS_Store
 
+*.sql
+
 # Windows specific files
 *.log
 *.pid
