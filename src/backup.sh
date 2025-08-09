@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Nome dell'immagine del container PostgreSQL
 IMAGE_NAME="postgres:latest"
