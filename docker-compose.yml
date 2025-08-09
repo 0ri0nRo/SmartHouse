@@ -63,7 +63,7 @@ services:
       - TZ=Europe/Rome
     volumes:
       - ./src/backup.sh:/usr/local/bin/backup.sh
-      - ./backup:/backup  # Monta la cartella di backup nella directory del contenitore
+      - ./backup:/backup
       - ./src/static:/app/static
     restart: unless-stopped
 
