@@ -18,6 +18,7 @@ from flask_cors import CORS
 import paramiko
 from io import StringIO
 from expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
+import traceback
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1497,28 +1498,25 @@ def search_by_timestamp(start_timestamp, end_timestamp):
 
 @app.route('/api_run_backup', methods=['POST'])
 def run_backup():
-    """Esegue il backup tramite backup.sh e invia un'email."""
     try:
-        # Percorso del file di backup all'interno del contenitore Docker
         backup_script_path = '/usr/local/bin/backup.sh'
-
-        # Verifica se il file di backup esiste nel percorso previsto
         if not os.path.exists(backup_script_path):
             return jsonify({'error': 'Il file di backup non è stato trovato.'}), 404
 
-        # Esegue il backup
         result = subprocess.run([backup_script_path], capture_output=True, text=True)
         
-        # Log di output per il debug
         print('Output backup:', result.stdout)
         print('Errori backup:', result.stderr)
+        print('Return code:', result.returncode)
 
         if result.returncode == 0:
-            invia_backup_email(email_sender)  # Funzione per inviare email
+            invia_backup_email(email_sender)
             return jsonify({'message': 'Backup eseguito con successo.', 'output': result.stdout}), 200
         else:
             return jsonify({'error': 'Errore durante l\'esecuzione del backup.', 'output': result.stderr}), 500
+
     except Exception as e:
+        print('Exception:', traceback.format_exc())
         return jsonify({'error': f'Si è verificato un errore: {e}'}), 500
 
 @app.route('/api/ssh_exec', methods=['POST'])
