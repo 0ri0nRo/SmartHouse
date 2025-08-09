@@ -4,256 +4,714 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temperature Charts</title>
+    <title>Temperature Analytics Dashboard</title>
     <!-- Include Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --primary-color: #6366f1;
+            --primary-hover: #5855eb;
+            --primary-light: #eef2ff;
+            --secondary-color: #10b981;
+            --secondary-light: #d1fae5;
+            --accent-color: #f59e0b;
+            --accent-light: #fef3c7;
+            --danger-color: #ef4444;
+            --danger-light: #fee2e2;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--primary-light) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-subtitle {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .stat-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .stat-header {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            background: var(--primary-light);
+            color: var(--primary-color);
         }
 
-        h1 {
-            margin: 20px;
-            font-size: 28px;
-            color: #333;
-            text-align: center;
+        .stat-icon.secondary {
+            background: var(--secondary-light);
+            color: var(--secondary-color);
         }
 
-        .container {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            max-width: 90%;
-            width: 800px;
-            margin: 20px;
+        .stat-icon.accent {
+            background: var(--accent-light);
+            color: var(--accent-color);
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chart-section {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .chart-card {
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .chart-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-2px);
+        }
+
+        .chart-header {
+            padding: 1.5rem 1.5rem 0 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            items: center;
+            gap: 0.75rem;
+        }
+
+        .chart-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .controls-section {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
         }
 
         .controls {
-            margin-bottom: 20px;
-            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 200px;
         }
 
         .controls label {
-            font-size: 16px;
-            color: #555;
-            margin-right: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
         }
 
         .controls select, 
         .controls input {
-            padding: 6px;
-            font-size: 14px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin: 0 5px;
-            background-color: #f9f9f9;
-            color: #333;
-            max-width: 200px; /* Ensure inputs don't stretch too wide */
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            min-width: 120px;
+            font-family: inherit;
         }
 
-        .controls button {
-            padding: 8px 16px;
-            font-size: 14px;
-            border: none;
-            border-radius: 6px;
-            background-color: #007bff;
-            color: #ffffff;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.2s;
-            margin: 5px;
-        }
-
-        .controls button:hover {
-            background-color: #0056b3;
-            transform: scale(1.05);
-        }
-
-        .controls button:focus {
+        .controls select:focus, 
+        .controls input:focus {
             outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
-        .chart-card {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary-color);
         }
 
         .chart-container {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 450px;
+            padding: 1.5rem;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            background: var(--danger-light);
+            color: var(--danger-color);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--danger-color);
+            margin: 1rem;
+            text-align: center;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 2rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+            background: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                min-width: auto;
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
 
         @media (max-width: 768px) {
-            .container {
-                width: 100%;
-                padding: 15px;
+            .dashboard-container {
+                padding: 0 0.75rem;
+                gap: 1.5rem;
             }
 
-            h1 {
-                font-size: 22px;
+            .page-title {
+                font-size: 2rem;
             }
 
-            .controls label,
-            .controls select,
-            .controls input,
-            .controls button {
-                font-size: 14px;
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
             }
-        }
 
-        @media (max-width: 480px) {
             .chart-container {
-                height: 300px;
-            }
-
-            .controls label,
-            .controls select,
-            .controls input,
-            .controls button {
-                font-size: 12px;
+                height: 350px;
+                padding: 1rem;
             }
 
             .controls select, 
             .controls input {
-                max-width: 150px; /* Adjust width for smaller screens */
+                min-width: auto;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-header {
+                padding: 1.5rem 0;
             }
 
-            .controls button {
-                font-size: 12px;
-                padding: 6px 12px; /* Make buttons smaller */
+            .page-title {
+                font-size: 1.75rem;
+            }
+
+            .chart-container {
+                height: 300px;
+                padding: 0.75rem;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text-primary: #f9fafb;
+                --text-secondary: #d1d5db;
+                --text-muted: #9ca3af;
+                --bg-primary: #1f2937;
+                --bg-secondary: #111827;
+                --bg-tertiary: #0f172a;
+                --border-color: #374151;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
     </style>
 </head>
 
 <body>
-    <h1>Temperature Charts</h1>
-    <div class="container">
+    <div class="page-header">
+        <div class="dashboard-container">
+            <h1 class="page-title">Temperature Analytics Dashboard</h1>
+            <p class="page-subtitle">Real-time temperature monitoring and historical data visualization</p>
+        </div>
+    </div>
 
-         <!-- Chart for Today's Temperature -->
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="todayTemperatureChart"></canvas>
+    <div class="dashboard-container">
+
+
+        <div class="chart-section">
+            <!-- Today's Temperature Chart -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="sun"></i>
+                        Today's Temperature
+                        <span class="badge">Real-time</span>
+                    </h3>
+                    <p class="chart-description">Hourly temperature readings for today</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="todayTemperatureChart"></canvas>
+                    <div class="loading-spinner" id="todaySpinner"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Chart for Monthly Average Temperature -->
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="monthlyAverageTemperatureChart"></canvas>
+            <!-- Monthly Average Temperature Chart -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="trending-up"></i>
+                        Monthly Average Temperature
+                    </h3>
+                    <p class="chart-description">Average temperature by month for the selected year</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="monthlyAverageTemperatureChart"></canvas>
+                    <div class="loading-spinner" id="monthlySpinner"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Chart for Daily Temperature -->
-          <!-- Controls for selecting month and year -->
-        <div class="controls">
-            <label for="monthSelector">Select Month:</label>
-            <select id="monthSelector">
-                <option value="1">January</option>
-                <option value="2">February</option>
-                <option value="3">March</option>
-                <option value="4">April</option>
-                <option value="5">May</option>
-                <option value="6">June</option>
-                <option value="7">July</option>
-                <option value="8">August</option>
-                <option value="9">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-            </select>
+            <!-- Daily Temperature Chart with Controls -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="calendar-days"></i>
+                        Daily Temperature Analysis
+                    </h3>
+                    <p class="chart-description">Daily temperature readings for the selected month and year</p>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="monthSelector">
+                                <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
+                                Month:
+                            </label>
+                            <select id="monthSelector">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
 
-            <label for="yearSelector">Select Year:</label>
-            <select id="yearSelector">
-                <!-- Years will be dynamically generated by JavaScript -->
-            </select>
+                        <div class="control-group">
+                            <label for="yearSelector">
+                                <i data-lucide="calendar-range" style="width: 16px; height: 16px;"></i>
+                                Year:
+                            </label>
+                            <select id="yearSelector">
+                                <!-- Years will be dynamically generated by JavaScript -->
+                            </select>
+                        </div>
 
-            <button id="updateChartsButton">Update</button>
-        </div>
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="dailyTemperatureChart"></canvas>
+                        <button id="updateChartsButton" class="btn btn-primary">
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                            Update Charts
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="dailyTemperatureChart"></canvas>
+                    <div class="loading-spinner" id="dailySpinner"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Controls for fetching data by date range -->
-        <div class="controls">
-            <label for="startDate">Start Date:</label>
-            <input type="datetime-local" id="startDate" />
+            <!-- Temperature by Date Range Chart -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="line-chart"></i>
+                        Custom Date Range Analysis
+                    </h3>
+                    <p class="chart-description">Temperature data for your selected date and time range</p>
+                </div>
 
-            <label for="endDate">End Date:</label>
-            <input type="datetime-local" id="endDate" />
+                <div class="controls-section">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="startDate">
+                                <i data-lucide="calendar-plus" style="width: 16px; height: 16px;"></i>
+                                Start Date:
+                            </label>
+                            <input type="datetime-local" id="startDate" />
+                        </div>
 
-            <button id="fetchDataButton">Fetch Data</button>
-        </div>
+                        <div class="control-group">
+                            <label for="endDate">
+                                <i data-lucide="calendar-minus" style="width: 16px; height: 16px;"></i>
+                                End Date:
+                            </label>
+                            <input type="datetime-local" id="endDate" />
+                        </div>
 
-        <!-- Chart for Temperature by Date Range -->
-        <div class="chart-card">
-            <div class="chart-container">
-                <canvas id="temperatureChart"></canvas>
+                        <button id="fetchDataButton" class="btn btn-primary">
+                            <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                            Fetch Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
+                    <div class="loading-spinner" id="rangeSpinner"></div>
+                    <div class="error-message" id="errorMessage"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
         let dailyTemperatureChart = null;
         let monthlyAverageTemperatureChart = null;
         let todayTemperatureChart = null;
         let temperatureChart = null;
 
+        function showSpinner(spinnerId) {
+            document.getElementById(spinnerId).style.display = 'block';
+        }
+
+        function hideSpinner(spinnerId) {
+            document.getElementById(spinnerId).style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
         async function fetchDailyTemperatureData(month, year) {
             try {
+                showSpinner('dailySpinner');
                 const response = await fetch(`/api/monthly_average_temperature/${month}/${year}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
                 console.error('Error fetching daily temperature data:', error);
+                showError('Failed to fetch daily temperature data');
                 return {};
+            } finally {
+                hideSpinner('dailySpinner');
             }
         }
 
         async function fetchMonthlyAverageTemperatureData(year) {
             try {
+                showSpinner('monthlySpinner');
                 const response = await fetch(`/api/monthly_average_temperature/${year}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
                 console.error('Error fetching monthly average temperature data:', error);
+                showError('Failed to fetch monthly average temperature data');
                 return {};
+            } finally {
+                hideSpinner('monthlySpinner');
             }
         }
 
         async function fetchTodayTemperatureData() {
             try {
+                showSpinner('todaySpinner');
                 const response = await fetch(`/api/today_temperature`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
                 console.error('Error fetching today temperature data:', error);
+                showError('Failed to fetch today\'s temperature data');
                 return {};
+            } finally {
+                hideSpinner('todaySpinner');
             }
         }
 
         async function fetchTemperatureData(startDate, endDate) {
             try {
+                showSpinner('rangeSpinner');
+                hideError();
                 const response = await fetch(`/api/temperature_average/${startDate}/${endDate}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
                 console.error('Error fetching temperature data:', error);
+                showError('Failed to fetch temperature data for the selected range');
                 return [];
+            } finally {
+                hideSpinner('rangeSpinner');
             }
         }
 
@@ -262,6 +720,72 @@
                 chart.destroy();
             }
         }
+
+        // Enhanced chart configuration
+        const chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: {
+                            family: 'Inter',
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(31, 41, 55, 0.95)',
+                    titleColor: '#f9fafb',
+                    bodyColor: '#d1d5db',
+                    borderColor: '#6366f1',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 12,
+                    displayColors: false,
+                    titleFont: {
+                        family: 'Inter',
+                        size: 14,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        family: 'Inter',
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(226, 232, 240, 0.5)',
+                        borderColor: 'rgba(226, 232, 240, 0.8)'
+                    },
+                    ticks: {
+                        font: {
+                            family: 'Inter',
+                            size: 11
+                        },
+                        color: '#6b7280'
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(226, 232, 240, 0.5)',
+                        borderColor: 'rgba(226, 232, 240, 0.8)'
+                    },
+                    ticks: {
+                        font: {
+                            family: 'Inter',
+                            size: 11
+                        },
+                        color: '#6b7280'
+                    }
+                }
+            }
+        };
 
         async function renderDailyTemperatureChart(month, year) {
             try {
@@ -281,42 +805,48 @@
                         datasets: [{
                             label: `Daily Temperature for ${getMonthName(month)} ${year}`,
                             data: temperatures,
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderColor: 'rgba(99, 102, 241, 1)',
+                            borderWidth: 2,
+                            borderRadius: 4,
+                            borderSkipped: false,
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...chartDefaults,
                         scales: {
+                            ...chartDefaults.scales,
                             x: {
+                                ...chartDefaults.scales.x,
                                 title: {
                                     display: true,
-                                    text: 'Day of the Month'
-                                },
-                                ticks: {
-                                    autoSkip: true,
-                                    maxTicksLimit: 10,
-                                    maxRotation: 45,
-                                    minRotation: 30
+                                    text: 'Day of the Month',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             },
                             y: {
+                                ...chartDefaults.scales.y,
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
-                                },
-                                ticks: {
-                                    beginAtZero: true
+                                    text: 'Temperature (°C)',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             }
                         },
                         plugins: {
-                            legend: {
-                                position: 'top'
-                            },
+                            ...chartDefaults.plugins,
                             tooltip: {
+                                ...chartDefaults.plugins.tooltip,
                                 callbacks: {
                                     label: function (tooltipItem) {
                                         return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
@@ -343,48 +873,59 @@
                 clearChart(monthlyAverageTemperatureChart);
 
                 monthlyAverageTemperatureChart = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: months.map(month => getMonthName(month)),
                         datasets: [{
                             label: `Average Temperature for ${year}`,
                             data: temperatures,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...chartDefaults,
                         scales: {
+                            ...chartDefaults.scales,
                             x: {
+                                ...chartDefaults.scales.x,
                                 title: {
                                     display: true,
-                                    text: 'Month'
-                                },
-                                ticks: {
-                                    autoSkip: true,
-                                    maxTicksLimit: 12,
-                                    maxRotation: 45,
-                                    minRotation: 30
+                                    text: 'Month',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             },
                             y: {
+                                ...chartDefaults.scales.y,
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
-                                },
-                                ticks: {
-                                    beginAtZero: true
+                                    text: 'Temperature (°C)',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             }
                         },
                         plugins: {
-                            legend: {
-                                position: 'top'
-                            },
+                            ...chartDefaults.plugins,
                             tooltip: {
+                                ...chartDefaults.plugins.tooltip,
                                 callbacks: {
                                     label: function (tooltipItem) {
                                         return `Average Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
@@ -417,42 +958,53 @@
                         datasets: [{
                             label: 'Temperature Today',
                             data: temperatures,
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
+                            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                            borderColor: 'rgba(245, 158, 11, 1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
+                        ...chartDefaults,
                         scales: {
+                            ...chartDefaults.scales,
                             x: {
+                                ...chartDefaults.scales.x,
                                 title: {
                                     display: true,
-                                    text: 'Hour of the Day'
-                                },
-                                ticks: {
-                                    autoSkip: true,
-                                    maxTicksLimit: 10,
-                                    maxRotation: 45,
-                                    minRotation: 30
+                                    text: 'Hour of the Day',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             },
                             y: {
+                                ...chartDefaults.scales.y,
                                 title: {
                                     display: true,
-                                    text: 'Temperature (°C)'
-                                },
-                                ticks: {
-                                    beginAtZero: true
+                                    text: 'Temperature (°C)',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 13,
+                                        weight: '500'
+                                    },
+                                    color: '#374151'
                                 }
                             }
                         },
                         plugins: {
-                            legend: {
-                                position: 'top'
-                            },
+                            ...chartDefaults.plugins,
                             tooltip: {
+                                ...chartDefaults.plugins.tooltip,
                                 callbacks: {
                                     label: function (tooltipItem) {
                                         return `Temperature: ${tooltipItem.raw !== null ? tooltipItem.raw + '°C' : 'No data'}`;
@@ -470,7 +1022,11 @@
         async function renderTemperatureChart(startDate, endDate) {
             const data = await fetchTemperatureData(startDate, endDate);
 
-            // Utilizzare sia la data che l'ora per l'asse X
+            if (!data || data.length === 0) {
+                showError('No data available for the selected date range');
+                return;
+            }
+
             const labels = data.map(entry => new Date(entry.hour).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }));
             const temperatures = data.map(entry => entry.avg_temperature);
 
@@ -480,46 +1036,63 @@
             temperatureChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels, // Date e ora combinate
+                    labels: labels,
                     datasets: [{
                         label: `Temperature from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`,
                         data: temperatures,
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    ...chartDefaults,
                     scales: {
+                        ...chartDefaults.scales,
                         x: {
+                            ...chartDefaults.scales.x,
                             title: {
                                 display: true,
-                                text: 'Date and Time'
+                                text: 'Date and Time',
+                                font: {
+                                    family: 'Inter',
+                                    size: 13,
+                                    weight: '500'
+                                },
+                                color: '#374151'
                             },
                             ticks: {
-                                autoSkip: true,
+                                ...chartDefaults.scales.x.ticks,
                                 maxTicksLimit: 10,
                                 maxRotation: 45,
                                 minRotation: 30
                             }
                         },
                         y: {
+                            ...chartDefaults.scales.y,
                             title: {
                                 display: true,
-                                text: 'Temperature (°C)'
-                            },
-                            ticks: {
-                                beginAtZero: true
+                                text: 'Temperature (°C)',
+                                font: {
+                                    family: 'Inter',
+                                    size: 13,
+                                    weight: '500'
+                                },
+                                color: '#374151'
                             }
                         }
                     },
                     plugins: {
-                        legend: {
-                            position: 'top'
-                        },
+                        ...chartDefaults.plugins,
                         tooltip: {
+                            ...chartDefaults.plugins.tooltip,
                             callbacks: {
                                 label: function (tooltipItem) {
                                     return `Temperature: ${tooltipItem.raw}°C`;
@@ -549,43 +1122,132 @@
                 option.text = year;
                 yearSelector.add(option);
             }
-            yearSelector.value = currentYear; // Set the default value to the current year
+            yearSelector.value = currentYear;
         }
 
         async function initializeMonthSelector() {
             const currentMonth = new Date().getMonth() + 1;
             const monthSelector = document.getElementById('monthSelector');
-            monthSelector.value = currentMonth; // Set the default value to the current month
+            monthSelector.value = currentMonth;
         }
 
         async function updateCharts() {
             const month = parseInt(document.getElementById('monthSelector').value, 10);
             const year = parseInt(document.getElementById('yearSelector').value, 10);
 
-            await renderTodayTemperatureChart();
-            await renderDailyTemperatureChart(month, year);
-            await renderMonthlyAverageTemperatureChart(year);
+            // Add loading animation to button
+            const updateButton = document.getElementById('updateChartsButton');
+            const originalText = updateButton.innerHTML;
+            updateButton.innerHTML = '<i data-lucide="loader-2" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Updating...';
+            updateButton.disabled = true;
+
+            try {
+                await Promise.all([
+                    renderTodayTemperatureChart(),
+                    renderDailyTemperatureChart(month, year),
+                    renderMonthlyAverageTemperatureChart(year)
+                ]);
+            } finally {
+                updateButton.innerHTML = originalText;
+                updateButton.disabled = false;
+                lucide.createIcons();
+            }
         }
 
+        // Enhanced event listeners with better UX
         document.getElementById('updateChartsButton').addEventListener('click', updateCharts);
 
-        document.getElementById('fetchDataButton').addEventListener('click', () => {
+        document.getElementById('fetchDataButton').addEventListener('click', async () => {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
 
-            if (startDate && endDate) {
-                renderTemperatureChart(startDate, endDate);
-            } else {
-                alert('Please select both start and end dates.');
+            if (!startDate || !endDate) {
+                showError('Please select both start and end dates.');
+                return;
+            }
+
+            if (new Date(startDate) >= new Date(endDate)) {
+                showError('End date must be after start date.');
+                return;
+            }
+
+            const fetchButton = document.getElementById('fetchDataButton');
+            const originalText = fetchButton.innerHTML;
+            fetchButton.innerHTML = '<i data-lucide="loader-2" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Fetching...';
+            fetchButton.disabled = true;
+
+            try {
+                await renderTemperatureChart(startDate, endDate);
+            } finally {
+                fetchButton.innerHTML = originalText;
+                fetchButton.disabled = false;
+                lucide.createIcons();
             }
         });
 
-        // Initialize year and month selectors and default chart view
-        (async function () {
-            await initializeYearSelector();
-            await initializeMonthSelector();
-            await updateCharts();
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'u') {
+                    e.preventDefault();
+                    updateCharts();
+                } else if (e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('fetchDataButton').click();
+                }
+            }
+        });
+
+        // Initialize the dashboard
+        (async function initializeDashboard() {
+            try {
+                await initializeYearSelector();
+                await initializeMonthSelector();
+                
+                // Add staggered animation to charts
+                setTimeout(() => {
+                    updateCharts();
+                }, 300);
+
+                // Initialize icons
+                lucide.createIcons();
+                
+                console.log('Dashboard initialized successfully');
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                showError('Failed to initialize dashboard. Please refresh the page.');
+            }
         })();
+
+        // Add smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add resize listener to handle responsive charts
+        window.addEventListener('resize', debounce(() => {
+            [dailyTemperatureChart, monthlyAverageTemperatureChart, todayTemperatureChart, temperatureChart]
+                .filter(chart => chart)
+                .forEach(chart => chart.resize());
+        }, 250));
+
+        // Debounce utility function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
     </script>
 </body>
 

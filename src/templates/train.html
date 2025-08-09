@@ -5,227 +5,627 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trains - Future and Past</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 10px;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
         }
 
         h1 {
-            text-align: center;
-            color: #007bff;
+            color: white;
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin-top: 10px;
+            font-weight: 300;
+        }
+
+        .search-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .search-title {
+            font-size: 1.3rem;
+            color: #333;
             margin-bottom: 20px;
-            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .search-controls select,
+        .search-controls input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .search-controls select:focus,
+        .search-controls input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .refresh-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            height: fit-content;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .trains-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         h2 {
-            color: #007bff;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 5px;
-            margin-top: 30px;
-            font-size: 1.2rem;
+            color: #333;
+            margin: 0 0 25px 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
         }
 
         table {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 15px;
             overflow: hidden;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
             font-size: 0.9rem;
         }
 
         th {
-            background-color: #007bff;
-            color: #fff;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 8px;
+            font-weight: 600;
+            text-align: left;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
         }
 
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #f1f3f4;
+            font-size: 0.85rem;
+            color: #444;
+            vertical-align: middle;
+        }
+
+        /* Responsive column widths */
+        .train-number {
+            width: 12%;
+            min-width: 80px;
+        }
+
+        .destination {
+            width: 25%;
+            min-width: 120px;
+        }
+
+        .time {
+            width: 15%;
+            min-width: 80px;
+            white-space: nowrap;
+        }
+
+        .delay {
+            width: 18%;
+            min-width: 90px;
+        }
+
+        .platform {
+            width: 15%;
+            min-width: 70px;
+        }
+
+        .stops {
+            width: 15%;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        tr:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .delay-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .delay-none {
+            background: #22c55e;
+        }
+
+        .delay-minor {
+            background: #f59e0b;
+        }
+
+        .delay-major {
+            background: #ef4444;
+        }
+
+        .platform-badge {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.75rem;
+            white-space: nowrap;
         }
 
         .icon-info {
-            display: inline-block;
-            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 50%;
             cursor: pointer;
-            color: #007bff;
+            font-size: 0.7rem;
             font-weight: bold;
-            font-size: 1rem;
+            transition: all 0.3s ease;
         }
 
         .icon-info:hover {
-            color: #0056b3;
+            transform: scale(1.1);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
         }
 
         .popup {
             display: none;
-            position: absolute;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            position: fixed;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
             z-index: 1000;
-            border-radius: 5px;
-            font-size: 0.9rem;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
         }
 
         .popup.active {
             display: block;
+            animation: popupAppear 0.3s ease;
+        }
+
+        @keyframes popupAppear {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .popup-close {
-            text-align: right;
-            font-size: 1rem;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.2rem;
             cursor: pointer;
+            color: #999;
+            transition: color 0.3s ease;
+        }
+
+        .popup-close:hover {
+            color: #333;
+        }
+
+        .popup-content {
+            margin-top: 10px;
+            line-height: 1.5;
+            color: #555;
         }
 
         .quick-links {
-            margin-top: 20px;
-            padding: 10px;
-            background: #e9f5ff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .quick-links h3 {
-            margin-top: 0;
-            font-size: 1.2rem;
-            color: #007bff;
+            margin: 0 0 20px 0;
+            font-size: 1.3rem;
+            color: #333;
+            font-weight: 600;
         }
 
         .quick-links ul {
             list-style: none;
             padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 12px;
         }
 
         .quick-links li {
-            margin: 5px 0;
+            margin: 0;
         }
 
         .quick-links a {
+            display: block;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 10px;
             text-decoration: none;
-            color: #0056b3;
+            color: #667eea;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
         }
 
         .quick-links a:hover {
-            text-decoration: underline;
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .alert {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #dc2626;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 10px 0;
+            color: #374151;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
-            h1 {
-                font-size: 1.3rem;
+            .container {
+                padding: 15px;
             }
 
-            h2 {
-                font-size: 1.1rem;
+            h1 {
+                font-size: 2rem;
+            }
+
+            .search-section,
+            .trains-section,
+            .quick-links {
+                padding: 20px;
+                border-radius: 15px;
+            }
+
+            .search-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .input-group {
+                min-width: auto;
             }
 
             th, td {
-                font-size: 0.8rem;
-                padding: 6px;
-            }
-
-            table {
+                padding: 10px 6px;
                 font-size: 0.8rem;
             }
 
-            .container {
-                padding: 10px;
+            .delay-badge {
+                font-size: 0.7rem;
+                padding: 2px 6px;
             }
+
+            .platform-badge {
+                font-size: 0.7rem;
+                padding: 2px 4px;
+            }
+
+            .icon-info {
+                width: 18px;
+                height: 18px;
+                font-size: 0.65rem;
+            }
+
+            .popup {
+                max-width: 280px;
+                left: 10px !important;
+                right: 10px;
+                transform: none !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .search-section,
+            .trains-section,
+            .quick-links {
+                padding: 15px;
+            }
+
+            th, td {
+                padding: 8px 4px;
+                font-size: 0.75rem;
+            }
+
+            .delay-badge {
+                font-size: 0.65rem;
+                padding: 1px 4px;
+            }
+
+            .platform-badge {
+                font-size: 0.65rem;
+                padding: 1px 3px;
+            }
+
+            .icon-info {
+                width: 16px;
+                height: 16px;
+                font-size: 0.6rem;
+            }
+
+            /* Hide less critical columns on very small screens */
+            .train-number { width: 15%; }
+            .destination { width: 30%; }
+            .time { width: 20%; }
+            .delay { width: 20%; }
+            .platform { width: 10%; }
+            .stops { width: 5%; }
         }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>Trains</h1>
+        <div class="header">
+            <h1>🚂 Trains</h1>
+            <p class="subtitle">Real-time train schedules and information</p>
+        </div>
 
-        <!-- Dropdown menu and input field for destination selection -->
-        <label for="destination-select">Select or enter a destination:</label>
-        <select id="destination-select">
-            <option value="">Select...</option>
-            <option value="COLLEFERRO">COLLEFERRO</option>
-            <option value="TORVERGATA">TORVERGATA</option>
-            <option value="FROSINONE">FROSINONE</option>
-            <!-- Add more destinations as needed -->
-        </select>
-        <input type="text" id="destination-input" placeholder="Enter destination" />
+        <div class="search-section">
+            <h3 class="search-title">🎯 Select Destination</h3>
+            <div class="search-controls">
+                <div class="input-group">
+                    <label for="destination-select">Quick Select</label>
+                    <select id="destination-select">
+                        <option value="">Choose destination...</option>
+                        <option value="COLLEFERRO">COLLEFERRO</option>
+                        <option value="TORVERGATA">TORVERGATA</option>
+                        <option value="FROSINONE">FROSINONE</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="destination-input">Or type destination</label>
+                    <input type="text" id="destination-input" placeholder="Enter destination name" />
+                </div>
+                
+                <button class="refresh-btn" onclick="refreshData()">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
 
-        <h2>Future Trains</h2>
-        <table id="future-trains">
-            <thead>
-                <tr>
-                    <th>Train Number</th>
-                    <th>Destination</th>
-                    <th>Time</th>
-                    <th>Delay</th>
-                    <th>Platform</th>
-                    <th>Stops</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Future train data will be inserted here -->
-            </tbody>
-        </table>
-        
-        <h2>Past Trains</h2>
-        <table id="past-trains">
-            <thead>
-                <tr>
-                    <th>Train Number</th>
-                    <th>Destination</th>
-                    <th>Time</th>
-                    <th>Delay</th>
-                    <th>Platform</th>
-                    <th>Stops</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Past train data will be inserted here -->
-            </tbody>
-        </table>
+        <div class="trains-section">
+            <h2>
+                <span class="section-icon">▶</span>
+                Future Trains
+            </h2>
+            <div class="table-wrapper">
+                <table id="future-trains">
+                    <thead>
+                        <tr>
+                            <th class="train-number">Train</th>
+                            <th class="destination">Destination</th>
+                            <th class="time">Time</th>
+                            <th class="delay">Status</th>
+                            <th class="platform">Platform</th>
+                            <th class="stops">Info</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🚉</div>
+                                    <h3>No destination selected</h3>
+                                    <p>Please select or enter a destination to view train schedules</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-        <!-- Popup for displaying train stops -->
-        <div id="popup" class="popup">
+        <div class="trains-section">
+            <h2>
+                <span class="section-icon">◀</span>
+                Past Trains
+            </h2>
+            <div class="table-wrapper">
+                <table id="past-trains">
+                    <thead>
+                        <tr>
+                            <th class="train-number">Train</th>
+                            <th class="destination">Destination</th>
+                            <th class="time">Time</th>
+                            <th class="delay">Status</th>
+                            <th class="platform">Platform</th>
+                            <th class="stops">Info</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🚉</div>
+                                    <h3>No destination selected</h3>
+                                    <p>Please select or enter a destination to view train schedules</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="popup" id="popup">
             <div class="popup-close" onclick="closePopup()">×</div>
-            <div id="popup-content"></div>
+            <div id="popup-content" class="popup-content"></div>
         </div>
 
         <div class="alert" id="error-message" style="display: none;">
-            Error retrieving train data. Check the console for details.
+            ❌ Error retrieving train data. Check the console for details.
         </div>
+
         <div class="quick-links">
-            <h3>Quick Links</h3>
+            <h3>🔗 Quick Links</h3>
             <ul>
-                <li><a href="https://www.trenitalia.com/it/informazioni/Infomobilita/notizie-infomobilita.html" target="_blank">Trenitalia InfoMobility</a></li>
-                <li><a href="https://www.metropolitanadiroma.it/notizie-metro-roma.html" target="_blank">Metropolitana di Roma</a></li>
-                <li><a href="https://www.italotreno.it/" target="_blank">Italo Treno</a></li>
+                <li><a href="https://www.trenitalia.com/it/informazioni/Infomobilita/notizie-infomobilita.html" target="_blank">📱 Trenitalia InfoMobility</a></li>
+                <li><a href="https://www.metropolitanadiroma.it/notizie-metro-roma.html" target="_blank">🚇 Metropolitana di Roma</a></li>
+                <li><a href="https://www.italotreno.it/" target="_blank">🚄 Italo Treno</a></li>
             </ul>
-        </div>
-
-        <div id="popup" class="popup">
-            <div class="popup-close" onclick="closePopup()">×</div>
-            <div id="popup-content"></div>
-        </div>
-
-        <div class="alert" id="error-message" style="display: none;">
-            Error retrieving train data. Check the console for details.
         </div>
     </div>
 
@@ -234,6 +634,36 @@
         function formatDateTime(dateTime) {
             const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
             return new Date(dateTime).toLocaleDateString(undefined, options);
+        }
+
+        function showLoading(tableId) {
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function showEmptyState(tableId, message = "No trains found for this destination") {
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🚉</div>
+                            <h3>No trains available</h3>
+                            <p>${message}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
         }
 
         async function fetchTrainData(destination) {
@@ -250,67 +680,98 @@
             }
         }
 
+        function formatDelay(delay) {
+            if (!delay || delay === '0' || delay === 'On time') {
+                return '<span class="delay-badge delay-none">On time</span>';
+            }
+            
+            const delayNum = parseInt(delay);
+            if (delayNum <= 5) {
+                return `<span class="delay-badge delay-minor">${delay}</span>`;
+            } else {
+                return `<span class="delay-badge delay-major">${delay}</span>`;
+            }
+        }
+
+        function formatPlatform(platform) {
+            if (!platform || platform === 'N/A') {
+                return '<span class="platform-badge">TBD</span>';
+            }
+            return `<span class="platform-badge">${platform}</span>`;
+        }
+
         function displayTrains(data) {
             const futureTrainsTable = document.getElementById('future-trains').getElementsByTagName('tbody')[0];
             const pastTrainsTable = document.getElementById('past-trains').getElementsByTagName('tbody')[0];
 
-            // Clear existing tables
-            futureTrainsTable.innerHTML = '';
-            pastTrainsTable.innerHTML = '';
+            // Hide error message if visible
+            document.getElementById('error-message').style.display = 'none';
 
             // Function to create an info icon with popup for stops
             function createInfoIcon(stops) {
                 const icon = document.createElement('span');
                 icon.className = 'icon-info';
                 icon.innerText = 'i';
-                icon.onclick = function () {
-                    showPopup(stops, icon);
+                icon.onclick = function (event) {
+                    showPopup(stops, event);
                 };
                 return icon;
             }
 
             // Process future trains
-            data.result.forEach(train => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${train.train_number}</td>
-                    <td>${train.destination}</td>
-                    <td>${train.time}</td>
-                    <td>${train.delay}</td>
-                    <td>${train.platform || 'N/A'}</td>
-                `;
-                const stopsCell = document.createElement('td');
-                stopsCell.appendChild(createInfoIcon(train.stops));
-                row.appendChild(stopsCell);
-                futureTrainsTable.appendChild(row);
-            });
+            futureTrainsTable.innerHTML = '';
+            if (data.result && data.result.length > 0) {
+                data.result.forEach(train => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="train-number"><strong>${train.train_number}</strong></td>
+                        <td class="destination">${train.destination}</td>
+                        <td class="time">${train.time}</td>
+                        <td class="delay">${formatDelay(train.delay)}</td>
+                        <td class="platform">${formatPlatform(train.platform)}</td>
+                    `;
+                    const stopsCell = document.createElement('td');
+                    stopsCell.className = 'stops';
+                    stopsCell.appendChild(createInfoIcon(train.stops));
+                    row.appendChild(stopsCell);
+                    futureTrainsTable.appendChild(row);
+                });
+            } else {
+                showEmptyState('future-trains', 'No upcoming trains found for this destination');
+            }
 
             // Process past trains
-            data.result_old.forEach(train => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${train.train_number}</td>
-                    <td>${train.destination}</td>
-                    <td>${train.time}</td>
-                    <td>${train.delay}</td>
-                    <td>${train.platform || 'N/A'}</td>
-                `;
-                const stopsCell = document.createElement('td');
-                stopsCell.appendChild(createInfoIcon(train.stops));
-                row.appendChild(stopsCell);
-                pastTrainsTable.appendChild(row);
-            });
+            pastTrainsTable.innerHTML = '';
+            if (data.result_old && data.result_old.length > 0) {
+                data.result_old.forEach(train => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="train-number"><strong>${train.train_number}</strong></td>
+                        <td class="destination">${train.destination}</td>
+                        <td class="time">${train.time}</td>
+                        <td class="delay">${formatDelay(train.delay)}</td>
+                        <td class="platform">${formatPlatform(train.platform)}</td>
+                    `;
+                    const stopsCell = document.createElement('td');
+                    stopsCell.className = 'stops';
+                    stopsCell.appendChild(createInfoIcon(train.stops));
+                    row.appendChild(stopsCell);
+                    pastTrainsTable.appendChild(row);
+                });
+            } else {
+                showEmptyState('past-trains', 'No recent trains found for this destination');
+            }
         }
 
-        function showPopup(stops, icon) {
+        function showPopup(stops, event) {
             const popup = document.getElementById('popup');
             const popupContent = document.getElementById('popup-content');
-            popupContent.innerText = stops;
+            popupContent.innerHTML = `<strong>Train Stops:</strong><br>${stops}`;
 
             // Position the popup
-            const iconRect = icon.getBoundingClientRect();
-            popup.style.left = `${iconRect.left}px`;
-            popup.style.top = `${iconRect.bottom + window.scrollY}px`;
+            const rect = event.target.getBoundingClientRect();
+            popup.style.left = `${Math.min(rect.left, window.innerWidth - 320)}px`;
+            popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
 
             popup.classList.add('active');
         }
@@ -318,6 +779,24 @@
         function closePopup() {
             const popup = document.getElementById('popup');
             popup.classList.remove('active');
+        }
+
+        // Close popup when clicking outside
+        document.addEventListener('click', function(event) {
+            const popup = document.getElementById('popup');
+            if (popup.classList.contains('active') && !popup.contains(event.target) && !event.target.classList.contains('icon-info')) {
+                closePopup();
+            }
+        });
+
+        function refreshData() {
+            const destinationSelect = document.getElementById('destination-select');
+            const destinationInput = document.getElementById('destination-input');
+            const destination = destinationSelect.value || destinationInput.value.trim();
+            
+            if (destination) {
+                updateTrainData();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -328,14 +807,22 @@
             async function updateTrainData() {
                 let destination = destinationSelect.value || destinationInput.value.trim();
                 if (destination) {
+                    // Show loading state
+                    showLoading('future-trains');
+                    showLoading('past-trains');
+                    
                     try {
                         const trainData = await fetchTrainData(destination);
                         displayTrains(trainData);
                     } catch (error) {
-                        // Error already handled in fetchTrainData function
+                        showEmptyState('future-trains', 'Error loading train data');
+                        showEmptyState('past-trains', 'Error loading train data');
                     }
                 }
             }
+
+            // Make updateTrainData available globally
+            window.updateTrainData = updateTrainData;
 
             // Add change event to dropdown and input field
             destinationSelect.addEventListener('change', () => {
@@ -348,7 +835,12 @@
                 updateTrainData();
             });
 
-            // Initialize page without data until the user selects or enters a destination
+            // Add Enter key support for input field
+            destinationInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    updateTrainData();
+                }
+            });
         });
     </script>
 </body>
