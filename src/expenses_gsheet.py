@@ -3,6 +3,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import calendar
+import json
+import redis
 
 class GoogleSheetExpenseManager:
     def __init__(self, credentials_path, sheet_name):
@@ -21,7 +23,7 @@ class GoogleSheetExpenseManager:
 
     def _get_month_worksheet(self, date_str):
         """
-        Given a date in format 'YYYY-MM-DD', returns the worksheet named with month abbreviation (e.g., 'Jul')
+        Given a date in 'YYYY-MM-DD' format, returns the worksheet named with the month abbreviation (e.g., 'Jul').
         """
         date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         month_abbr = calendar.month_abbr[date_obj.month]  # 'Jan', 'Feb', ..., 'Dec'
@@ -54,9 +56,9 @@ class GoogleSheetExpenseManager:
 
     def get_summary_expenses(self, summary_sheet_name="2025 Expenses"):
         """
-        Estrae i dati dal foglio riepilogativo (es. '2025 expenses') e restituisce un dizionario
-        con le spese per categoria e mese, inclusi totale e media.
-        Restituisce solo le categorie specificate.
+        Extracts data from the summary worksheet (e.g., '2025 Expenses') and returns a dictionary
+        with expenses per category and month, including total and average.
+        Only predefined categories are considered.
         """
         valid_categories = {
             "Housing", "Leisure", "Health", "Transport", "University", "Bar", "Clothing",
@@ -70,7 +72,7 @@ class GoogleSheetExpenseManager:
 
         all_values = ws.get_all_values()
         if not all_values or len(all_values) < 2:
-            raise ValueError("Worksheet is empty or has insufficient data.")
+            raise ValueError("Worksheet is empty or lacks sufficient data.")
 
         headers = all_values[0]  # Month names and Total/Average
         data_rows = all_values[1:]
@@ -83,7 +85,7 @@ class GoogleSheetExpenseManager:
 
             category = row[0]
             if category not in valid_categories:
-                continue  # Skip categories non valide
+                continue  # Skip invalid categories
 
             try:
                 monthly_data = row[1:13]  # Jan to Dec
@@ -104,20 +106,68 @@ class GoogleSheetExpenseManager:
 
         return summary
 
-# --- Script execution ---
-if __name__ == "__main__":
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    credentials_path = os.path.join(BASE_DIR, "gcredentials.json")
 
-    manager = GoogleSheetExpenseManager(
-        credentials_path=credentials_path,
-        sheet_name="My NW"  # Cambia con il nome reale del tuo Google Sheet
-    )
+class SheetValueFetcher:
+    CACHE_KEY = "p48_value"  # chiave per Redis
 
-    # Esempio di aggiunta spesa
-    manager.add_expense(
-        name="ProvaPython",
-        date="2025-07-22",
-        amount="5",
-        category="Fees"
-    )
+    def __init__(self, credentials_path, sheet_name, redis_host='localhost', redis_port=6379):
+        self.scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        self.credentials_path = credentials_path
+        self.sheet_name = sheet_name
+        self.client = self._authenticate()
+        self.sheet = self.client.open(self.sheet_name)
+
+        # Connessione a Redis
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+
+    def _authenticate(self):
+        """
+        Authenticate the application with Google using the JSON credentials file.
+        """
+        creds = ServiceAccountCredentials.from_json_keyfile_name(
+            self.credentials_path,
+            self.scope
+        )
+        return gspread.authorize(creds)
+
+    def get_cached_value(self):
+        """
+        Recupera il valore dalla cache Redis, oppure None se non esiste.
+        """
+        try:
+            value = self.redis_client.get(self.CACHE_KEY)
+            return value
+        except redis.RedisError as e:
+            print(f"Errore Redis get: {e}")
+            return None
+
+    def _update_cache(self, value):
+        """
+        Aggiorna il valore in Redis.
+        """
+        try:
+            # Imposta il valore con TTL, ad esempio 10 minuti (600 secondi)
+            self.redis_client.set(self.CACHE_KEY, value, ex=600)
+            print(f"Cache Redis aggiornata con valore: {value}")
+        except redis.RedisError as e:
+            print(f"Errore Redis set: {e}")
+
+    def get_cell_value_p48(self):
+        current_year = datetime.now().year
+        summary_sheet_name = f"{current_year}"
+
+        try:
+            worksheet = self.sheet.worksheet(summary_sheet_name)
+        except gspread.WorksheetNotFound:
+            raise ValueError(f"Worksheet '{summary_sheet_name}' non trovata.")
+
+        try:
+            value = worksheet.acell("P48").value
+            self._update_cache(value)
+            print(f"Valore aggiornato da P48 ({summary_sheet_name}): {value}")
+            return value
+        except gspread.exceptions.CellNotFound:
+            raise ValueError("Cell P48 non trovata.")

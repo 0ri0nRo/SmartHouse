@@ -17,7 +17,8 @@ from send_email import EmailSender, invia_backup_email
 from flask_cors import CORS
 import paramiko
 from io import StringIO
-from expenses_gsheet import GoogleSheetExpenseManager
+from expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
+import traceback
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1597,6 +1598,38 @@ def add_expense():
             return jsonify({"error": str(ve)}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/p48', methods=['GET'])
+def get_p48_value():
+    try:
+        fetcher = SheetValueFetcher(
+            credentials_path=credentials_path,
+            sheet_name="My NW",
+            redis_host=os.getenv("REDIS_HOST", "redis"),
+            redis_port=int(os.getenv("REDIS_PORT", 6379))
+        )
+
+        # Recupera il valore dalla cache (se esiste)
+        cached_value = fetcher.get_cached_value()
+
+        # Prova a ottenere il nuovo valore live e aggiornare la cache
+        try:
+            live_value = fetcher.get_cell_value_p48()
+            live_value = float(live_value.replace(",", "."))
+        except Exception as e:
+            live_value = None  # In caso di errore, continuiamo solo con il valore cache
+
+        response = {
+            "cached_value": float(cached_value.replace(",", ".")) if cached_value else None,
+            "P48_value": live_value
+        }
+        return jsonify(response), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
