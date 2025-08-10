@@ -6,206 +6,669 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Device Security</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            /* Professional color palette */
+            --bg-primary: linear-gradient(135deg, #f7fafc 0%, #edf2f7 50%, #e2e8f0 100%);
+            --bg-secondary: #ffffff;
+            --accent-primary: #4299e1;
+            --accent-secondary: #38b2ac;
+            --accent-tertiary: #805ad5;
+            --accent-neutral: #718096;
+            --accent-success: #48bb78;
+            --accent-warning: #ed8936;
+            
+            --text-primary: #2d3748;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --text-light: #a0aec0;
+            
+            --surface-white: rgba(255, 255, 255, 0.95);
+            --surface-glass: rgba(255, 255, 255, 0.65);
+            --surface-elevated: rgba(255, 255, 255, 0.85);
+            
+            --border-light: rgba(226, 232, 240, 0.6);
+            --border-focus: #4299e1;
+            
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.12);
+            --shadow-focus: 0 0 0 4px rgba(66, 153, 225, 0.15);
+            
+            --success: #68d391;
+            --error: #fc8181;
+            --warning: #f6e05e;
+            
+            --radius: 20px;
+            --radius-lg: 24px;
+            --radius-sm: 16px;
+            --radius-xs: 12px;
+            
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Animated background elements */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 15% 25%, rgba(66, 153, 225, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 15%, rgba(56, 178, 172, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 45% 75%, rgba(128, 90, 213, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 75% 85%, rgba(113, 128, 150, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-20px, -10px) rotate(1deg); }
+            50% { transform: translate(15px, -20px) rotate(-1deg); }
+            75% { transform: translate(-10px, 10px) rotate(0.5deg); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin: 40px 0 32px;
+            z-index: 1;
+            position: relative;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         h1 {
-            color: #333;
-            margin: 20px;
-            font-size: 28px;
-            text-align: center;
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #4299e1, #38b2ac, #805ad5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            letter-spacing: -0.03em;
+            text-shadow: none;
+            position: relative;
         }
 
+        h1::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            filter: blur(20px);
+            opacity: 0.3;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        /* Main container */
         .container {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            max-width: 90%;
-            width: 800px;
-            margin: 20px;
+            width: 100%;
+            max-width: 1200px;
+            background: var(--surface-white);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-medium);
+            margin: 0 20px 40px;
+            backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 1;
+            border: 1px solid var(--border-light);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Table styling */
+        .table-container {
+            background: var(--surface-elevated);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border-light);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-soft);
+            overflow-x: auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), transparent);
+            margin-left: 20px;
+            border-radius: 2px;
+        }
+
+        .section-icon {
+            font-size: 1.6rem;
+            filter: grayscale(0.2);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 0;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
         }
 
         thead {
-            background-color: #3f51b5;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
         }
 
         th, td {
-            padding: 15px 10px;
-            color: #fff;
+            padding: 16px 20px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         th {
-            color: #fff;
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.875rem;
         }
 
         tbody tr {
-            background-color: #f9f9f9;
-            transition: background-color 0.2s ease;
+            background-color: rgba(255, 255, 255, 0.8);
+            transition: var(--transition);
+            border-bottom: 1px solid var(--border-light);
         }
 
         tbody tr:hover {
-            background-color: #e3f2fd;
+            background-color: rgba(66, 153, 225, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
         }
 
         td {
-            color: #333;
-            border-bottom: 1px solid #e0e0e0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
         }
 
         td:first-child {
-            font-weight: 500;
-            color: #3f51b5;
+            font-weight: 600;
+            color: var(--accent-primary);
         }
 
+        /* Chart cards */
         .chart-card {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
+            background: var(--surface-elevated);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-soft);
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border-light);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .chart-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chart-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: translateX(-50%);
+            border-radius: 2px;
         }
 
         .chart-container {
             position: relative;
             width: 100%;
-            height: 500px; /* Reduced height for better mobile view */
+            height: 500px;
         }
 
+        canvas {
+            border-radius: var(--radius-xs);
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(66, 153, 225, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1.2s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Enhanced mobile responsiveness */
         @media (max-width: 768px) {
             .container {
-                width: 100%;
-                padding: 15px;
+                padding: 32px 24px;
+                margin: 0 16px 40px;
+                border-radius: var(--radius);
             }
 
             h1 {
-                font-size: 24px;
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .table-container {
+                padding: 20px 16px;
             }
 
             th, td {
-                font-size: 14px; /* Adjust font size for mobile */
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
+            .chart-card {
+                padding: 24px 20px;
+            }
+
+            .chart-container {
+                height: 400px;
+            }
+
+            .section-title {
+                font-size: 1.3rem;
+            }
+
+            .section-title::after {
+                margin-left: 16px;
             }
         }
 
         @media (max-width: 480px) {
+            .header {
+                margin: 24px 0;
+            }
+
+            .container {
+                padding: 24px 20px;
+                margin: 0 12px 30px;
+                border-radius: var(--radius-sm);
+            }
+
             h1 {
-                font-size: 20px; /* Smaller font for very small screens */
+                font-size: 1.75rem;
+            }
+
+            .table-container {
+                padding: 16px 12px;
+            }
+
+            th, td {
+                padding: 10px 12px;
+                font-size: 13px;
             }
 
             .chart-container {
-                height: 500px; /* Further reduce chart height for mobile */
+                height: 350px;
             }
+
+            .section-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Enhanced focus styles for accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
+
+        /* Fade-in animation for content */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-    <h1>Device Security</h1>
+    <div class="header">
+        <h1>🔒 Device Security</h1>
+        <div class="subtitle">Network device monitoring and analytics</div>
+    </div>
+    
     <div class="container">
-        <table id="devicesTable">
-            <thead>
-                <tr>
-                    <th>Hostname</th>
-                    <th>Last Seen</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Device rows will be inserted here -->
-            </tbody>
-        </table>
+        <div class="table-container">
+            <h2 class="section-title">
+                <span class="section-icon">📱</span>
+                Connected Devices
+            </h2>
+            <table id="devicesTable">
+                <thead>
+                    <tr>
+                        <th>Hostname</th>
+                        <th>Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Device rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
 
-        <div style="height: 500px">
+        <div class="chart-card">
+            <div class="chart-title">Connection Distribution</div>
             <div class="chart-container">
                 <canvas id="connectionChart"></canvas>
             </div>
         </div>
 
-        <div style="height: 500px">
+        <div class="chart-card">
+            <div class="chart-title">Weekly Activity Patterns</div>
             <div class="chart-container">
                 <canvas id="mostConnectedDaysChart"></canvas>
             </div>
         </div>
     </div>
+    
     <script>
+        // Professional color palette for charts
+        const professionalColors = [
+            '#4299e1', '#38b2ac', '#805ad5', '#48bb78', 
+            '#ed8936', '#e53e3e', '#3182ce', '#319795',
+            '#6b46c1', '#059669', '#d69e2e', '#c53030',
+            '#2b6cb0', '#0d9488', '#7c3aed', '#047857'
+        ];
+
+        let connectionChart = null;
+        let daysChart = null;
+
         async function fetchDevices() {
-            const response = await fetch('/api/devices');
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
+            try {
+                const response = await fetch('/api/devices');
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+                return [];
+            }
         }
 
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
-            return date.toLocaleString();
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
 
         async function updateDeviceTable() {
             const devices = await fetchDevices();
             const tableBody = document.querySelector('#devicesTable tbody');
-            tableBody.innerHTML = '';
+            
+            if (devices.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #718096;">No devices found</td></tr>';
+                return;
+            }
 
-            devices.forEach(device => {
+            tableBody.innerHTML = '';
+            devices.forEach((device, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = 
-                    `<td>${device.hostname}</td>
+                    `<td>${device.hostname || 'Unknown Device'}</td>
                     <td>${formatTimestamp(device.last_seen)}</td>`;
+                
+                // Add staggered animation
+                row.style.animationDelay = `${index * 0.1}s`;
+                row.classList.add('fade-in');
                 tableBody.appendChild(row);
             });
         }
 
         async function fetchDeviceStats() {
-            const response = await fetch('/api/devices/stats');
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
+            try {
+                const response = await fetch('/api/devices/stats');
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching device stats:', error);
+                return [];
+            }
         }
 
         async function fetchMostConnectedDays() {
-            const response = await fetch('/api/devices/most_connected_days');
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
+            try {
+                const response = await fetch('/api/devices/most_connected_days');
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            } catch (error) {
+                console.error('Error fetching most connected days:', error);
+                return {};
+            }
         }
 
         async function updateConnectionChart() {
             const stats = await fetchDeviceStats();
-            const labels = stats.map(stat => stat.ip_address);
-            const data = stats.map(stat => stat.connection_count);
+            
+            if (stats.length === 0) {
+                const ctx = document.getElementById('connectionChart').getContext('2d');
+                if (connectionChart) connectionChart.destroy();
+                
+                connectionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['No Data'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e2e8f0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+                return;
+            }
+
+            const labels = stats.map(stat => stat.ip_address || 'Unknown');
+            const data = stats.map(stat => stat.connection_count || 0);
 
             const ctx = document.getElementById('connectionChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'pie',
+            if (connectionChart) connectionChart.destroy();
+
+            connectionChart = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Connection Counts',
                         data: data,
-                        backgroundColor: labels.map(() => getRandomColor()),
+                        backgroundColor: professionalColors.slice(0, labels.length),
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverOffset: 20,
+                        hoverBorderWidth: 4,
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '50%',
                     plugins: {
                         legend: {
-                            display: true,
-                            position: 'top',
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                boxWidth: 16,
+                                boxHeight: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 13,
+                                    family: 'Plus Jakarta Sans',
+                                    weight: '500',
+                                },
+                                color: '#4a5568',
+                                generateLabels(chart) {
+                                    const original = Chart.overrides.doughnut.plugins.legend.labels.generateLabels;
+                                    const labelsOriginal = original.call(this, chart);
+                                    
+                                    return labelsOriginal.map((label, index) => {
+                                        const value = chart.data.datasets[0].data[index];
+                                        const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value * 100) / total).toFixed(1);
+                                        label.text = `${label.text} (${percentage}%)`;
+                                        return label;
+                                    });
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(45, 55, 72, 0.95)',
+                            titleFont: {
+                                size: 16,
+                                weight: '600',
+                                family: 'Plus Jakarta Sans',
+                            },
+                            bodyFont: {
+                                size: 14,
+                                family: 'Plus Jakarta Sans',
+                            },
+                            padding: 16,
+                            cornerRadius: 12,
+                            displayColors: true,
+                            boxPadding: 6,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const value = context.parsed;
+                                    const percentage = ((value * 100) / total).toFixed(1);
+                                    return `${value} connections (${percentage}%)`;
+                                }
+                            }
                         }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        duration: 1500,
+                        easing: 'easeOutQuart',
                     }
                 }
             });
@@ -216,16 +679,30 @@
             const labels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const datasets = [];
 
+            let colorIndex = 0;
             for (const ip in data) {
                 datasets.push({
                     label: ip,
-                    data: data[ip],
-                    backgroundColor: getRandomColor(),
+                    data: data[ip] || new Array(7).fill(0),
+                    backgroundColor: professionalColors[colorIndex % professionalColors.length],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                });
+                colorIndex++;
+            }
+
+            if (datasets.length === 0) {
+                datasets.push({
+                    label: 'No Data',
+                    data: new Array(7).fill(0),
+                    backgroundColor: '#e2e8f0',
                 });
             }
 
             const ctx = document.getElementById('mostConnectedDaysChart').getContext('2d');
-            new Chart(ctx, {
+            if (daysChart) daysChart.destroy();
+
+            daysChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -237,32 +714,104 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    family: 'Plus Jakarta Sans'
+                                },
+                                color: '#718096'
+                            },
+                            grid: {
+                                color: 'rgba(113, 128, 150, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    family: 'Plus Jakarta Sans'
+                                },
+                                color: '#718096'
+                            },
+                            grid: {
+                                display: false
+                            }
                         }
                     },
                     plugins: {
                         legend: {
-                            display: true,
+                            display: datasets.length > 1,
                             position: 'top',
+                            labels: {
+                                padding: 20,
+                                boxWidth: 16,
+                                boxHeight: 16,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 13,
+                                    family: 'Plus Jakarta Sans',
+                                    weight: '500',
+                                },
+                                color: '#4a5568'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(45, 55, 72, 0.95)',
+                            titleFont: {
+                                family: 'Plus Jakarta Sans',
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                family: 'Plus Jakarta Sans'
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} connections`
+                            }
                         }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
                     }
                 }
             });
         }
 
         function getRandomColor() {
-            const letters = '0123456789ABCDEF';
-            let color = '#';
-            for (let i = 0; i < 6; i++) {
-                color += letters[Math.floor(Math.random() * 16)];
-            }
-            return color;
+            return professionalColors[Math.floor(Math.random() * professionalColors.length)];
         }
 
         window.onload = async () => {
-            await updateDeviceTable();
-            await updateConnectionChart();
-            await updateMostConnectedDaysChart();
+            try {
+                // Add loading states
+                document.querySelector('#devicesTable tbody').innerHTML = 
+                    '<tr><td colspan="2" style="text-align: center;"><div class="loading"></div></td></tr>';
+                
+                await Promise.all([
+                    updateDeviceTable(),
+                    updateConnectionChart(),
+                    updateMostConnectedDaysChart()
+                ]);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('#devicesTable tbody').innerHTML = 
+                    '<tr><td colspan="2" style="text-align: center; color: #fc8181;">Error loading data</td></tr>';
+            }
         };
+
+        // Auto-refresh data every 30 seconds
+        setInterval(async () => {
+            try {
+                await Promise.all([
+                    updateDeviceTable(),
+                    updateConnectionChart(),
+                    updateMostConnectedDaysChart()
+                ]);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }, 30000);
     </script>
 </body>
 

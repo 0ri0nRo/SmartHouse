@@ -1,6 +1,6 @@
-# Temperature and Humidity Charts
-<img width="1680" alt="Screenshot 2024-09-20 at 21 30 03" src="https://github.com/user-attachments/assets/9c1e88c6-ed1d-4128-927f-3bc9e1a29067">
-<img width="1675" alt="Screenshot 2024-09-20 at 21 29 58" src="https://github.com/user-attachments/assets/d5cb9349-3d1a-48fd-85a8-10da778b51e7">
+# Smart House Project
+<img width="1359" height="383" alt="image" src="https://github.com/user-attachments/assets/e6e1fb7b-50d1-43c9-9956-43c9b8c6990c" />
+<img width="1201" height="396" alt="image" src="https://github.com/user-attachments/assets/d8531d3a-f611-41a7-90b5-4d08b6210411" />
 
 
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
@@ -12,7 +12,12 @@ This project provides a web interface to visualize temperature and humidity data
 - **Dynamic Icons**: Shows icons representing the current weather (sun/moon) and temperature (hot/cold).
 - **Responsive Design**: Optimized for various screen sizes.
 
-<img width="1680" alt="Screenshot 2024-09-20 at 21 30 10" src="https://github.com/user-attachments/assets/6757fbcf-9e97-489f-a08d-951fe0200b58">
+# Temperature and Humidity Charts
+<img width="1127" height="918" alt="image" src="https://github.com/user-attachments/assets/87571d64-7566-4aca-b2f9-82df708ed544" />
+<img width="1021" height="922" alt="image" src="https://github.com/user-attachments/assets/37352015-b840-41da-b9c6-b26efb12a769" />
+
+# Raspberry Pi info with backup and SSH Connection 
+<img width="1159" height="901" alt="image" src="https://github.com/user-attachments/assets/b55718af-606b-4474-a961-7b2764814f56" />
 
 
 ## Prerequisites

@@ -27,3 +27,7 @@ pymongo
 pytest
 paramiko
 flask-cors
+gspread 
+oauth2client
+redis
+flask-socketio
