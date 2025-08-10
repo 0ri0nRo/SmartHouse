@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Raspberry Pi Dashboard</title>
+  <title>Raspberry Pi System Dashboard</title>
 
   <!-- Chart.js & Plugins -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -24,89 +24,144 @@
     }
 
     :root {
-      --bg-primary: #0a0b1e;
-      --bg-secondary: #1a1d35;
-      --bg-card: rgba(26, 29, 53, 0.8);
-      --bg-glass: rgba(255, 255, 255, 0.05);
-      --text-primary: #ffffff;
-      --text-secondary: #a3a7c7;
-      --text-muted: #6b7280;
-      --accent-primary: #3b82f6;
-      --accent-secondary: #8b5cf6;
-      --accent-success: #10b981;
-      --accent-warning: #f59e0b;
-      --accent-danger: #ef4444;
-      --border-color: rgba(255, 255, 255, 0.1);
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      /* Professional Color Palette */
+      --primary-50: #f8fafc;
+      --primary-100: #f1f5f9;
+      --primary-200: #e2e8f0;
+      --primary-300: #cbd5e1;
+      --primary-400: #94a3b8;
+      --primary-500: #64748b;
+      --primary-600: #475569;
+      --primary-700: #334155;
+      --primary-800: #1e293b;
+      --primary-900: #0f172a;
+
+      --accent-blue: #0f4c75;
+      --accent-teal: #14b8a6;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+      
+      /* System Colors */
+      --color-cpu: #3b82f6;
+      --color-memory: #8b5cf6;
+      --color-disk: #10b981;
+      --color-temperature: #f59e0b;
+      
+      /* Backgrounds */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-sidebar: #f1f5f9;
+      
+      /* Borders and Shadows */
+      --border-color: #e2e8f0;
+      --border-focus: #0f4c75;
+      --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      
+      /* Typography */
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-inverse: #ffffff;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #0a0b1e 0%, #1a1d35 50%, #0f172a 100%);
-      min-height: 100vh;
+      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-secondary);
       color: var(--text-primary);
-      overflow-x: hidden;
-      position: relative;
+      line-height: 1.6;
+      font-size: 14px;
+      font-weight: 400;
     }
 
-    /* Animated background elements */
-    body::before {
-      content: '';
-      position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
-      animation: float 20s ease-in-out infinite;
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: rotate(0deg) translate(0, 0); }
-      33% { transform: rotate(120deg) translate(20px, -20px); }
-      66% { transform: rotate(240deg) translate(-20px, 20px); }
-    }
-
-    .container {
-      max-width: 1400px;
+    .dashboard-container {
+      max-width: 1440px;
       margin: 0 auto;
-      padding: 0 1rem;
+      padding: 2rem;
+      min-height: 100vh;
     }
 
     /* Header */
     .header {
-      text-align: center;
-      padding: 2rem 0 1rem;
-      position: relative;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-icon {
+      width: 3rem;
+      height: 3rem;
+      background: var(--accent-blue);
+      color: var(--text-inverse);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
     .header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #10b981 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.5rem;
-      animation: glow 3s ease-in-out infinite alternate;
-    }
-
-    @keyframes glow {
-      0% { filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3)); }
-      100% { filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.5)); }
+      font-size: 1.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+      letter-spacing: -0.025em;
     }
 
     .header p {
       color: var(--text-secondary);
-      font-size: 1.1rem;
-      font-weight: 400;
+      font-size: 1rem;
+      margin: 0.25rem 0 0 0;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg-secondary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
     }
 
     /* Stats Grid */
@@ -114,86 +169,77 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1.5rem;
-      margin: 2rem 0;
+      margin-bottom: 2rem;
     }
 
     .stat-card {
       background: var(--bg-card);
-      backdrop-filter: blur(20px);
       border: 1px solid var(--border-color);
-      border-radius: 1rem;
+      border-radius: 8px;
       padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
       position: relative;
-      overflow: hidden;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--card-accent), transparent);
-      opacity: 0;
-      transition: opacity 0.3s ease;
     }
 
     .stat-card:hover {
-      transform: translateY(-4px) scale(1.02);
-      box-shadow: var(--shadow-xl);
-      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-300);
     }
-
-    .stat-card:hover::before {
-      opacity: 1;
-    }
-
-    .stat-card.cpu { --card-accent: var(--accent-primary); }
-    .stat-card.temperature { --card-accent: var(--accent-warning); }
-    .stat-card.disk { --card-accent: var(--accent-success); }
-    .stat-card.memory { --card-accent: var(--accent-secondary); }
 
     .stat-header {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      justify-content: space-between;
       margin-bottom: 1rem;
+    }
+
+    .stat-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .stat-icon {
       width: 2rem;
       height: 2rem;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--card-accent);
-      color: white;
+      border-radius: 4px;
+      color: var(--text-inverse);
     }
 
-    .stat-title {
-      font-size: 0.9rem;
+    .stat-icon.cpu { background: var(--color-cpu); }
+    .stat-icon.memory { background: var(--color-memory); }
+    .stat-icon.disk { background: var(--color-disk); }
+    .stat-icon.temperature { background: var(--color-temperature); }
+
+    .stat-label {
+      font-size: 0.875rem;
       font-weight: 500;
       color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
     .stat-value {
       font-size: 2rem;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--text-primary);
       margin-bottom: 0.5rem;
-      text-shadow: 0 0 20px var(--card-accent);
+    }
+
+    .stat-trend {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
     }
 
     .stat-chart {
+      height: 200px;
       position: relative;
-      height: 180px;
+      margin-top: 1rem;
     }
 
     canvas {
@@ -202,74 +248,82 @@
     }
 
     /* Control Panels */
+    .control-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+
     .control-panel {
       background: var(--bg-card);
-      backdrop-filter: blur(20px);
       border: 1px solid var(--border-color);
-      border-radius: 1rem;
-      padding: 2rem;
-      margin: 2rem 0;
-      box-shadow: var(--shadow-lg);
-      position: relative;
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
       overflow: hidden;
     }
 
-    .control-panel::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
-    }
-
-    .panel-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 1.5rem;
+    .panel-header {
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.25rem 1.5rem;
       display: flex;
       align-items: center;
       gap: 0.75rem;
     }
 
     .panel-icon {
-      width: 1.5rem;
-      height: 1.5rem;
-      color: var(--accent-primary);
+      width: 1.25rem;
+      height: 1.25rem;
+      color: var(--accent-blue);
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .panel-content {
+      padding: 1.5rem;
+    }
+
+    .panel-description {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
     }
 
     /* Form Elements */
     .form-group {
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
     }
 
     .form-label {
       display: block;
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: var(--text-primary);
       margin-bottom: 0.5rem;
     }
 
     .form-input {
       width: 100%;
       padding: 0.75rem 1rem;
-      background: var(--bg-glass);
+      background: var(--bg-primary);
       border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
+      border-radius: 6px;
       color: var(--text-primary);
       font-size: 0.875rem;
       transition: all 0.2s ease;
-      backdrop-filter: blur(10px);
+      font-family: inherit;
     }
 
     .form-input:focus {
       outline: none;
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      background: var(--bg-secondary);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(15, 76, 117, 0.1);
     }
 
     .form-input::placeholder {
@@ -280,44 +334,36 @@
     .btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.5rem;
       padding: 0.75rem 1.5rem;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: white;
+      background: var(--accent-blue);
+      color: var(--text-inverse);
       border: none;
-      border-radius: 0.5rem;
+      border-radius: 6px;
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
-      min-width: 120px;
-      justify-content: center;
-    }
-
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s ease;
+      text-decoration: none;
+      font-family: inherit;
+      min-height: 2.75rem;
     }
 
     .btn:hover {
+      background: #0a3a5c;
       transform: translateY(-1px);
-      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
-    }
-
-    .btn:hover::before {
-      left: 100%;
+      box-shadow: var(--shadow-md);
     }
 
     .btn:active {
-      transform: scale(0.98);
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .btn-full {
@@ -325,81 +371,101 @@
     }
 
     .btn-success {
-      background: linear-gradient(135deg, var(--accent-success), #059669);
+      background: var(--accent-green);
     }
 
     .btn-success:hover {
-      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+      background: #059669;
+    }
+
+    .btn-danger {
+      background: var(--accent-red);
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
     }
 
     /* Output */
     .output {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
-      padding: 1rem;
-      font-family: 'Fira Code', 'Courier New', monospace;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
+      background: var(--primary-900);
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 1.25rem;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.6;
       max-height: 300px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
       margin-top: 1rem;
-      position: relative;
+      border: 1px solid var(--border-color);
     }
 
     .output::before {
-      content: 'Output';
-      position: absolute;
-      top: -0.5rem;
-      left: 1rem;
-      background: var(--bg-secondary);
-      color: var(--text-muted);
+      content: 'Terminal Output';
+      display: block;
+      color: var(--primary-400);
       font-size: 0.75rem;
-      padding: 0 0.5rem;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--primary-700);
     }
 
-    /* Loading States */
+    /* Loading State */
     .loading {
-      animation: pulse 2s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
     }
 
     /* Responsive Design */
     @media (max-width: 768px) {
-      .container {
-        padding: 0 0.75rem;
+      .dashboard-container {
+        padding: 1rem;
       }
 
-      .header h1 {
-        font-size: 2rem;
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
       }
 
       .stats-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
       }
 
-      .stat-card,
-      .control-panel {
-        padding: 1.25rem;
+      .control-section {
+        grid-template-columns: 1fr;
       }
 
       .stat-value {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
       }
     }
 
-    /* Scrollbar Styling */
+    /* Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
@@ -407,75 +473,83 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: var(--accent-primary);
+      background: var(--primary-300);
       border-radius: 3px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: var(--accent-secondary);
+      background: var(--primary-400);
     }
 
-    /* Status Indicators */
-    .status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent-success);
-      margin-left: 0.5rem;
-      animation: blink 2s infinite;
-    }
-
-    @keyframes blink {
-      0%, 50% { opacity: 1; }
-      51%, 100% { opacity: 0.3; }
-    }
+    /* Utilities */
+    .text-success { color: var(--accent-green); }
+    .text-danger { color: var(--accent-red); }
+    .text-warning { color: var(--accent-amber); }
   </style>
 </head>
 <body>
 
-  <div class="container">
+  <div class="dashboard-container">
     <!-- Header -->
     <header class="header">
-      <h1>Raspberry Pi Dashboard</h1>
-      <p>Real-time system monitoring and control</p>
+      <div class="header-content">
+        <div class="header-title">
+          <div class="header-icon">
+            <i data-lucide="server"></i>
+          </div>
+          <div>
+            <h1>System Dashboard</h1>
+            <p>Raspberry Pi System Monitoring & Control Center</p>
+          </div>
+        </div>
+        <div class="header-status">
+          <div class="status-indicator"></div>
+          <span class="status-text">System Online</span>
+        </div>
+      </div>
     </header>
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card cpu">
+      <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-icon">
-            <i data-lucide="cpu"></i>
-          </div>
-          <div>
-            <div class="stat-title">CPU Usage</div>
-            <div class="status-indicator"></div>
+          <div class="stat-title">
+            <div class="stat-icon cpu">
+              <i data-lucide="cpu"></i>
+            </div>
+            <span class="stat-label">CPU Usage</span>
           </div>
         </div>
         <div class="stat-value loading" id="cpuUsageValue">---%</div>
+        <div class="stat-trend">
+          <i data-lucide="trending-up" style="width: 12px; height: 12px;"></i>
+          Real-time monitoring
+        </div>
       </div>
 
-      <div class="stat-card temperature">
+      <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-icon">
-            <i data-lucide="thermometer"></i>
-          </div>
-          <div>
-            <div class="stat-title">Temperature</div>
-            <div class="status-indicator"></div>
+          <div class="stat-title">
+            <div class="stat-icon temperature">
+              <i data-lucide="thermometer"></i>
+            </div>
+            <span class="stat-label">Temperature</span>
           </div>
         </div>
         <div class="stat-value loading" id="temperatureValue">---°C</div>
+        <div class="stat-trend">
+          <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
+          Thermal status
+        </div>
       </div>
 
-      <div class="stat-card disk">
+      <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-icon">
-            <i data-lucide="hard-drive"></i>
-          </div>
-          <div>
-            <div class="stat-title">Disk Usage</div>
-            <div class="status-indicator"></div>
+          <div class="stat-title">
+            <div class="stat-icon disk">
+              <i data-lucide="hard-drive"></i>
+            </div>
+            <span class="stat-label">Disk Usage</span>
           </div>
         </div>
         <div class="stat-chart">
@@ -483,14 +557,13 @@
         </div>
       </div>
 
-      <div class="stat-card memory">
+      <div class="stat-card">
         <div class="stat-header">
-          <div class="stat-icon">
-            <i data-lucide="memory-stick"></i>
-          </div>
-          <div>
-            <div class="stat-title">Memory Usage</div>
-            <div class="status-indicator"></div>
+          <div class="stat-title">
+            <div class="stat-icon memory">
+              <i data-lucide="memory-stick"></i>
+            </div>
+            <span class="stat-label">Memory Usage</span>
           </div>
         </div>
         <div class="stat-chart">
@@ -499,51 +572,66 @@
       </div>
     </div>
 
-    <!-- SSH Control Panel -->
-    <div class="control-panel">
-      <h2 class="panel-title">
-        <i data-lucide="terminal" class="panel-icon"></i>
-        SSH Command Executor
-      </h2>
-      
-      <div class="form-group">
-        <label class="form-label">Private Key File</label>
-        <input type="file" id="privateKeyInput" class="form-input" />
+    <!-- Control Panels -->
+    <div class="control-section">
+      <!-- SSH Control Panel -->
+      <div class="control-panel">
+        <div class="panel-header">
+          <i data-lucide="terminal" class="panel-icon"></i>
+          <h2 class="panel-title">Remote Command Execution</h2>
+        </div>
+        <div class="panel-content">
+          <p class="panel-description">
+            Execute commands remotely via SSH connection. Upload your private key and enter commands to run on the target system.
+          </p>
+          
+          <div class="form-group">
+            <label class="form-label">Private Key File</label>
+            <input type="file" id="privateKeyInput" class="form-input" accept=".pem,.key" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Passphrase (Optional)</label>
+            <input type="password" id="passphraseInput" class="form-input" placeholder="Enter key passphrase if required" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Command</label>
+            <input type="text" id="commandInput" class="form-input" placeholder="systemctl status ssh" />
+          </div>
+          
+          <button id="runSSHCommandBtn" class="btn btn-full">
+            <i data-lucide="play"></i>
+            Execute Command
+          </button>
+          
+          <div class="output" id="resultOutput">Waiting for command execution...</div>
+        </div>
       </div>
-      
-      <div class="form-group">
-        <label class="form-label">Passphrase (Optional)</label>
-        <input type="password" id="passphraseInput" class="form-input" placeholder="Enter passphrase if required" />
-      </div>
-      
-      <div class="form-group">
-        <label class="form-label">Command</label>
-        <input type="text" id="commandInput" class="form-input" placeholder="Enter SSH command to execute" />
-      </div>
-      
-      <button id="runSSHCommandBtn" class="btn btn-full">
-        <i data-lucide="play"></i>
-        Execute Command
-      </button>
-      
-      <div class="output" id="resultOutput">Output will appear here...</div>
-    </div>
 
-    <!-- Backup Control Panel -->
-    <div class="control-panel">
-      <h2 class="panel-title">
-        <i data-lucide="database" class="panel-icon"></i>
-        System Backup
-      </h2>
-      
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-        Start a system backup process to secure your Raspberry Pi data.
-      </p>
-      
-      <button id="backupButton" class="btn btn-success btn-full">
-        <i data-lucide="download"></i>
-        Run Backup
-      </button>
+      <!-- Backup Control Panel -->
+      <div class="control-panel">
+        <div class="panel-header">
+          <i data-lucide="shield-check" class="panel-icon"></i>
+          <h2 class="panel-title">System Backup</h2>
+        </div>
+        <div class="panel-content">
+          <p class="panel-description">
+            Initiate a complete system backup process. This will create a snapshot of your current system configuration and data for disaster recovery purposes.
+          </p>
+          
+          <div style="background: var(--bg-sidebar); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; border-left: 4px solid var(--accent-amber);">
+            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+              <strong>Backup includes:</strong> System configurations, user data, installed packages, and application settings.
+            </div>
+          </div>
+          
+          <button id="backupButton" class="btn btn-success btn-full">
+            <i data-lucide="download"></i>
+            Start Backup Process
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -554,7 +642,7 @@
     const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
     const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
 
-    // Chart configuration with enhanced styling
+    // Professional chart configuration
     const chartOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -565,25 +653,25 @@
         datalabels: {
           display: true,
           formatter: (value, context) => {
-            const label = context.chart.data.labels[context.dataIndex];
-            return `${label}\n${value.toFixed(1)}GB`;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return context.dataIndex === 0 ? `${percentage}%` : '';
           },
           color: '#ffffff',
           font: { 
-            weight: 'bold',
-            size: 11
+            weight: '600',
+            size: 14
           },
-          textAlign: 'center',
-          textStrokeColor: 'rgba(0,0,0,0.5)',
-          textStrokeWidth: 2
+          textAlign: 'center'
         }
       },
       elements: {
         arc: {
-          borderWidth: 3,
-          borderColor: 'rgba(255,255,255,0.1)'
+          borderWidth: 2,
+          borderColor: '#ffffff'
         }
-      }
+      },
+      cutout: '65%'
     };
 
     const diskUsageChart = new Chart(ctxDisk, {
@@ -593,14 +681,8 @@
         datasets: [{
           label: 'Disk Usage',
           data: [0, 0],
-          backgroundColor: [
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(16, 185, 129, 0.2)'
-          ],
-          borderColor: [
-            'rgba(16, 185, 129, 1)',
-            'rgba(16, 185, 129, 0.4)'
-          ]
+          backgroundColor: ['#10b981', '#e2e8f0'],
+          borderColor: ['#10b981', '#e2e8f0']
         }]
       },
       options: chartOptions,
@@ -614,14 +696,8 @@
         datasets: [{
           label: 'Memory Usage',
           data: [0, 0],
-          backgroundColor: [
-            'rgba(139, 92, 246, 0.8)',
-            'rgba(139, 92, 246, 0.2)'
-          ],
-          borderColor: [
-            'rgba(139, 92, 246, 1)',
-            'rgba(139, 92, 246, 0.4)'
-          ]
+          backgroundColor: ['#8b5cf6', '#e2e8f0'],
+          borderColor: ['#8b5cf6', '#e2e8f0']
         }]
       },
       options: chartOptions,
@@ -633,7 +709,7 @@
         .then(response => {
           const data = response.data;
           
-          // Remove loading class and update values
+          // Update values
           const cpuElement = document.getElementById('cpuUsageValue');
           const tempElement = document.getElementById('temperatureValue');
           
@@ -643,61 +719,63 @@
           cpuElement.textContent = `${parseFloat(data.cpuUsage).toFixed(1)}%`;
           tempElement.textContent = `${parseFloat(data.temperature).toFixed(1)}°C`;
 
-          // Update disk chart
+          // Update charts
           diskUsageChart.data.datasets[0].data = [
             parseFloat(data.diskUsed),
             parseFloat(data.diskFree)
           ];
           diskUsageChart.update('none');
 
-          // Update memory chart
           const usedMem = parseFloat(data.memoryUsed);
           const totalMem = parseFloat(data.memoryTotal);
           memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
           memoryUsageChart.update('none');
         })
         .catch(error => {
-          console.error('Error fetching data:', error);
-          // Keep loading state on error
+          console.error('Error fetching system data:', error);
         });
     }
 
-    // Enhanced button interactions
+    // Backup button handler
     document.getElementById('backupButton').addEventListener('click', function() {
       const btn = this;
       const originalContent = btn.innerHTML;
       
-      btn.innerHTML = '<i data-lucide="loader-2"></i> Starting Backup...';
+      btn.innerHTML = '<i data-lucide="loader-2"></i> Initializing...';
       btn.disabled = true;
+      btn.classList.add('loading');
       lucide.createIcons();
       
       axios.post('/api_run_backup')
         .then(() => {
-          btn.innerHTML = '<i data-lucide="check"></i> Backup Started!';
-          btn.style.background = 'linear-gradient(135deg, var(--accent-success), #059669)';
+          btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+          btn.className = 'btn btn-success btn-full';
           lucide.createIcons();
           
           setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
-            btn.style.background = '';
+            btn.className = 'btn btn-success btn-full';
+            btn.classList.remove('loading');
             lucide.createIcons();
-          }, 3000);
+          }, 4000);
         })
-        .catch(() => {
-          btn.innerHTML = '<i data-lucide="x"></i> Backup Failed';
-          btn.style.background = 'linear-gradient(135deg, var(--accent-danger), #dc2626)';
+        .catch(error => {
+          btn.innerHTML = '<i data-lucide="alert-circle"></i> Backup Failed';
+          btn.className = 'btn btn-danger btn-full';
           lucide.createIcons();
           
           setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
-            btn.style.background = '';
+            btn.className = 'btn btn-success btn-full';
+            btn.classList.remove('loading');
             lucide.createIcons();
-          }, 3000);
+          }, 4000);
         });
     });
 
+    // SSH command button handler
     document.getElementById('runSSHCommandBtn').addEventListener('click', function() {
       const btn = this;
       const fileInput = document.getElementById('privateKeyInput');
@@ -706,18 +784,19 @@
       const output = document.getElementById('resultOutput');
 
       if (!fileInput.files.length) {
-        output.textContent = "❌ Error: Please select a private key file.";
+        output.textContent = "ERROR: No private key file selected. Please choose a valid key file.";
         return;
       }
       if (!command) {
-        output.textContent = "❌ Error: Please enter a command.";
+        output.textContent = "ERROR: No command specified. Please enter a command to execute.";
         return;
       }
 
       const originalContent = btn.innerHTML;
       btn.innerHTML = '<i data-lucide="loader-2"></i> Executing...';
       btn.disabled = true;
-      output.textContent = "🔄 Executing command...";
+      btn.classList.add('loading');
+      output.textContent = "Establishing SSH connection and executing command...";
       lucide.createIcons();
 
       const file = fileInput.files[0];
@@ -730,39 +809,39 @@
           passphrase: passphrase || ""
         })
         .then(res => {
-          output.textContent = res.data.output || "✅ Command executed. No output returned.";
-          btn.innerHTML = '<i data-lucide="check"></i> Executed';
-          btn.style.background = 'linear-gradient(135deg, var(--accent-success), #059669)';
+          output.textContent = res.data.output || "Command executed successfully. No output returned.";
+          btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
+          btn.className = 'btn btn-success btn-full';
           lucide.createIcons();
           
           setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
-            btn.style.background = '';
+            btn.className = 'btn btn-full';
+            btn.classList.remove('loading');
             lucide.createIcons();
-          }, 2000);
+          }, 3000);
         })
         .catch(err => {
-          output.textContent = "❌ Error: " + (err.response?.data?.error || err.message);
-          btn.innerHTML = '<i data-lucide="x"></i> Failed';
-          btn.style.background = 'linear-gradient(135deg, var(--accent-danger), #dc2626)';
+          output.textContent = "ERROR: " + (err.response?.data?.error || err.message);
+          btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
+          btn.className = 'btn btn-danger btn-full';
           lucide.createIcons();
           
           setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
-            btn.style.background = '';
+            btn.className = 'btn btn-full';
+            btn.classList.remove('loading');
             lucide.createIcons();
-          }, 2000);
+          }, 3000);
         });
       };
       reader.readAsText(file);
     });
 
-    // Initial data fetch
+    // Initialize dashboard
     fetchData();
-    
-    // Auto-refresh every 5 seconds
     setInterval(fetchData, 5000);
   </script>
 </body>
