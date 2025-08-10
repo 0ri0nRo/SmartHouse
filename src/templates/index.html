@@ -6,205 +6,363 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Temperature and Humidity Dashboard</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #F9F6F8;
+            padding: 15px 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: background-color 0.3s, color 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* Minimalist animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(129, 140, 248, 0.01) 0%, transparent 50%);
+            animation: subtleFloat 45s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes subtleFloat {
+            0%, 100% { 
+                transform: translate(0, 0) scale(1); 
+                opacity: 0.5;
+            }
+            50% { 
+                transform: translate(10px, -10px) scale(1.02); 
+                opacity: 0.7;
+            }
         }
 
         h1 {
-            color: #333;
-            margin: 20px 0;
-            font-size: 30px;
+            color: #1e293b;
+            margin: 15px 0 25px 0;
+            font-size: 1.75rem;
             text-align: center;
-            letter-spacing: 1px;
-            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            position: relative;
+            animation: fadeInDown 0.6s ease-out;
         }
 
-        /* Stile per il tema scuro */
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 1px;
+            animation: expandLine 0.8s ease-out 0.3s both;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes expandLine {
+            from { width: 0; opacity: 0; }
+            to { width: 40px; opacity: 1; }
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: #000000 !important;
+        }
+
+        body.dark-mode::before {
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(30, 30, 30, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(40, 40, 40, 0.2) 0%, transparent 50%);
+        }
+
         body.dark-mode h1 {
-            color: #ffffff; /* Colore bianco quando è attivo il tema scuro */
-        }
-        /* Nuovi colori per l'indice di qualità dell'aria */
-        .card.air-quality.ottimo {
-            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+            color: #ffffff;
         }
 
-        .card.air-quality.buono {
-            background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
+        body.dark-mode h1::after {
+            background: linear-gradient(90deg, #ffffff, #cccccc);
         }
-
-        .card.air-quality.moderato {
-            background: linear-gradient(135deg, #fbc02d 0%, #ffeb3b 100%);
-        }
-
-        .card.air-quality.scadente {
-            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
-        }
-
-        .card.air-quality.molto-scadente {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-        }
-
-        .card.air-quality.pericoloso {
-            background: linear-gradient(135deg, #b71c1c 0%, #e53935 100%);
-        }
-
-
-    .card.list button {
-        background-color: #ffffff;
-        color: #333;
-        font-size: 16px;
-        border: none;
-        border-radius: 5px;
-        padding: 10px;
-        cursor: pointer;
-        margin-top: 10px;
-        transition: background-color 0.3s;
-    }
-
-    .card.list button:hover {
-        background-color: #ff5722;
-        color: #fff;
-    }
-
 
         .cards-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            width: 90%;
-            max-width: 1000px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            width: 95%;
+            max-width: 900px;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .card {
-            background-color: #ffffff;
-            color: #333;
-            border-radius: 10px;
-            padding: 10px;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 16px 12px;
+            box-shadow: 
+                0 2px 8px rgba(0, 0, 0, 0.04),
+                0 1px 2px rgba(0, 0, 0, 0.02);
             text-align: center;
-            font-size: 12px;
-            border: none;
-            flex: 1 1 calc(30% - 10px);
-            min-width: 160px; /* Larghezza minima uniformata */
-            max-width: 200px; /* Larghezza massima uniformata */
-            height: 140px; /* Altezza uniforme aumentata per maggiore spazio */
-            box-sizing: border-box;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            min-height: 110px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
             overflow: hidden;
-            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 8px 20px rgba(0, 0, 0, 0.08),
+                0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .card:active {
+            transform: translateY(-1px) scale(1.01);
+            transition: all 0.1s ease;
         }
 
         .card p {
-            margin: 1;
-            word-wrap: break-word;
-            font-size: 12px;
+            margin: 2px 0;
+            font-size: 0.75rem;
+            color: inherit;
+            opacity: 0.9;
         }
 
+        .card h2 {
+            margin: 4px 0 8px 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: inherit;
+            opacity: 0.95;
+        }
+
+        /* Enhanced pastel gradients - each card has unique colors */
         .card.temperature {
-            background: linear-gradient(135deg, #f9d423 0%, #ff4e50 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #fef7f0 0%, #fed7aa 50%, #fb923c 100%);
+            color: #c2410c;
+            border: 1px solid rgba(251, 146, 60, 0.2);
         }
 
         .card.humidity {
-            background: linear-gradient(135deg, #24c6dc 0%, #514a9d 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #f0f4ff 0%, #c7d2fe 50%, #a5b4fc 100%);
+            color: #4338ca;
+            border: 1px solid rgba(165, 180, 252, 0.2);
         }
 
         .card.raspberry-pi {
-            background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #fdf2f8 0%, #f9a8d4 50%, #ec4899 100%);
+            color: #be185d;
+            border: 1px solid rgba(249, 168, 212, 0.2);
         }
 
         .card.transports {
-            background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 50%, #4ade80 100%);
+            color: #166534;
+            border: 1px solid rgba(187, 247, 208, 0.2);
         }
 
         .card.devices {
-            background: linear-gradient(135deg, #83a4d4 0%, #b6fbff 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #faf5ff 0%, #dad1e4 50%, #c4c4c4 100%);
+            color: #7c3aed;
+            border: 1px solid rgba(233, 213, 255, 0.2);
+        }
+
+        .card.list {
+            background: linear-gradient(135deg, #faf5ff 0%, #e9d5ff 50%, #c084fc 100%);
+            color: #c2410c;
+            border: 1px solid rgba(254, 215, 170, 0.2);
+        }
+
+        .card.air-quality {
+            color: #065f46;
+            position: relative;
+        }
+
+        .card.air-quality.ottimo {
+            background: linear-gradient(135deg, #f0fdf4 0%, #bbf7d0 50%, #22c55e 100%);
+            color: #14532d;
+        }
+
+        .card.air-quality.buono {
+            background: linear-gradient(135deg, #f0f9ff 0%, #bae6fd 50%, #38bdf8 100%);
+            color: #0c4a6e;
+        }
+
+        .card.air-quality.moderato {
+            background: linear-gradient(135deg, #fffbeb 0%, #fde68a 50%, #fbbf24 100%);
+            color: #92400e;
+        }
+
+        .card.air-quality.scadente {
+            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fb923c 100%);
+            color: #c2410c;
+        }
+
+        .card.air-quality.molto-scadente {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 50%, #ef4444 100%);
+            color: #991b1b;
+        }
+
+        .card.air-quality.pericoloso {
+            background: linear-gradient(135deg, #f9fafb 0%, #d1d5db 50%, #6b7280 100%);
+            color: #374151;
+        }
+
+        .card#expensesCard {
+            background: linear-gradient(135deg, #f0fdfa 0%, #a7f3d0 50%, #34d399 100%);
+            color: #064e3b;
+        }
+
+        .card#saldoCard {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #f59e0b 100%);
+            color: #92400e;
         }
 
         .card.alarm.green {
-            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #dcfce7 0%, #22c55e 100%) !important;
+            color: #ffffff !important;
+            animation: pulseGreen 3s ease-in-out infinite;
+            border: 1px solid rgba(34, 197, 94, 0.3) !important;
         }
 
         .card.alarm.red {
-            background: linear-gradient(135deg, #ff6a6a 0%, #ee0979 100%);
-            color: #fff;
-        }
-        .card.list {
-        background: linear-gradient(135deg, #b76ad8 0%, #FF69B4 100%);
-        color: #fff;
+            background: linear-gradient(135deg, #fee2e2 0%, #ef4444 100%) !important;
+            color: #ffffff !important;
+            animation: pulseRed 3s ease-in-out infinite;
+            border: 1px solid rgba(239, 68, 68, 0.3) !important;
         }
 
-        /* Dark mode styles */
-        body.dark-mode {
-            background-color: #121212;
-            color: #ffffff;
+        @keyframes pulseGreen {
+            0%, 100% { 
+                box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+                transform: scale(1); 
+            }
+            50% { 
+                box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+                transform: scale(1.01); 
+            }
         }
 
-        body.dark-mode .card {
-            background-color: #1e1e1e;
-            color: #ffffff;
+        @keyframes pulseRed {
+            0%, 100% { 
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+                transform: scale(1); 
+            }
+            50% { 
+                box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+                transform: scale(1.01); 
+            }
         }
 
-        body.dark-mode .card.temperature,
-        body.dark-mode .card.humidity,
-        body.dark-mode .card.raspberry-pi,
-        body.dark-mode .card.list,
-        body.dark-mode .card.transports,
-        body.dark-mode .card.groceries,
-        body.dark-mode .card.air-quality,
-        body.dark-mode .card.card.air-quality.good,
-        body.dark-mode .card.card.air-quality.moderate,
-        body.dark-mode .card.devices {
-            background: linear-gradient(135deg, #1b1b1b 0%, #2d2d2d 100%);
+        .card.air-quality::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            animation: breathe 2s ease-in-out infinite;
         }
 
-        body.dark-mode .card.alarm.green {
-            background: linear-gradient(135deg, #1b6b3f 0%, #124b2f 100%);
+        @keyframes breathe {
+            0%, 100% { 
+                opacity: 0.5; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.2);
+            }
         }
 
-        body.dark-mode .card.alarm.red {
-            background: linear-gradient(135deg, #7e3e3e 0%, #a61e1e 100%);
+        /* Dark mode card adjustments - Excluding alarm card */
+        body.dark-mode .card:not(.alarm) {
+            background: rgba(15, 23, 42, 0.95) !important;
+            backdrop-filter: blur(15px) saturate(150%);
+            border: 1px solid rgba(71, 85, 105, 0.4) !important;
+            color: #e2e8f0 !important;
+            box-shadow: 
+                0 4px 16px rgba(0, 0, 0, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        
-
-        .footer {
-            margin-top: 20px;
-            padding: 10px;
-            background: #333;
-            color: #fff;
-            text-align: center;
-            width: 100%;
-            font-size: 12px;
-            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s, color 0.3s;
+        body.dark-mode .card:not(.alarm):hover {
+            background: rgba(15, 23, 42, 0.98) !important;
+            box-shadow: 
+                0 8px 24px rgba(0, 0, 0, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.3);
+            border-color: rgba(71, 85, 105, 0.5) !important;
         }
 
+        /* Enhanced minimalist toggle switch */
         .switch {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             display: inline-block;
-            width: 60px;
-            height: 34px;
+            width: 50px;
+            height: 28px;
+            z-index: 1000;
         }
 
         .switch input {
@@ -220,120 +378,164 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: 0.4s;
-            border-radius: 34px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 28px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        .card.air-quality {
-            color: #fff;
-            cursor: pointer;
-        }
-
-        .card.air-quality.good {
-            background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
-        }
-
-        .card.air-quality.moderate {
-            background: linear-gradient(135deg, #fbc02d 0%, #ffeb3b 100%);
-        }
-
-        .card.air-quality.poor {
-            background: linear-gradient(135deg, #d32f2f 0%, #ff6659 100%);
-        }
-
 
         .slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: 0.4s;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         }
 
         input:checked + .slider {
-            background-color: #2196f3;
+            background: #000000;
         }
 
         input:checked + .slider:before {
-            transform: translateX(26px);
+            transform: translateX(22px);
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
         }
 
+        /* Value styling */
+        .card h2#temperatureValue,
+        .card h2#airqualityValue,
+        .card h2#humidityValue,
+        .card h2#airQualityIndex,
+        .card h2#saldoValue,
+        .card h2#alarmStatus {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 2px 0;
+        }
+
+        /* Loading animation */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 1.2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Entrance animations */
+        .card {
+            animation: cardEntrance 0.4s ease-out backwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.05s; }
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.15s; }
+        .card:nth-child(4) { animation-delay: 0.2s; }
+        .card:nth-child(5) { animation-delay: 0.25s; }
+        .card:nth-child(6) { animation-delay: 0.3s; }
+        .card:nth-child(7) { animation-delay: 0.35s; }
+        .card:nth-child(8) { animation-delay: 0.4s; }
+        .card:nth-child(9) { animation-delay: 0.45s; }
+        .card:nth-child(10) { animation-delay: 0.5s; }
+
+        @keyframes cardEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Mobile optimizations */
         @media (max-width: 600px) {
+            body {
+                padding: 10px 0;
+            }
+            
+            .cards-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                width: 98%;
+            }
+            
             .card {
-                flex: 1 1 calc(45% - 10px);
-                padding: 10px;
-                font-size: 16px;
-                max-width: 140px;
+                padding: 12px 8px;
+                min-height: 100px;
+                border-radius: 10px;
             }
-            .footer {
-                font-size: 10px;
+            
+            h1 {
+                font-size: 1.5rem;
+                margin: 10px 0 20px 0;
+            }
+
+            .card h2 {
+                font-size: 0.8rem;
+                margin: 2px 0 6px 0;
+            }
+
+            .card h2#temperatureValue,
+            .card h2#airqualityValue,
+            .card h2#humidityValue,
+            .card h2#airQualityIndex,
+            .card h2#saldoValue,
+            .card h2#alarmStatus {
+                font-size: 1.2rem;
+            }
+
+            .card p {
+                font-size: 0.7rem;
             }
         }
 
-        /* Specific styles for temperature and humidity cards */
-        .card.temperature h2#temperatureValue,
-        .card.air-quality h2#airqualityValue,
-        .card.humidity h2#humidityValue {
-            font-size: 30px; /* Maggiore dimensione per i numeri */
-            font-weight: bold;
-            margin: 2px 0;
+        @media (max-width: 480px) {
+            .cards-container {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            
+            .card {
+                min-height: 90px;
+                padding: 10px 6px;
+            }
+            
+            .switch {
+                width: 45px;
+                height: 25px;
+            }
+            
+            .slider:before {
+                height: 19px;
+                width: 19px;
+            }
+            
+            input:checked + .slider:before {
+                transform: translateX(20px);
+            }
         }
-
-        .card.temperature .unit,
-        .card.humidity .unit {
-            font-size: 20px; /* Maggiore dimensione per le unità */
-            margin-top: 0;
-        }
-
-        /* Posizionamento e dimensione della scritta */
-        .card.temperature h2,
-        .card.air-quality h2,
-        .card.air-quality.good h2,
-        .card.air-quality.moderate h2,
-        .card.air-quality.poor h2,
-        .card.humidity h2 {
-            font-size: 20px; /* Maggiore dimensione per la scritta */
-            margin: 10px 0;
-        }
-       /* Specific styles for the air quality card */
-        .card.air-quality h2#airQualityIndex {
-            font-size: 30px; /* Impostato per essere della stessa dimensione dei numeri in Temperature e Humidity */
-            font-weight: bold;
-            margin: 2px 0;
-        }
-        /* New colors for air quality levels */
-        .card.air-quality.ottimo {
-            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
-        }
-
-        .card.air-quality.buono {
-            background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%);
-        }
-
-        .card.air-quality.moderato {
-            background: linear-gradient(135deg, #fbc02d 0%, #ffeb3b 100%);
-        }
-
-        .card.air-quality.scadente {
-            background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%);
-        }
-
-        .card.air-quality.molto-scadente {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-        }
-
-        .card.air-quality.pericoloso {
-            background: linear-gradient(135deg, #b71c1c 0%, #e53935 100%);
-        }
-
-
     </style>
 </head>
-
 
 <body>
     <h1>Smart Homes</h1>
@@ -359,40 +561,53 @@
             <p><span id="humidityMinMax">-- / --</span></p>
         </div>
 
-         <!-- Air Quality Card -->
-         <div class="card air-quality" id="airQualityCard">
+        <!-- Air Quality Card -->
+        <div class="card air-quality" id="airQualityCard">
             <h2>Air Quality</h2>
             <h2 id="airQualityIndex">--</h2>
             <p><span id="airQualityStatus">Loading...</span></p>
         </div>
+
+
 
         <!-- Raspberry Pi Stats Card -->
         <div class="card raspberry-pi" id="raspberryPiCard">
             <h2>Raspberry Pi</h2>
         </div>
 
-        <!-- Transports Card -->
-        <div class="card transports" id="transportsCard">
-            <h2>Travel</h2>
-        </div>
-
-        <!-- Device Card -->
+        <!-- Home Security Card -->
         <div class="card devices" id="deviceCard">
             <h2>Home Security</h2>
         </div>
 
+        <!-- Travel Card -->
+        <div class="card transports" id="transportsCard">
+            <h2>Travel</h2>
+        </div>
+
+        <!-- Shopping List Card -->
         <div class="card list" id="shoppingListCard">
             <h2>Shopping List</h2>
         </div>
 
-        <!-- Alarm Card -->
+        <!-- Expenses Card -->
+        <div class="card list" id="expensesCard">
+            <h2>Expenses</h2>
+        </div>
+
+        <!-- Saldo Card -->
+        <div class="card list" id="saldoCard">
+            <h2>Saldo</h2>
+            <h2 id="saldoValue">-- €</h2>
+        </div>
+
+        <!-- Home Alarm Card -->
         <div class="card alarm" id="alarmCard">
             <h2>Home Alarm</h2>
             <h2 id="alarmStatus">OFF</h2>
         </div>
-
+        
     </div>
-
 
     <script>
         // Funzione per aprire nuove pagine in base alla card cliccata
@@ -406,6 +621,10 @@
 
         document.getElementById("raspberryPiCard").addEventListener("click", () => {
             window.location.href = "/raspi";
+        });
+
+        document.getElementById("expensesCard").addEventListener("click", () => {
+            window.location.href = "/expenses";
         });
 
         document.getElementById("transportsCard").addEventListener("click", () => {
@@ -430,7 +649,7 @@
 
         async function fetchData() {
             try {
-                const response = await fetch('/api_sensors'); // Backend API
+                const response = await fetch('/api_sensors');
                 const data = await response.json();
                 return data;
             } catch (error) {
@@ -439,9 +658,38 @@
             }
         }
 
+        async function fetchSaldoValue() {
+            const saldoElement = document.getElementById("saldoValue");
+            const saldoCard = document.getElementById("saldoCard");
+            
+            // Add loading animation
+            saldoCard.classList.add('loading');
+
+            try {
+                const response = await fetch('/api/p48');
+                const data = await response.json();
+
+                // Show cached value immediately
+                if (data.cached_value !== undefined && data.cached_value !== null) {
+                    saldoElement.textContent = `${parseFloat(data.cached_value).toFixed(2)} €`;
+                }
+
+                // Override with updated value if available
+                if (data.P48_value !== undefined && data.P48_value !== null) {
+                    saldoElement.textContent = `${parseFloat(data.P48_value).toFixed(2)} €`;
+                }
+
+            } catch (error) {
+                console.error("Errore nel recuperare il saldo da P48:", error);
+                saldoElement.textContent = "-- €";
+            } finally {
+                saldoCard.classList.remove('loading');
+            }
+        }
+
         async function fetchDevices() {
             try {
-                const response = await fetch('/api/devices'); // Endpoint API per i dispositivi
+                const response = await fetch('/api/devices');
                 const devices = await response.json();
                 return devices;
             } catch (error) {
@@ -452,19 +700,22 @@
 
         async function updateUI() {
             const data = await fetchData();
-            const devices = await fetchDevices(); // Nuova chiamata API per i dispositivi
+            const devices = await fetchDevices();
 
             if (!data) return;
 
-            // Update current temperature and humidity
-            document.getElementById("temperatureValue").textContent = `${parseFloat(data.temperature.current).toFixed(1)} °C`;
-            document.getElementById("humidityValue").textContent = `${parseFloat(data.humidity.current).toFixed(0)} %`;
+            // Update current temperature and humidity with smooth animation
+            const tempElement = document.getElementById("temperatureValue");
+            const humidElement = document.getElementById("humidityValue");
+            
+            tempElement.textContent = `${parseFloat(data.temperature.current).toFixed(1)} °C`;
+            humidElement.textContent = `${parseFloat(data.humidity.current).toFixed(0)} %`;
 
             // Update min/max temperature and humidity
             document.getElementById("tempMinMax").textContent =
-                `${data.temperature.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[0]).toFixed(2)} / ${data.temperature.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[1]).toFixed(2)}`;
+                `${data.temperature.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[0]).toFixed(1)} / ${data.temperature.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.temperature.minMaxLast24Hours[1]).toFixed(1)}`;
             document.getElementById("humidityMinMax").textContent =
-                `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(2)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(2)}`;
+                `${data.humidity.minMaxLast24Hours[0] === 'inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[0]).toFixed(0)} / ${data.humidity.minMaxLast24Hours[1] === '-inf' ? 'N/A' : parseFloat(data.humidity.minMaxLast24Hours[1]).toFixed(0)}`;
 
             // Update devices section
             const deviceDetails = devices.map(device =>
@@ -501,10 +752,16 @@
             }
         }
 
-        // Function to toggle alarm state
+        // Function to toggle alarm state with enhanced animation
         async function toggleAlarm() {
             const alarmCard = document.getElementById("alarmCard");
             const alarmStatus = document.getElementById("alarmStatus");
+
+            // Add click feedback
+            alarmCard.style.transform = 'scale(0.96)';
+            setTimeout(() => {
+                alarmCard.style.transform = '';
+            }, 120);
 
             // Determine current status and toggle
             const isOn = alarmCard.classList.contains("green");
@@ -513,7 +770,7 @@
             alarmStatus.textContent = isOn ? "OFF" : "ON";
 
             // Send the new status to the server
-            const alarmData = { status: !isOn };  // POST data with the new alarm state
+            const alarmData = { status: !isOn };
 
             try {
                 const response = await fetch('/security/alarm', {
@@ -526,7 +783,7 @@
 
                 if (response.ok) {
                     console.log('Alarm status updated successfully.');
-                    fetchLastAlarmStatus();  // Refresh the alarm status and color after update
+                    fetchLastAlarmStatus();
                 } else {
                     console.error('Failed to update alarm status.');
                 }
@@ -538,9 +795,9 @@
         // Add click event listener to the alarm card
         document.getElementById('alarmCard').addEventListener('click', toggleAlarm);
 
-         // Function to load the current theme from localStorage
-         function loadTheme() {
-            const darkMode = localStorage.getItem("darkMode");
+        // Function to load the current theme with enhanced transition
+        function loadTheme() {
+            const darkMode = localStorage.getItem("darkMode") || "disabled";
             const bodyElement = document.body;
             const toggleDarkMode = document.getElementById("toggleDarkMode");
 
@@ -553,16 +810,24 @@
             }
         }
 
-        // Function to toggle dark mode
+        // Enhanced dark mode toggle with smooth transition
         function toggleDarkMode() {
             const bodyElement = document.body;
             const darkModeEnabled = bodyElement.classList.toggle("dark-mode");
+
+            // Add transition class for smooth color changes
+            bodyElement.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
             if (darkModeEnabled) {
                 localStorage.setItem("darkMode", "enabled");
             } else {
                 localStorage.setItem("darkMode", "disabled");
             }
+
+            // Remove transition class after animation completes
+            setTimeout(() => {
+                bodyElement.style.transition = '';
+            }, 300);
         }
 
         // Load the theme when the page loads
@@ -570,35 +835,37 @@
 
         // Add event listener for the dark mode toggle switch
         document.getElementById("toggleDarkMode").addEventListener("change", toggleDarkMode);
-        // Fetch the last alarm status and load the dark mode theme when the page loads
 
-        // Aggiungi l'evento di click per il bottone della lista della spesa
+        // Enhanced shopping list navigation
         document.getElementById("shoppingListCard").addEventListener("click", () => {
-            window.location.href = "/lista-spesa";  // Indirizza alla pagina della lista della spesa
+            window.location.href = "/lista-spesa";
         });
 
         async function fetchAirQuality() {
+            const airQualityCard = document.getElementById("airQualityCard");
+            airQualityCard.classList.add('loading');
+
             try {
-                // Modifica URL per ottenere i dati dall'indirizzo specificato
-                const response = await fetch('https://192.168.178.101:4443/api/air_quality');
+                const response = await fetch('https://192.168.178.101:4443/api/last_air_quality_today');
                 const data = await response.json();
 
-                // Estrai il primo elemento (se l'array contiene più elementi, aggiorna qui in base alle tue esigenze)
-                const { air_quality_index, air_quality_description, timestamp } = data[0];
+                const { air_quality_index, air_quality_description, timestamp } = data;
 
-                // Seleziona gli elementi HTML da aggiornare
-                const airQualityCard = document.getElementById("airQualityCard");
                 const airQualityIndexElement = document.getElementById("airQualityIndex");
                 const airQualityStatus = document.getElementById("airQualityStatus");
 
-                // Aggiorna l'indice e la descrizione di qualità dell'aria
-                airQualityIndexElement.textContent = `${air_quality_index.toFixed(1)}`;
-                airQualityStatus.textContent = `${air_quality_description}`;
+                // Animate value changes
+                airQualityIndexElement.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    airQualityIndexElement.textContent = `${air_quality_index.toFixed(1)}`;
+                    airQualityStatus.textContent = `${air_quality_description}`;
+                    airQualityIndexElement.style.transform = 'scale(1)';
+                }, 150);
 
-                // Rimuovi le classi di qualità precedenti
+                // Remove previous quality classes
                 airQualityCard.classList.remove("ottimo", "buono", "moderato", "scadente", "molto-scadente", "pericoloso");
 
-                // Aggiorna il colore della card in base al valore di air_quality_index
+                // Update card color based on air quality index
                 if (air_quality_index <= 20) {
                     airQualityCard.classList.add("molto-scadente");
                 } else if (air_quality_index <= 40) {
@@ -614,22 +881,110 @@
                 }
             } catch (error) {
                 console.error('Error fetching air quality data:', error);
+            } finally {
+                airQualityCard.classList.remove('loading');
             }
         }
 
-
-
-        // Aggiorna anche la qualità dell'aria all'inizializzazione
+        // Enhanced initialization with staggered loading
         window.onload = () => {
             loadTheme();
-            updateUI();
-            fetchLastAlarmStatus();
-            fetchAirQuality();  // Chiamata per aggiornare la qualità dell'aria
+            
+            // Stagger the API calls for better UX
+            setTimeout(() => updateUI(), 50);
+            setTimeout(() => fetchSaldoValue(), 100);
+            setTimeout(() => fetchLastAlarmStatus(), 150);
+            setTimeout(() => fetchAirQuality(), 200);
         };
 
-        // Aggiungi un evento click per aggiornare manualmente la qualità dell'aria
-        document.getElementById("airQualityCard").addEventListener("click", fetchAirQuality);
+        // Enhanced card interaction feedback
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'translateY(-1px) scale(0.98)';
+            });
+            
+            card.addEventListener('mouseup', () => {
+                card.style.transform = '';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
 
+        // Add loading states for better UX
+        function addLoadingState(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.add('loading');
+            }
+        }
+
+        function removeLoadingState(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.remove('loading');
+            }
+        }
+
+        // Enhanced error handling with user feedback
+        function showErrorState(elementId, errorMessage = 'Error') {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = errorMessage;
+                element.style.opacity = '0.7';
+            }
+        }
+
+        // Auto-refresh data every 5 minutes
+        setInterval(() => {
+            updateUI();
+            fetchSaldoValue();
+            fetchAirQuality();
+        }, 5 * 60 * 1000);
+
+        // Add service worker for offline functionality (optional)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // Performance optimization: Intersection Observer for animations
+        if ('IntersectionObserver' in window) {
+            const cardObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.card').forEach((card) => {
+                cardObserver.observe(card);
+            });
+        }
+
+        // Add touch feedback for mobile devices
+        if ('ontouchstart' in window) {
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('touchstart', () => {
+                    card.style.transform = 'scale(0.98)';
+                }, { passive: true });
+                
+                card.addEventListener('touchend', () => {
+                    setTimeout(() => {
+                        card.style.transform = '';
+                    }, 100);
+                }, { passive: true });
+            });
+        }
     </script>
 </body>
 

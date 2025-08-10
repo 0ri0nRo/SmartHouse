@@ -1,20 +1,30 @@
-# Usa un'immagine base di Python
-FROM python:3.9
+FROM python:3.12-alpine
 
-# Imposta la directory di lavoro all'interno del contenitore
+# Set the working directory
 WORKDIR /app
 
-# Installa nmap
-RUN apt-get update && apt-get install -y nmap
+# Install system dependencies for building Python packages
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    python3-dev \
+    linux-headers \
+    libffi-dev \
+    postgresql-dev \
+    nmap
 
-# Copia il file requirements.txt nella directory di lavoro
-COPY requirements.txt requirements.txt
+# Upgrade pip
+RUN pip install --upgrade pip
 
-# Installa le dipendenze
+# Copy and install Python dependencies
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# Copia tutto il contenuto della directory corrente nella directory di lavoro del contenitore
+# Copy the rest of the code
 COPY . .
 
-# Comando per eseguire l'app quando il contenitore parte
+# Expose port if needed (e.g., for Flask)
+EXPOSE 5000
+
+# Command to run the app
 CMD ["python", "app.py"]
