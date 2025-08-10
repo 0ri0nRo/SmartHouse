@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-from psycopg2 import Error
 import psycopg2.extras
 import os
 from dotenv import load_dotenv
@@ -19,7 +18,31 @@ import paramiko
 from io import StringIO
 from expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
 import traceback
+from psycopg2 import Error
+from datetime import datetime, timedelta
+import logging
+import json
+from decimal import Decimal
 
+# Configura logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Custom JSON encoder per gestire Decimal e datetime
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super(CustomJSONEncoder, self).default(obj)
+
+app = Flask(__name__)
+app.json_encoder = CustomJSONEncoder
+
+# Configura il logging per debug migliore
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 credentials_path = os.path.join(BASE_DIR, "gcredentials.json")  # Modifica se serve
@@ -1230,94 +1253,146 @@ def last_temp():
     except:
         pass
 
+
+
+
+def get_db_connection():
+    """Crea una connessione al database con gestione errori migliorata."""
+    try:
+        connection = psycopg2.connect(**db_config)
+        return connection
+    except psycopg2.OperationalError as e:
+        logger.error(f"Errore di connessione al database: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Errore generico di connessione: {e}")
+        raise
+
+def handle_db_error(func):
+    """Decorator per gestire errori comuni del database."""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except psycopg2.OperationalError as e:
+            logger.error(f"Errore operazionale database in {func.__name__}: {e}")
+            return jsonify({
+                'error': 'Database connection error',
+                'message': 'Temporary database unavailability'
+            }), 503
+        except psycopg2.Error as e:
+            logger.error(f"Errore database in {func.__name__}: {e}")
+            return jsonify({
+                'error': 'Database error',
+                'message': str(e)
+            }), 500
+        except Exception as e:
+            logger.error(f"Errore generico in {func.__name__}: {e}")
+            return jsonify({
+                'error': 'Internal server error',
+                'message': str(e)
+            }), 500
+    wrapper.__name__ = func.__name__
+    return wrapper
+
 @app.route('/air_quality_data', methods=['GET'])
+@handle_db_error
 def air_quality_data():
     """Gestisce la richiesta per ottenere i dati più recenti della qualità dell'aria."""
     connection = None
     cursor = None
+    
     try:
-        # Connessione al database
-        connection = psycopg2.connect(**db_config)
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-
-        # Chiama la funzione per ottenere i dati dell'aria
-        result = db.get_last_air_quality()  # Dovrebbe restituire tutti i nuovi dati (compresi i gas)
+        logger.info("Richiesta dati qualità dell'aria più recenti")
         
-        cursor.close()
-        connection.close()
+        # Connessione al database
+        connection = get_db_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        # Restituisci il risultato come JSON
+        # Query per ottenere l'ultimo record
+        query = """
+        SELECT 
+            smoke, lpg, methane, hydrogen, 
+            air_quality_index, air_quality_description, 
+            timestamp,
+            EXTRACT(EPOCH FROM (NOW() - timestamp)) as seconds_ago
+        FROM air_quality 
+        ORDER BY timestamp DESC, id DESC
+        LIMIT 1;
+        """
+        
+        cursor.execute(query)
+        result = cursor.fetchone()
+        
         if result:
-            return jsonify(result), 200
+            # Converti in dizionario normale e gestisci i tipi
+            data = dict(result)
+            data['smoke'] = float(data['smoke'])
+            data['lpg'] = float(data['lpg'])
+            data['methane'] = float(data['methane'])
+            data['hydrogen'] = float(data['hydrogen'])
+            data['air_quality_index'] = float(data['air_quality_index'])
+            data['timestamp'] = data['timestamp'].isoformat()
+            data['data_age_seconds'] = int(data['seconds_ago'])
+            data['is_recent'] = data['seconds_ago'] < 300  # Considera recenti dati < 5 minuti
+            
+            logger.info(f"Dati trovati: AQI={data['air_quality_index']}, Age={data['data_age_seconds']}s")
+            return jsonify(data), 200
         else:
-            return jsonify({"error": "Nessun dato disponibile."}), 404
+            logger.warning("Nessun dato disponibile nella tabella air_quality")
+            return jsonify({
+                "error": "No data available",
+                "message": "Nessun dato disponibile nella tabella."
+            }), 404
 
-    except Exception as e:
-        print(f"Errore durante il recupero dei dati di qualità dell'aria: {e}")
-        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 
-@app.route('/api/air_quality', methods=['GET', 'POST'])
-def air_quality_func():
+@app.route('/api/last_air_quality_today', methods=['GET'])
+@handle_db_error
+def api_last_air_quality_today():
+    """Restituisce l'ultima rilevazione di qualità dell'aria di oggi."""
     connection = None
     cursor = None
+    
     try:
-        # Connessione al database
-        connection = psycopg2.connect(**db_config)
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        connection = get_db_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        if request.method == 'GET':
-            # Recupera tutti i valori di qualità dell'aria
-            query = """
-                SELECT smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp 
-                FROM air_quality 
-                ORDER BY timestamp DESC;
-            """
-            cursor.execute(query)
-            result = cursor.fetchall()
+        query = """
+            SELECT 
+                smoke, lpg, methane, hydrogen, 
+                air_quality_index, air_quality_description, 
+                timestamp
+            FROM air_quality
+            WHERE DATE(timestamp) = CURRENT_DATE
+            ORDER BY timestamp DESC
+            LIMIT 1;
+        """
+        
+        cursor.execute(query)
+        row = cursor.fetchone()
 
-            if result:
-                # Convertiamo i dati in un formato JSON compatibile
-                air_quality_data = [{
-                    'smoke': row['smoke'],
-                    'lpg': row['lpg'],
-                    'methane': row['methane'],
-                    'hydrogen': row['hydrogen'],
-                    'air_quality_index': row['air_quality_index'],
-                    'air_quality_description': row['air_quality_description'],
-                    'timestamp': row['timestamp']
-                } for row in result]
-                return jsonify(air_quality_data), 200
-            else:
-                return jsonify({'error': 'Nessun dato disponibile.'}), 404
+        if not row:
+            return jsonify({
+                'error': 'No data found',
+                'message': 'Nessun dato disponibile per oggi'
+            }), 404
 
-        elif request.method == 'POST':
-            # Inserisci un nuovo valore di qualità dell'aria
-            data = request.get_json()
+        # Conversioni per compatibilità JSON
+        result = dict(row)
+        result['smoke'] = float(result['smoke'])
+        result['lpg'] = float(result['lpg'])
+        result['methane'] = float(result['methane'])
+        result['hydrogen'] = float(result['hydrogen'])
+        result['air_quality_index'] = float(result['air_quality_index'])
+        result['timestamp'] = result['timestamp'].isoformat()
 
-            # Verifica che tutti i campi necessari siano nel body della richiesta
-            if all(k in data for k in ['smoke', 'lpg', 'methane', 'hydrogen', 'air_quality_index', 'air_quality_description']):
-                smoke = data['smoke']
-                lpg = data['lpg']
-                methane = data['methane']
-                hydrogen = data['hydrogen']
-                air_quality_index = data['air_quality_index']
-                air_quality_description = data['air_quality_description']
-                timestamp = datetime.now()
+        return jsonify(result), 200
 
-                query = """
-                    INSERT INTO air_quality (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s);
-                """
-                cursor.execute(query, (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp))
-                connection.commit()
-
-                return jsonify({'message': 'Dati di qualita\' dell\'aria salvati correttamente.'}), 201
-            else:
-                return jsonify({'error': 'Uno o più campi necessari sono mancanti nel body della richiesta.'}), 400
-
-    except Exception as e:
-        return jsonify({'error': f'Si è verificato un errore: {e}'}), 500
     finally:
         if cursor:
             cursor.close()
@@ -1326,123 +1401,360 @@ def air_quality_func():
 
 
 
+@app.route('/api/air_quality', methods=['GET', 'POST'])
+@handle_db_error
+def air_quality_func():
+    """Gestisce GET (tutti i dati) e POST (inserimento nuovo dato) per qualità dell'aria."""
+    connection = None
+    cursor = None
+    
+    try:
+        # Connessione al database
+        connection = get_db_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        if request.method == 'GET':
+            logger.info("Richiesta di tutti i dati qualità dell'aria")
+            
+            # Parametri opzionali per filtri
+            limit = request.args.get('limit', 1000, type=int)
+            limit = min(limit, 5000)  # Limita a massimo 5000 record
+            
+            hours_back = request.args.get('hours', 24, type=int)
+            hours_back = min(hours_back, 168)  # Massimo 1 settimana
+            
+            # Query con filtri temporali
+            query = """
+                SELECT 
+                    smoke, lpg, methane, hydrogen, 
+                    air_quality_index, air_quality_description, 
+                    timestamp,
+                    EXTRACT(EPOCH FROM (NOW() - timestamp)) as seconds_ago
+                FROM air_quality 
+                WHERE timestamp >= NOW() - INTERVAL '%s hours'
+                ORDER BY timestamp DESC
+                LIMIT %s;
+            """
+            
+            cursor.execute(query, (hours_back, limit))
+            results = cursor.fetchall()
+
+            if results:
+                # Converti i risultati in formato JSON compatibile
+                air_quality_data = []
+                for row in results:
+                    data = dict(row)
+                    data['smoke'] = float(data['smoke'])
+                    data['lpg'] = float(data['lpg'])
+                    data['methane'] = float(data['methane'])
+                    data['hydrogen'] = float(data['hydrogen'])
+                    data['air_quality_index'] = float(data['air_quality_index'])
+                    data['timestamp'] = data['timestamp'].isoformat()
+                    data['data_age_seconds'] = int(data['seconds_ago'])
+                    air_quality_data.append(data)
+                
+                logger.info(f"Restituiti {len(air_quality_data)} record")
+                return jsonify({
+                    'data': air_quality_data,
+                    'count': len(air_quality_data),
+                    'hours_requested': hours_back,
+                    'limit_applied': limit
+                }), 200
+            else:
+                logger.warning(f"Nessun dato trovato nelle ultime {hours_back} ore")
+                return jsonify({
+                    'error': 'No data found',
+                    'message': f'Nessun dato disponibile nelle ultime {hours_back} ore.',
+                    'count': 0
+                }), 404
+
+        elif request.method == 'POST':
+            logger.info("Richiesta inserimento nuovo dato qualità dell'aria")
+            
+            # Validazione Content-Type
+            if not request.is_json:
+                return jsonify({'error': 'Content-Type deve essere application/json'}), 400
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'Body della richiesta vuoto o malformato'}), 400
+
+            # Lista dei campi richiesti
+            required_fields = ['smoke', 'lpg', 'methane', 'hydrogen', 'air_quality_index', 'air_quality_description']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                return jsonify({
+                    'error': 'Campi mancanti',
+                    'missing_fields': missing_fields,
+                    'required_fields': required_fields
+                }), 400
+
+            # Validazione tipi di dati
+            try:
+                smoke = float(data['smoke'])
+                lpg = float(data['lpg'])
+                methane = float(data['methane'])
+                hydrogen = float(data['hydrogen'])
+                air_quality_index = float(data['air_quality_index'])
+                air_quality_description = str(data['air_quality_description']).strip()
+                
+                # Validazione range valori (opzionale, adatta ai tuoi sensori)
+                if not (0 <= smoke <= 1000):
+                    raise ValueError("smoke deve essere tra 0 e 1000")
+                if not (0 <= lpg <= 1000):
+                    raise ValueError("lpg deve essere tra 0 e 1000")
+                if not (0 <= methane <= 1000):
+                    raise ValueError("methane deve essere tra 0 e 1000")
+                if not (0 <= hydrogen <= 1000):
+                    raise ValueError("hydrogen deve essere tra 0 e 1000")
+                if not (0 <= air_quality_index <= 500):
+                    raise ValueError("air_quality_index deve essere tra 0 e 500")
+                if not air_quality_description:
+                    raise ValueError("air_quality_description non può essere vuoto")
+                    
+            except (ValueError, TypeError) as e:
+                return jsonify({
+                    'error': 'Validazione dati fallita',
+                    'message': str(e)
+                }), 400
+
+            # Inserimento nel database
+            timestamp = datetime.now()
+            query = """
+                INSERT INTO air_quality (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, timestamp;
+            """
+            
+            cursor.execute(query, (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp))
+            result = cursor.fetchone()
+            connection.commit()
+            
+            logger.info(f"Nuovo record inserito con ID: {result['id']}")
+            
+            return jsonify({
+                'message': 'Dati di qualità dell\'aria salvati correttamente.',
+                'id': result['id'],
+                'timestamp': result['timestamp'].isoformat(),
+                'data': {
+                    'smoke': smoke,
+                    'lpg': lpg,
+                    'methane': methane,
+                    'hydrogen': hydrogen,
+                    'air_quality_index': air_quality_index,
+                    'air_quality_description': air_quality_description
+                }
+            }), 201
+
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
 def get_daily_air_quality():
     """Recupera l'indice medio della qualità dell'aria per ogni ora del giorno corrente."""
     hourly_data = {}
+    connection = None
+    cursor = None
+    
     try:
-
-        connection = psycopg2.connect(**db_config)
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        logger.info("Recupero dati qualità dell'aria giornalieri")
         
-        # Esegui la query per ottenere la media dell'indice di qualità dell'aria per ogni ora del giorno corrente
+        connection = get_db_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Query migliorata con più informazioni
         query = """
             SELECT
                 EXTRACT(HOUR FROM timestamp) AS hour,
-                AVG(air_quality_index) AS avg_air_quality_index
+                ROUND(AVG(air_quality_index)::numeric, 2) AS avg_air_quality_index,
+                COUNT(*) as measurement_count,
+                MIN(air_quality_index) as min_aqi,
+                MAX(air_quality_index) as max_aqi
             FROM air_quality
             WHERE DATE(timestamp) = CURRENT_DATE
-            GROUP BY hour
+              AND timestamp >= CURRENT_DATE
+              AND timestamp < CURRENT_DATE + INTERVAL '1 day'
+            GROUP BY EXTRACT(HOUR FROM timestamp)
             ORDER BY hour;
         """
         
         cursor.execute(query)
         rows = cursor.fetchall()
+        
+        if not rows:
+            logger.warning("Nessun dato trovato per oggi")
+            return {}
         
         # Organizza i dati in un dizionario
         for row in rows:
             hour = int(row['hour'])
-            avg_air_quality_index = round(float(row['avg_air_quality_index']), 2)
-            hourly_data[hour] = avg_air_quality_index
-        
-        # Chiudi il cursore e la connessione
-        cursor.close()
-        connection.close()
-        
-    except Error as e:
-        print(f"Errore durante il recupero dei dati: {e}")
-    
-    return hourly_data
-
-
-@app.route('/api/air_quality_today', methods=['GET'])
-def api_air_quality_today():
-    """Restituisce la qualità dell'aria giornaliera."""
-
-    data = get_daily_air_quality()
-    
-    if not data:
-        return jsonify({'error': 'Nessun dato disponibile'}), 404
-
-    return jsonify(data)
-
-
-def get_hourly_gas_concentration():
-    """Fetches the hourly average concentrations of smoke, lpg, methane, and hydrogen for the current day."""
-    hourly_data = {}
-
-    try:
-        connection = psycopg2.connect(**db_config)
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        
-        # Query to retrieve the hourly averages for smoke, lpg, methane, and hydrogen
-        query = """
-            SELECT
-                EXTRACT(HOUR FROM timestamp) AS hour,
-                AVG(smoke) AS avg_smoke,
-                AVG(lpg) AS avg_lpg,
-                AVG(methane) AS avg_methane,
-                AVG(hydrogen) AS avg_hydrogen
-            FROM air_quality
-            WHERE DATE(timestamp) = CURRENT_DATE
-            GROUP BY hour
-            ORDER BY hour;
-        """
-        
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        
-        # Organize the results into a dictionary
-        for row in rows:
-            hour = int(row['hour'])
             hourly_data[hour] = {
-                'avg_smoke': round(float(row['avg_smoke']), 2),
-                'avg_lpg': round(float(row['avg_lpg']), 2),
-                'avg_methane': round(float(row['avg_methane']), 2),
-                'avg_hydrogen': round(float(row['avg_hydrogen']), 2)
+                'avg_air_quality_index': float(row['avg_air_quality_index']),
+                'measurement_count': int(row['measurement_count']),
+                'min_aqi': float(row['min_aqi']),
+                'max_aqi': float(row['max_aqi'])
             }
         
-        # Close the cursor and connection
-        cursor.close()
-        connection.close()
+        logger.info(f"Dati orari recuperati per {len(hourly_data)} ore")
         
-    except psycopg2.Error as e:
-        print(f"Errore durante il recupero dei dati: {e}")
+    except Exception as e:
+        logger.error(f"Errore durante il recupero dei dati giornalieri: {e}")
+        
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
     
     return hourly_data
 
-# Initialize the last run time for the aggregation function to None
 last_aggregation_time = None
 
 @app.route('/api/gas_concentration_today', methods=['GET'])
 def api_gas_concentration_today():
     """Returns today's hourly gas concentration data."""
-    global last_aggregation_time
+    try:
+        logger.info("Richiesta dati concentrazione gas")
+        
+        global last_aggregation_time
+        current_time = datetime.now()
+
+        # Check if the aggregation function should run
+        if last_aggregation_time is None or (current_time - last_aggregation_time) >= timedelta(hours=1):
+            try:
+                db.create_temp_table_and_aggregate_air_quality()
+                last_aggregation_time = current_time
+                logger.info("Aggregazione completata")
+            except Exception as e:
+                logger.error(f"Errore durante aggregazione: {e}")
+                # Continua comunque a recuperare i dati
+
+        # Retrieve the hourly gas concentration data
+        data = get_hourly_gas_concentration()
+        
+        if not data:
+            logger.warning("Nessun dato gas disponibile")
+            return jsonify({'error': 'Nessun dato disponibile'}), 404
+
+        logger.info(f"Restituendo dati gas per {len(data)} ore")
+        
+        # Debug: stampa i primi dati
+        sample_hours = list(data.keys())[:3]
+        for hour in sample_hours:
+            logger.info(f"Ora {hour}: {data[hour]}")
+        
+        return jsonify(data)
+        
+    except Exception as e:
+        logger.error(f"Errore nell'endpoint gas_concentration_today: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Errore interno del server: {str(e)}'}), 500
+
+
+
+@app.route('/api/air_quality_today', methods=['GET'])
+@handle_db_error
+def api_air_quality_today():
+    """Restituisce la qualità dell'aria giornaliera con formato semplificato per il frontend."""
+    logger.info("Richiesta API per dati AQI giornalieri")
     
-    # Get the current time
-    current_time = datetime.now()
-
-    # Check if the aggregation function should run (if it has never run or if more than an hour has passed)
-    if last_aggregation_time is None or (current_time - last_aggregation_time) >= timedelta(hours=1):
-        db.create_temp_table_and_aggregate_air_quality()
-        last_aggregation_time = current_time  # Update the last aggregation time
-
-    # Retrieve the hourly gas concentration data
-    data = get_hourly_gas_concentration()
+    data = get_daily_air_quality()
     
     if not data:
-        return jsonify({'error': 'Nessun dato disponibile'}), 404
+        logger.warning("Nessun dato giornaliero disponibile")
+        return jsonify({
+            'error': 'No data available', 
+            'message': 'Nessun dato disponibile per oggi'
+        }), 404
 
-    return jsonify(data)
+    # Formato semplificato per il frontend esistente
+    simplified_data = {}
+    for hour, values in data.items():
+        simplified_data[str(hour)] = values['avg_air_quality_index']
+    
+    logger.info(f"Restituiti dati per {len(simplified_data)} ore")
+    return jsonify(simplified_data), 200
+
+def get_hourly_gas_concentration():
+    """Recupera le concentrazioni medie orarie di gas per il giorno corrente."""
+    hourly_data = {}
+    connection = None
+    cursor = None
+    
+    try:
+        logger.info("Recupero concentrazioni gas orarie")
+        
+        connection = get_db_connection()
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        # Query semplificata e corretta
+        query = """
+            SELECT 
+                EXTRACT(HOUR FROM timestamp) AS hour,
+                ROUND(AVG(smoke)::numeric, 2) AS avg_smoke,
+                ROUND(AVG(lpg)::numeric, 2) AS avg_lpg,
+                ROUND(AVG(methane)::numeric, 2) AS avg_methane,
+                ROUND(AVG(hydrogen)::numeric, 2) AS avg_hydrogen,
+                COUNT(*) as measurement_count
+            FROM air_quality 
+            WHERE DATE(timestamp) = CURRENT_DATE
+            GROUP BY EXTRACT(HOUR FROM timestamp)
+            ORDER BY hour;
+        """
+        
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        if not rows:
+            logger.warning("Nessun dato gas trovato per oggi")
+            # Restituisci dati di esempio se non ci sono dati reali
+            for hour in range(24):
+                hourly_data[str(hour)] = {
+                    'avg_smoke': 0.0,
+                    'avg_lpg': 0.0,
+                    'avg_methane': 0.0,
+                    'avg_hydrogen': 0.0,
+                    'measurement_count': 0
+                }
+            return hourly_data
+        
+        # Organizza i risultati
+        for row in rows:
+            hour = str(int(row['hour']))  # Converti in stringa per coerenza
+            hourly_data[hour] = {
+                'avg_smoke': float(row['avg_smoke'] or 0),
+                'avg_lpg': float(row['avg_lpg'] or 0),
+                'avg_methane': float(row['avg_methane'] or 0),
+                'avg_hydrogen': float(row['avg_hydrogen'] or 0),
+                'measurement_count': int(row['measurement_count'])
+            }
+        
+        logger.info(f"Dati gas recuperati per {len(hourly_data)} ore")
+        return hourly_data
+        
+    except Exception as e:
+        logger.error(f"Errore durante il recupero concentrazioni gas: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # In caso di errore, restituisci dati vuoti ma validi
+        for hour in range(24):
+            hourly_data[str(hour)] = {
+                'avg_smoke': 0.0,
+                'avg_lpg': 0.0,
+                'avg_methane': 0.0,
+                'avg_hydrogen': 0.0,
+                'measurement_count': 0
+            }
+        return hourly_data
+        
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 @app.route('/todolist/insert', methods=['POST'])
 def insert_documents():
