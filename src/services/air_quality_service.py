@@ -4,10 +4,10 @@ from datetime import datetime
 from models.database import BaseService
 
 class AirQualityService(BaseService):
-    """Servizio per gestire i dati della qualità dell'aria"""
+    """Service to manage air quality data"""
     
     def get_latest(self):
-        """Ottiene l'ultima lettura della qualità dell'aria"""
+        """Gets the latest air quality reading"""
         query = """
             SELECT smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp,
                    EXTRACT(EPOCH FROM (NOW() - timestamp)) as seconds_ago
@@ -41,7 +41,7 @@ class AirQualityService(BaseService):
                 conn.close()
 
     def insert_record(self, payload: dict):
-        """Inserisce un nuovo record di qualità dell'aria"""
+        """Inserts a new air quality record"""
         required_fields = ['smoke', 'lpg', 'methane', 'hydrogen', 'air_quality_index', 'air_quality_description']
         for f in required_fields:
             if f not in payload:
@@ -66,7 +66,7 @@ class AirQualityService(BaseService):
         if not (0 <= aqi <= 500):
             raise ValueError("aqi out of range")
         if not desc:
-            raise ValueError("desc empty")
+            raise ValueError("description is empty")
 
         query = """
             INSERT INTO air_quality (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp)
@@ -89,7 +89,7 @@ class AirQualityService(BaseService):
                 conn.close()
 
     def get_daily_aggregated(self):
-        """Ottiene i dati aggregati per oggi"""
+        """Gets aggregated air quality data for today"""
         query = """
             SELECT
                 EXTRACT(HOUR FROM timestamp) AS hour,
@@ -126,7 +126,7 @@ class AirQualityService(BaseService):
                 conn.close()
 
     def get_hourly_gas_concentration(self):
-        """Ottiene le concentrazioni di gas per ora"""
+        """Gets hourly average gas concentrations"""
         query = """
             SELECT 
                 EXTRACT(HOUR FROM timestamp) AS hour,
@@ -148,7 +148,7 @@ class AirQualityService(BaseService):
             cur.execute(query)
             rows = cur.fetchall()
             if not rows:
-                # Return placeholder for 24h
+                # Return placeholder for 24 hours
                 return {str(h): {
                     'avg_smoke': 0.0,
                     'avg_lpg': 0.0,

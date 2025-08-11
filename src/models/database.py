@@ -9,16 +9,16 @@ from flask import jsonify
 logger = logging.getLogger(__name__)
 
 def get_db_connection(db_config):
-    """Crea una connessione al database PostgreSQL"""
+    """Create a connection to the PostgreSQL database."""
     try:
         conn = psycopg2.connect(**db_config)
         return conn
     except Exception as e:
-        logger.error(f"DB conn error: {e}")
+        logger.error(f"DB connection error: {e}")
         raise
 
 def handle_db_error(func):
-    """Decorator per gestire gli errori del database in modo uniforme"""
+    """Decorator to uniformly handle database errors in Flask APIs."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -36,17 +36,27 @@ def handle_db_error(func):
     return wrapper
 
 class BaseService:
-    """Classe base per tutti i servizi che usano il database"""
+    """Base class for services that use the PostgreSQL database."""
     
     def __init__(self, db_config):
         self.db_config = db_config
 
     def _connect(self):
-        """Crea una connessione al database"""
+        """Open a new database connection."""
         return psycopg2.connect(**self.db_config)
     
     def _execute_query(self, query, params=None, fetch_one=False, fetch_all=True):
-        """Utility per eseguire query in modo sicuro"""
+        """Safely execute an SQL query with options for fetchone, fetchall, or commit.
+        
+        Args:
+            query (str): The SQL query to execute.
+            params (tuple, optional): Parameters for the query.
+            fetch_one (bool): If True, return only the first row.
+            fetch_all (bool): If True, return all rows; ignored if fetch_one=True.
+        
+        Returns:
+            list/dict/int/None: Query result or number of affected rows.
+        """
         conn = None
         cur = None
         try:

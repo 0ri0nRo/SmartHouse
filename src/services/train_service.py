@@ -4,13 +4,13 @@ from datetime import datetime
 from scraper import TrainScraper
 
 class TrainService:
-    """Servizio per gestire i dati dei treni"""
+    """Service to manage train data"""
     
     def __init__(self, db_config):
         self.db_config = db_config
 
     def fetch_and_save(self, train_destination):
-        """Recupera e salva i dati dei treni per una destinazione"""
+        """Fetches and saves train data for a destination"""
         url = "https://iechub.rfi.it/ArriviPartenze/ArrivalsDepartures/Monitor?placeId=2416&arrivals=False"
         scraper = TrainScraper(url, self.db_config)
         trains = scraper.parse_trains(train_destination)
@@ -20,7 +20,7 @@ class TrainService:
         return self._get_trains_from_db(train_destination)
     
     def _get_trains_from_db(self, train_destination):
-        """Ottiene i dati dei treni dal database"""
+        """Gets train data from the database"""
         conn = None
         cur = None
         try:
@@ -28,7 +28,7 @@ class TrainService:
             cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
             now = datetime.now()
             
-            # Query per treni passati
+            # Query for past trains
             query_old = """
                 SELECT train_number, destination, time, delay, platform, stops, timestamp
                 FROM trains
@@ -38,7 +38,7 @@ class TrainService:
             cur.execute(query_old, (now.time(), f'%{train_destination}%', 4))
             results_old = cur.fetchall()
             
-            # Query per treni futuri
+            # Query for future trains
             query_future = """
                 SELECT train_number, destination, time, delay, platform, stops, timestamp
                 FROM trains
