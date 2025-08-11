@@ -4,10 +4,10 @@ from datetime import datetime
 from models.database import BaseService
 
 class SensorService(BaseService):
-    """Servizio per gestire i dati dei sensori di temperatura e umidità"""
+    """Service to manage temperature and humidity sensor data"""
     
     def get_hourly_today(self):
-        """Ottiene i dati orari di oggi"""
+        """Gets hourly data for today"""
         query = """
             SELECT
                 EXTRACT(HOUR FROM timestamp) AS hour,
@@ -21,12 +21,12 @@ class SensorService(BaseService):
         return self._execute_query(query)
 
     def get_latest(self):
-        """Ottiene l'ultima lettura del sensore"""
+        """Gets the latest sensor reading"""
         query = "SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 1"
         return self._execute_query(query, fetch_one=True, fetch_all=False)
 
     def get_monthly_temperature_data(self, year=None):
-        """Ottiene i dati mensili di temperatura per un anno"""
+        """Gets monthly temperature data for a year"""
         if year is None:
             year = datetime.now().year
         query = """
@@ -49,7 +49,7 @@ class SensorService(BaseService):
         return monthly
 
     def get_monthly_average_temperature(self, year=None):
-        """Ottiene la temperatura media mensile per un anno"""
+        """Gets average monthly temperature for a year"""
         if year is None:
             year = datetime.now().year
         query = """
@@ -65,7 +65,7 @@ class SensorService(BaseService):
         return {int(r['month']): float(r['avg_temperature']) for r in rows}
 
     def get_daily_for_month(self, month, year=None):
-        """Ottiene i dati giornalieri per un mese specifico"""
+        """Gets daily data for a specific month"""
         if year is None:
             year = datetime.now().year
         query = """
@@ -82,7 +82,7 @@ class SensorService(BaseService):
         return {int(r['day']): float(r['avg_temperature']) for r in rows}
 
     def get_today_hourly_temperature(self):
-        """Ottiene i dati orari di temperatura per oggi"""
+        """Gets hourly temperature data for today"""
         query = """
             SELECT
                 EXTRACT(HOUR FROM timestamp) AS hour,
@@ -96,7 +96,7 @@ class SensorService(BaseService):
         return {int(r['hour']): float(r['avg_temperature']) for r in rows}
 
     def get_today_hourly_humidity(self):
-        """Ottiene i dati orari di umidità per oggi"""
+        """Gets hourly humidity data for today"""
         query = """
             SELECT
                 EXTRACT(HOUR FROM timestamp) AS hour,
@@ -110,7 +110,7 @@ class SensorService(BaseService):
         return {int(r['hour']): float(r['avg_humidity']) for r in rows}
 
     def get_average_temperatures(self, start_dt, end_dt):
-        """Ottiene le temperature medie in un range di date"""
+        """Gets average temperatures in a date range"""
         query = """
             SELECT DATE_TRUNC('hour', timestamp) AS hour, 
                    ROUND(AVG(temperature_c)::numeric, 2) AS avg_temp
@@ -123,7 +123,7 @@ class SensorService(BaseService):
         return [{"hour": r['hour'].isoformat(), "avg_temperature": float(r['avg_temp'])} for r in rows]
 
     def get_average_humidity(self, start_dt, end_dt):
-        """Ottiene l'umidità media in un range di date"""
+        """Gets average humidity in a date range"""
         query = """
             SELECT DATE_TRUNC('hour', timestamp) AS hour, 
                    ROUND(AVG(humidity)::numeric, 2) AS avg_humidity
@@ -136,7 +136,7 @@ class SensorService(BaseService):
         return [{"hour": r['hour'].isoformat(), "avg_humidity": float(r['avg_humidity'])} for r in rows]
 
     def get_last_temperature(self):
-        """Ottiene l'ultima temperatura registrata"""
+        """Gets the last recorded temperature"""
         query = "SELECT temperature_c, humidity, timestamp FROM sensor_readings ORDER BY timestamp DESC LIMIT 1"
         r = self._execute_query(query, fetch_one=True, fetch_all=False)
         if r:
@@ -146,7 +146,9 @@ class SensorService(BaseService):
                 'timestamp': r['timestamp'].isoformat()
             }
         return None
+
     def get_daily_humidity_for_month(self, month, year=None):
+        """Gets daily humidity data for a specific month"""
         if year is None:
             year = datetime.now().year
         query = """
@@ -172,6 +174,7 @@ class SensorService(BaseService):
             if conn: conn.close()
 
     def get_monthly_average_humidity(self, year):
+        """Gets average monthly humidity for a year"""
         query = """
             SELECT
                 EXTRACT(MONTH FROM timestamp) AS month,

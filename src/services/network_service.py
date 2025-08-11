@@ -7,10 +7,10 @@ from models.database import BaseService
 logger = logging.getLogger(__name__)
 
 class NetworkService(BaseService):
-    """Servizio per gestire la scansione e il monitoraggio dei dispositivi di rete"""
+    """Service to manage scanning and monitoring of network devices"""
     
     def scan_network(self, network='192.168.178.0/24'):
-        """Scansiona la rete per trovare dispositivi attivi"""
+        """Scans the network to find active devices"""
         nm = nmap.PortScanner()
         nm.scan(hosts=network, arguments='-sn')
         devices = {}
@@ -19,19 +19,19 @@ class NetworkService(BaseService):
             hostname = nm[host].hostname() or 'Unknown'
             devices[host] = {'hostname': hostname, 'status': nm[host].state()}
         
-        # Salva nel database
+        # Save results to database
         self._save_devices_to_db(devices)
         return devices
     
     def _save_devices_to_db(self, devices):
-        """Salva i dispositivi trovati nel database"""
+        """Saves found devices into the database"""
         conn = None
         cur = None
         try:
             conn = self._connect()
             cur = conn.cursor()
             
-            # Crea la tabella se non exists
+            # Create the table if it does not exist
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS network_devices (
                     id SERIAL PRIMARY KEY,
@@ -57,7 +57,7 @@ class NetworkService(BaseService):
                 conn.close()
 
     def get_device_stats(self):
-        """Ottiene statistiche sui dispositivi di rete"""
+        """Gets statistics on network devices"""
         query = """
             SELECT hostname, COUNT(*) AS connection_count
             FROM network_devices
@@ -87,7 +87,7 @@ class NetworkService(BaseService):
                 conn.close()
 
     def get_most_connected_days(self):
-        """Ottiene i giorni con più connessioni per dispositivo"""
+        """Gets the days of the week with the most connections per device"""
         query = """
             SELECT hostname, EXTRACT(DOW FROM timestamp) AS day_of_week, COUNT(*) AS connection_count
             FROM network_devices
@@ -126,7 +126,7 @@ class NetworkService(BaseService):
                 conn.close()
 
     def get_latest_devices(self):
-        """Ottiene l'ultimo scan dei dispositivi"""
+        """Gets the latest scan results of devices"""
         query = """
             SELECT * FROM network_devices 
             WHERE timestamp = (SELECT MAX(timestamp) FROM network_devices) 

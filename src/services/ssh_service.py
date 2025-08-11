@@ -3,29 +3,29 @@ import paramiko
 from io import StringIO
 
 class SSHService:
-    """Servizio per eseguire comandi SSH su dispositivi remoti"""
+    """Service to execute SSH commands on remote devices"""
     
     @staticmethod
     def exec_command(private_key_str, command, passphrase=None):
-        """Esegue un comando SSH usando una chiave privata"""
+        """Executes an SSH command using a private key"""
         key_file = StringIO(private_key_str)
         private_key = None
         
-        # Prova diversi tipi di chiavi
+        # Try different key types
         for key_class in [paramiko.ECDSAKey, paramiko.RSAKey, paramiko.Ed25519Key, paramiko.DSSKey]:
             try:
                 key_file.seek(0)
                 private_key = key_class.from_private_key(key_file, password=passphrase)
                 break
             except paramiko.PasswordRequiredException:
-                raise ValueError("Chiave richiede passphrase")
+                raise ValueError("Key requires a passphrase")
             except paramiko.SSHException:
                 continue
         
         if private_key is None:
-            raise ValueError("Chiave non supportata o corrotta")
+            raise ValueError("Unsupported or corrupted key")
         
-        # Connessione SSH
+        # SSH connection
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
@@ -35,7 +35,7 @@ class SSHService:
         
         client.connect(hostname=HOST_PI, port=PORT_PI, username=USERNAME_PI, pkey=private_key)
         
-        # Esecuzione comando
+        # Execute command
         stdin, stdout, stderr = client.exec_command(command)
         out = stdout.read().decode('utf-8')
         err = stderr.read().decode('utf-8')

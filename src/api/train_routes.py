@@ -10,19 +10,19 @@ train_service = TrainService(config['DB_CONFIG'])
 @train_bp.route('/trains_data/<train_destination>', methods=['GET'])
 @handle_db_error
 def api_trains_data_fetch(train_destination):
-    """API per recuperare e salvare dati treni per una destinazione"""
+    """API to fetch and save train data for a given destination."""
     res = train_service.fetch_and_save(train_destination)
     return jsonify(res)
 
-# Route alternativa per backward compatibility
+# Alternative route for backward compatibility
 @train_bp.route('/trains_data/<destination>', methods=['GET'])
 @handle_db_error
 def api_trains_data(destination):
-    """API alternativa per recuperare dati treni (backward compatibility)"""
+    """Alternative API to fetch train data (backward compatibility)."""
     res = train_service.fetch_and_save(destination)
     return jsonify(res)
 
 @train_bp.route('/train')
 def page_train():
-    """Pagina per visualizzare informazioni sui treni"""
+    """Page to display train information."""
     return render_template('train.html')
