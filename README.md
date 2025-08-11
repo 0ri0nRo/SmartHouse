@@ -29,10 +29,58 @@ Before running this project, ensure you have the following installed:
 
 ## Project Structure
 
-- **`Dockerfile`**: Defines the Docker image for the project.
-- **`docker-compose.yml`**: Configures the Docker services and networking.
-- **`app/`**: Contains the HTML and JavaScript files for the web interface.
-- **`index.html`**: The main HTML file for the web application.
+```bash
+project/
+├── app.py                          # Entry point principale
+├── config/
+│   ├── __init__.py
+│   └── settings.py                 # Configurazioni e variabili d'ambiente
+├── models/
+│   ├── __init__.py
+│   └── database.py                 # Connessioni DB e decorators
+├── services/
+│   ├── __init__.py
+│   ├── sensor_service.py           # SensorService
+│   ├── air_quality_service.py      # AirQualityService
+│   ├── network_service.py          # NetworkService
+│   ├── train_service.py           # TrainService
+│   ├── todolist_service.py        # TodolistService
+│   └── ssh_service.py             # SSHService
+├── api/
+│   ├── __init__.py
+│   ├── sensor_routes.py           # Route per sensori
+│   ├── air_quality_routes.py      # Route per qualità aria
+│   ├── network_routes.py          # Route per dispositivi rete
+│   ├── train_routes.py            # Route per treni
+│   ├── todolist_routes.py         # Route per todo list
+│   ├── security_routes.py         # Route per sicurezza
+│   ├── system_routes.py           # Route per sistema/backup/SSH
+│   └── expense_routes.py          # Route per spese
+├── utils/
+│   ├── __init__.py
+│   ├── json_encoder.py            # CustomJSONEncoder
+│   └── decorators.py              # Decorators comuni
+├── templates/                      # Template HTML esistenti
+│   ├── index.html
+│   ├── temperature.html
+│   ├── umid.html
+│   ├── train.html
+│   ├── air_quality.html
+│   ├── raspi.html
+│   ├── security.html
+│   ├── expenses.html
+│   └── index-lista.html
+├── static/                         # File statici esistenti
+│   └── favicon.ico
+├── client/                         # Client esistenti
+│   ├── PostgresClient.py
+│   └── MongoClient.py
+├── scraper.py                      # File esistente
+├── send_email.py                   # File esistente
+├── expenses_gsheet.py              # File esistente
+├── gcredentials.json               # File esistente
+└── requirements.txt                # Dipendenze
+```
 
 ## Running the Project with Docker
 
