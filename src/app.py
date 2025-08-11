@@ -1,15 +1,15 @@
 """
-Flask Application - Entry Point Principale
+Flask Application - Main Entry Point
 
-Applicazione Flask refactorata con struttura modulare per gestire:
-- Sensori di temperatura e umidità
-- Qualità dell'aria
-- Dispositivi di rete
-- Informazioni sui treni
-- Todo list
-- Sistema di sicurezza
-- Backup e comandi SSH
-- Gestione spese
+Refactored Flask application with a modular structure to handle:
+- Temperature and humidity sensors
+- Air quality
+- Network devices
+- Train information
+- To-do list
+- Security system
+- Backup and SSH commands
+- Expense management
 """
 
 from flask import Flask
@@ -17,51 +17,67 @@ from flask_cors import CORS
 import os
 import logging
 
-# Import locali del progetto refactorato
+# Local project imports (refactored structure)
 from config.settings import get_config, setup_logging
 from utils.json_encoder import CustomJSONEncoder
 from api import register_blueprints
 
+
 def create_app():
-    """Factory per creare l'applicazione Flask"""
-    
+    """
+    Factory function to create and configure a Flask application.
+
+    This function performs the following steps:
+    - Sets up logging for the application.
+    - Creates a Flask app instance.
+    - Loads and updates the app configuration.
+    - Configures Cross-Origin Resource Sharing (CORS).
+    - Sets a custom JSON encoder for the app.
+    - Registers all API blueprints with the app.
+
+    Returns:
+        Flask: The configured Flask application instance.
+    """
+
     # Setup logging
     logger = setup_logging()
-    logger.info("Avvio dell'applicazione Flask...")
-    
-    # Crea l'app Flask
+    logger.info("Starting Flask application...")
+
+    # Create Flask app instance
     app = Flask(__name__)
-    
-    # Carica configurazione
+
+    # Load configuration
     config = get_config()
     app.config.update(config)
-    
-    # Configura CORS
+
+    # Enable CORS
     CORS(app)
-    
-    # Configura JSON encoder personalizzato
+
+    # Set custom JSON encoder
     app.json_encoder = CustomJSONEncoder
-    
-    # Registra tutti i blueprint delle API
+
+    # Register all API blueprints
     register_blueprints(app)
-    
-    logger.info("Applicazione Flask configurata correttamente")
-    
+
+    logger.info("Flask application configured successfully")
+
     return app
 
+
 def main():
-    """Funzione principale per avviare il server"""
+    """Main function to start the Flask development server."""
     app = create_app()
-    
-    # Parametri del server
-    host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('DEBUG', 'False').lower() == 'true'
-    
-    logging.info(f"Avvio server su {host}:{port} (debug={debug})")
-    
-    # Avvia il server
+
+    # Server parameters
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("DEBUG", "False").lower() == "true"
+
+    logging.info(f"Starting server on {host}:{port} (debug={debug})")
+
+    # Run the server
     app.run(host=host, port=port, debug=debug)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

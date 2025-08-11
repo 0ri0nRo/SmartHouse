@@ -31,36 +31,36 @@ Before running this project, ensure you have the following installed:
 
 ```bash
 project/
-├── app.py                          # Entry point principale
+├── app.py                          # Main entry point
 ├── config/
 │   ├── __init__.py
-│   └── settings.py                 # Configurazioni e variabili d'ambiente
+│   └── settings.py                 # Configuration and environment variables
 ├── models/
 │   ├── __init__.py
-│   └── database.py                 # Connessioni DB e decorators
+│   └── database.py                 # Database connections and decorators
 ├── services/
 │   ├── __init__.py
 │   ├── sensor_service.py           # SensorService
 │   ├── air_quality_service.py      # AirQualityService
 │   ├── network_service.py          # NetworkService
-│   ├── train_service.py           # TrainService
-│   ├── todolist_service.py        # TodolistService
-│   └── ssh_service.py             # SSHService
+│   ├── train_service.py            # TrainService
+│   ├── todolist_service.py         # TodolistService
+│   └── ssh_service.py              # SSHService
 ├── api/
 │   ├── __init__.py
-│   ├── sensor_routes.py           # Route per sensori
-│   ├── air_quality_routes.py      # Route per qualità aria
-│   ├── network_routes.py          # Route per dispositivi rete
-│   ├── train_routes.py            # Route per treni
-│   ├── todolist_routes.py         # Route per todo list
-│   ├── security_routes.py         # Route per sicurezza
-│   ├── system_routes.py           # Route per sistema/backup/SSH
-│   └── expense_routes.py          # Route per spese
+│   ├── sensor_routes.py            # Routes for sensor endpoints
+│   ├── air_quality_routes.py       # Routes for air quality endpoints
+│   ├── network_routes.py           # Routes for network devices
+│   ├── train_routes.py             # Routes for trains
+│   ├── todolist_routes.py          # Routes for to-do list
+│   ├── security_routes.py          # Routes for security
+│   ├── system_routes.py            # Routes for system/backup/SSH
+│   └── expense_routes.py           # Routes for expenses
 ├── utils/
 │   ├── __init__.py
-│   ├── json_encoder.py            # CustomJSONEncoder
-│   └── decorators.py              # Decorators comuni
-├── templates/                      # Template HTML esistenti
+│   ├── json_encoder.py             # Custom JSON encoder
+│   └── decorators.py               # Common decorators
+├── templates/                      # Existing HTML templates
 │   ├── index.html
 │   ├── temperature.html
 │   ├── umid.html
@@ -70,16 +70,17 @@ project/
 │   ├── security.html
 │   ├── expenses.html
 │   └── index-lista.html
-├── static/                         # File statici esistenti
+├── static/                         # Existing static files
 │   └── favicon.ico
-├── client/                         # Client esistenti
+├── client/                         # Existing client classes
 │   ├── PostgresClient.py
 │   └── MongoClient.py
-├── scraper.py                      # File esistente
-├── send_email.py                   # File esistente
-├── expenses_gsheet.py              # File esistente
-├── gcredentials.json               # File esistente
-└── requirements.txt                # Dipendenze
+├── scraper.py                      # Web scraping script
+├── send_email.py                   # Email sending script
+├── expenses_gsheet.py              # Google Sheets expenses handler
+├── gcredentials.json               # Google API credentials file
+└── requirements.txt                # Project dependencies
+
 ```
 
 ## Running the Project with Docker
