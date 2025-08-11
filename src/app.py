@@ -204,6 +204,55 @@ class SensorService(BaseService):
             if cur: cur.close()
             if conn: conn.close()
 
+    def get_daily_humidity_for_month(self, month, year=None):
+        if year is None:
+            year = datetime.now().year
+        query = """
+            SELECT
+                EXTRACT(DAY FROM timestamp) AS day,
+                ROUND(AVG(humidity)::numeric, 2) AS avg_humidity
+            FROM sensor_readings
+            WHERE EXTRACT(MONTH FROM timestamp) = %s
+            AND EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY day
+            ORDER BY day;
+        """
+        conn = None
+        cur = None
+        try:
+            conn = self._connect()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            cur.execute(query, (month, year))
+            rows = cur.fetchall()
+            return {int(r['day']): float(r['avg_humidity']) for r in rows}
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+
+    def get_monthly_average_humidity(self, year):
+        query = """
+            SELECT
+                EXTRACT(MONTH FROM timestamp) AS month,
+                ROUND(AVG(humidity)::numeric, 2) AS avg_humidity
+            FROM sensor_readings
+            WHERE EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY month
+            ORDER BY month;
+        """
+        conn = None
+        cur = None
+        try:
+            conn = self._connect()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            cur.execute(query, (year,))
+            rows = cur.fetchall()
+            return {int(r['month']): float(r['avg_humidity']) for r in rows}
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+
+
+
     def get_daily_for_month(self, month, year=None):
         if year is None:
             year = datetime.now().year
@@ -806,6 +855,27 @@ def api_temperature_average(start_datetime, end_datetime):
     data = sensor_service.get_average_temperatures(s, e)
     if data is None: return jsonify({'error': 'Errore fetching'}), 500
     return jsonify(data), 200
+
+
+@app.route('/api/monthly_average_humidity/<int:mese>/<int:anno>', methods=['GET'])
+@handle_db_error
+def api_daily_humidity_by_month_year(mese, anno):
+    if mese < 1 or mese > 12:
+        return jsonify({'error': 'Mese non valido.'}), 400
+    if anno < 1900 or anno > datetime.now().year:
+        return jsonify({'error': 'Anno non valido.'}), 400
+    data = sensor_service.get_daily_humidity_for_month(mese, anno)
+    if not data:
+        return jsonify({'error': 'Nessun dato.'}), 404
+    return jsonify(data)
+
+@app.route('/api/monthly_average_humidity/<int:anno>', methods=['GET'])
+@handle_db_error
+def api_monthly_avg_humidity_by_year(anno):
+    if anno < 1900 or anno > datetime.now().year:
+        return jsonify({'error': 'Anno non valido.'}), 400
+    return jsonify(sensor_service.get_monthly_average_humidity(anno))
+
 
 @app.route('/api/humidity_average/<start_datetime>/<end_datetime>', methods=['GET'])
 @handle_db_error
