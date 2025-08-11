@@ -1,6 +1,7 @@
 from pymongo import MongoClient, errors
 from datetime import datetime
 from bson import ObjectId
+import pytz
 
 class MongoDBHandler:
     def __init__(self, uri, db_name, collection_name):
@@ -70,21 +71,16 @@ class MongoDBHandler:
 
     def read_today_items(self):
         try:
-            # Ottieni la data di oggi (inizio e fine)
-            start_of_day = datetime.combine(datetime.today(), datetime.min.time())
-            end_of_day = datetime.combine(datetime.today(), datetime.max.time())
-            
-            # Creiamo la query per selezionare gli item di oggi
+            utc = pytz.UTC
+            now = datetime.utcnow().replace(tzinfo=utc)
+            start_of_day = datetime.combine(now.date(), time.min).replace(tzinfo=utc)
+            end_of_day = datetime.combine(now.date(), time.max).replace(tzinfo=utc)
+
             query = {"timestamp": {"$gte": start_of_day, "$lt": end_of_day}}
-
-            # Recuperiamo i documenti
             documents = self.collection.find(query)
-
-            # Convertire ObjectId in stringa per evitare errori di serializzazione
             result = [{**doc, "_id": str(doc["_id"])} for doc in documents]
             print(result)
             return result
-
         except Exception as e:
             print(f"Errore durante la lettura degli item di oggi: {e}")
             return []

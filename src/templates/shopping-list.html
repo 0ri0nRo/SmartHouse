@@ -624,7 +624,7 @@
         async function loadCurrentItems() {
             try {
                 // Try to fetch from API first
-                const response = await fetch('/api/shopping-list/current');
+                const response = await fetch('/todolist/today');
                 if (response.ok) {
                     shoppingData = await response.json();
                 } else {
@@ -692,20 +692,21 @@
                 return;
             }
 
+            const timestamp = new Date().toISOString();
+
             const newItem = {
                 id: Date.now(),
                 name,
-                item_name: name, // For API compatibility
+                item_name: name,
                 store,
                 quantity,
                 neededBy,
                 priority,
                 inCart: false,
-                dateAdded: new Date().toISOString()
+                dateAdded: timestamp
             };
 
             try {
-                // Try to send to server
                 const response = await fetch('/todolist/insert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -714,32 +715,47 @@
                         store: store,
                         quantity: quantity,
                         priority: priority,
-                        needed_by: neededBy
+                        timestamp: timestamp
                     })
                 });
 
                 if (response.ok) {
-                    console.log('Item added to server successfully');
+                    const data = await response.json();
+                    console.log('Item added to server successfully:', data.message);
+
+                    // Aggiorna solo se server ha accettato
+                    shoppingData.push(newItem);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+
+                    // Aggiorna interfaccia
+                    renderCurrentItems();
+                    updateStatistics();
+
+                    // Pulisci form
+                    document.getElementById('item_name').value = '';
+                    document.getElementById('store').value = '';
+                    document.getElementById('quantity').value = '1';
+                    document.getElementById('needed_by').value = '';
+                    document.getElementById('priority').value = 'medium';
+
+                    alert('Item added successfully!');
+                } else {
+                    const errData = await response.json();
+                    alert(`Failed to add item: ${errData.message || response.statusText}`);
                 }
             } catch (error) {
                 console.error('Server unavailable, using local storage:', error);
+
+                // Salva in locale se server non risponde
+                shoppingData.push(newItem);
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                renderCurrentItems();
+                updateStatistics();
+
+                alert('Server unavailable, item saved locally.');
             }
-
-            // Always update local state
-            shoppingData.push(newItem);
-            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-            
-            // Clear form
-            document.getElementById('item_name').value = '';
-            document.getElementById('store').value = '';
-            document.getElementById('quantity').value = '1';
-            document.getElementById('needed_by').value = '';
-            document.getElementById('priority').value = 'medium';
-
-            // Re-render and update stats
-            renderCurrentItems();
-            updateStatistics();
         }
+
 
         async function toggleItemInCart(index) {
             shoppingData[index].inCart = !shoppingData[index].inCart;
