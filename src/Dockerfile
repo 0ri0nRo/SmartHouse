@@ -1,30 +1,40 @@
 FROM python:3.12-alpine
 
-# Set the working directory
 WORKDIR /app
 
-# Install system dependencies for building Python packages
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    python3-dev \
-    linux-headers \
-    libffi-dev \
-    postgresql-dev \
-    nmap
+# Create the appgroup group and the appuser user, adding appuser to the existing dialout group
+RUN addgroup -S appgroup \
+    && adduser -S appuser -G appgroup \
+    && addgroup appuser dialout
 
-# Upgrade pip
-RUN pip install --upgrade pip
+# Install build dependencies required for compiling some Python packages
+RUN apk add --no-cache --virtual .build-deps \
+        gcc musl-dev python3-dev linux-headers libffi-dev postgresql-dev \
+    && apk add --no-cache nmap
 
-# Copy and install Python dependencies
+    
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
+# Copy requirements file to container
 COPY requirements.txt .
-RUN pip install -r requirements.txt
 
-# Copy the rest of the code
-COPY . .
+# Upgrade pip and install Python dependencies
+RUN python -m pip install --upgrade pip \
+    && python -m pip install -r requirements.txt
 
-# Expose port if needed (e.g., for Flask)
+# Remove build dependencies to reduce image size
+RUN apk del .build-deps
+
+# Copy application code and set ownership to appuser and appgroup
+COPY --chown=appuser:appgroup . .
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port your app will run on
 EXPOSE 5000
 
-# Command to run the app
+# Start the application
 CMD ["python", "app.py"]
