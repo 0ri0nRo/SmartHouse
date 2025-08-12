@@ -25,4 +25,3 @@ class TodolistService:
     def read_all(self):
         """Read all items in mongo collection"""
         return self.mongo.read_all_items()
-
