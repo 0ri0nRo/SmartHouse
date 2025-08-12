@@ -532,7 +532,7 @@
             <div class="form-row">
                 <div class="input-group">
                     <label for="store">Store</label>
-                    <input type="text" id="store" placeholder="e.g., Walmart, Target..." required>
+                    <input type="text" id="store" placeholder="e.g., Conad, Maurys..." required>
                 </div>
                 <div class="input-group">
                     <label for="priority">Priority</label>
@@ -543,13 +543,13 @@
                     </select>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="input-group">
+           <div class="form-row">
+                <div class="input-group" style="flex: 1;">
                     <label for="needed_by">Needed By (Optional)</label>
                     <input type="date" id="needed_by">
                 </div>
-                <div class="input-group">
-                    <button class="add-btn" onclick="addItem()">➕ Add Item</button>
+                <div class="input-group" style="display: flex; align-items: flex-end;">
+                    <button class="add-btn" style="width: 100%;" onclick="addItem()">➕ Add Item</button>
                 </div>
             </div>
         </div>
@@ -784,7 +784,7 @@
                 const deletedItem = shoppingData.splice(index, 1)[0];
                 
                 try {
-                    await fetch(`/todolist/delete/${deletedItem.id}`, {
+                    await fetch(`/todolist/delete/${deletedItem._id}`, {
                         method: 'DELETE'
                     });
                 } catch (error) {
