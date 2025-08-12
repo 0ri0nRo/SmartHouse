@@ -88,16 +88,20 @@ class MongoDBHandler:
     def delete_item(self, item_id):
         """Elimina un item dalla collezione in base al suo ID."""
         try:
-            # Esegui la cancellazione
-            result = self.collection.delete_one({"_id": ObjectId(item_id)})
+            # Verifica che l'ID sia un ObjectId valido
+            if not ObjectId.is_valid(item_id):
+                return {"message": "Invalid item ID format", "deleted_count": 0}
 
-            # Se il numero di cancellazioni è maggiore di 0, significa che è stato trovato e cancellato
+            oid = ObjectId(item_id)
+            result = self.collection.delete_one({"_id": oid})
+
             if result.deleted_count > 0:
                 return {"message": "Item deleted successfully", "deleted_count": result.deleted_count}
             else:
                 return {"message": "Item not found", "deleted_count": result.deleted_count}
         except Exception as e:
             return {"message": f"Error deleting item: {e}", "deleted_count": 0}
+
 
 
     def range_timestamp(self, start_timestamp, end_timestamp):
