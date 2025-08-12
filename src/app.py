@@ -12,8 +12,8 @@ Refactored Flask application with a modular structure to handle:
 - Expense management
 """
 
-from flask import Flask
-from flask_cors import CORS
+from flask import Flask, send_from_directory # pyright: ignore[reportMissingImports]
+from flask_cors import CORS # type: ignore
 import os
 import logging
 
@@ -58,6 +58,10 @@ def create_app():
 
     # Register all API blueprints
     register_blueprints(app)
+
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory('static', 'favicon.ico')
 
     logger.info("Flask application configured successfully")
 

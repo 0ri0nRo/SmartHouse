@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>Temperature and Humidity Dashboard</title>
     <style>
         * {
@@ -21,6 +22,11 @@
             align-items: center;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            /* iOS Fix: Force hardware acceleration */
+            -webkit-transform: translate3d(0,0,0);
+            transform: translate3d(0,0,0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         /* Minimalist animated background */
@@ -467,6 +473,13 @@
             }
         }
 
+        @supports (-webkit-touch-callout: none) {
+            body.dark-mode {
+                background-color: #000000 !important;
+                background-image: none !important;
+            }
+        }
+
         /* Mobile optimizations */
         @media (max-width: 600px) {
             body {
@@ -804,10 +817,29 @@
             if (darkMode === "enabled") {
                 bodyElement.classList.add("dark-mode");
                 toggleDarkMode.checked = true;
+                 // iOS Fix: Force immediate repaint
+                forceRepaint()
             } else {
                 bodyElement.classList.remove("dark-mode");
                 toggleDarkMode.checked = false;
             }
+        }
+
+         // iOS Fix: Force repaint function
+        function forceRepaint() {
+            // Force a repaint on iOS devices
+            const body = document.body;
+            body.style.display = 'none';
+            body.offsetHeight; // Trigger reflow
+            body.style.display = 'flex';
+            
+            // Alternative method for stubborn cases
+            setTimeout(() => {
+                body.style.transform = 'translateZ(0)';
+                setTimeout(() => {
+                    body.style.transform = '';
+                }, 1);
+            }, 10);
         }
 
         // Enhanced dark mode toggle with smooth transition
@@ -823,6 +855,11 @@
             } else {
                 localStorage.setItem("darkMode", "disabled");
             }
+
+             // iOS Fix: Force repaint after toggle
+            setTimeout(() => {
+                forceRepaint();
+            }, 50);
 
             // Remove transition class after animation completes
             setTimeout(() => {
@@ -886,9 +923,20 @@
             }
         }
 
-        // Enhanced initialization with staggered loading
+        // Enhanced initialization with staggered loading and iOS fix
         window.onload = () => {
             loadTheme();
+            
+            // iOS specific initialization
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // Add iOS-specific class for additional fixes if needed
+                document.body.classList.add('ios-device');
+                
+                // Force initial repaint on iOS
+                setTimeout(() => {
+                    forceRepaint();
+                }, 100);
+            }
             
             // Stagger the API calls for better UX
             setTimeout(() => updateUI(), 50);
@@ -983,6 +1031,29 @@
                         card.style.transform = '';
                     }, 100);
                 }, { passive: true });
+            });
+        }
+
+        // iOS specific fixes for viewport and rendering issues
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            // Fix for iOS viewport height issues
+            const setVH = () => {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            };
+            
+            setVH();
+            window.addEventListener('resize', setVH);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(setVH, 100);
+                setTimeout(forceRepaint, 150);
+            });
+            
+            // Additional fix for iOS dark mode rendering
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    setTimeout(forceRepaint, 100);
+                }
             });
         }
     </script>
