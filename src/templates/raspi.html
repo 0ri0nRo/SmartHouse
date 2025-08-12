@@ -743,7 +743,7 @@
         </div>
         <div class="panel-content">
           <p class="panel-description">
-            Execute commands remotely via SSH connection. Upload your private key (RSA, ECDSA, or PEM format) and enter commands to run on the target system.
+            Execute commands remotely via SSH connection. Upload your private key and enter commands to run on the configured Raspberry Pi.
           </p>
           
           <div class="form-group">
@@ -765,16 +765,6 @@
               <strong>Size:</strong> <span id="fileSize">-</span><br>
               <strong>Type:</strong> <span id="fileType">-</span>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Host Information</label>
-            <input type="text" id="hostInput" class="form-input" placeholder="user@hostname or IP address (e.g., pi@192.168.1.100)" />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">Port (Optional)</label>
-            <input type="number" id="portInput" class="form-input" placeholder="22" value="22" min="1" max="65535" />
           </div>
           
           <div class="form-group">
@@ -898,7 +888,7 @@
 
     // Global variables for SSH management
     let commandHistory = [];
-    let currentConnection = null;
+    let currentPrivateKey = null;
 
     // File input handling
     document.getElementById('privateKeyInput').addEventListener('change', function(event) {
@@ -913,6 +903,7 @@
         label.classList.remove('has-file');
         label.innerHTML = '<i data-lucide="upload"></i><span>Click to select SSH private key file</span>';
         fileInfo.classList.remove('show');
+        currentPrivateKey = null;
         lucide.createIcons();
         return;
       }
@@ -929,10 +920,12 @@
       
       lucide.createIcons();
 
-      // Validate SSH key
+      // Read and validate SSH key
       const reader = new FileReader();
       reader.onload = function(e) {
         const content = e.target.result.trim();
+        currentPrivateKey = content;
+        
         const isValidKey = 
           content.includes("-----BEGIN RSA PRIVATE KEY-----") ||
           content.includes("-----BEGIN EC PRIVATE KEY-----") ||
@@ -970,7 +963,7 @@
       if (type === 'command') {
         logEntry.innerHTML = `
           <div class="command-header">${content.command}</div>
-          <div class="command-time">${timestamp} - ${content.host}</div>
+          <div class="command-time">${timestamp}</div>
           <div class="command-output">${content.output || 'No output'}</div>
         `;
       } else if (type === 'error') {
@@ -1021,134 +1014,62 @@
       }
     });
 
-    // Enhanced SSH execution function
-    async function executeSSHCommand(privateKey, host, port, command, passphrase = '') {
+    // SSH execution function - Updated for backend API
+    async function executeSSHCommand(privateKey, command, passphrase = '') {
       try {
         addOutputLog({
           status: 'connecting',
-          message: `Connecting to ${host}:${port}...`
+          message: `Connecting to Raspberry Pi...`
         }, 'status');
 
-        // Here you would make the actual API call to your backend
-        // For demonstration, we'll simulate the process with realistic responses
-        
-        const response = await simulateSSHExecution(host, command);
+        // Make API call to backend
+        const response = await axios.post('/api/ssh_exec', {
+          privateKey: privateKey,
+          command: command,
+          passphrase: passphrase || null
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         
         addOutputLog({
           status: 'connected',
-          message: `Connected to ${host}`
+          message: `Connected to Raspberry Pi`
         }, 'status');
 
         addOutputLog({
           command: command,
-          host: host,
-          output: response.output
+          output: response.data.output
         }, 'command');
 
         // Store in history
         commandHistory.push({
           timestamp: new Date(),
-          host: host,
           command: command,
-          output: response.output,
-          success: response.success
+          output: response.data.output,
+          success: true
         });
 
-        return response;
+        return {
+          success: true,
+          output: response.data.output
+        };
 
       } catch (error) {
-        addOutputLog(`Connection failed: ${error.message}`, 'error');
+        const errorMessage = error.response?.data?.error || error.message;
+        addOutputLog(`SSH execution failed: ${errorMessage}`, 'error');
+        
+        // Store error in history
+        commandHistory.push({
+          timestamp: new Date(),
+          command: command,
+          output: errorMessage,
+          success: false
+        });
+        
         throw error;
       }
-    }
-
-    // Simulate SSH execution with realistic responses
-    async function simulateSSHExecution(host, command) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          let output = '';
-          
-          // Generate realistic output based on command
-          if (command.includes('ls')) {
-            output = `total 32
-drwxr-xr-x  3 pi pi 4096 ${new Date().toLocaleDateString()} .
-drwxr-xr-x 15 pi pi 4096 ${new Date().toLocaleDateString()} ..
--rw-r--r--  1 pi pi 1234 ${new Date().toLocaleDateString()} config.txt
--rw-r--r--  1 pi pi 2048 ${new Date().toLocaleDateString()} dashboard.log
-drwxr-xr-x  2 pi pi 4096 ${new Date().toLocaleDateString()} scripts`;
-          } else if (command.includes('systemctl status')) {
-            const service = command.split(' ').pop() || 'ssh';
-            output = `● ${service}.service - OpenBSD Secure Shell server
-   Loaded: loaded (/lib/systemd/system/${service}.service; enabled; vendor preset: enabled)
-   Active: active (running) since ${new Date().toLocaleString()}
-     Docs: man:sshd(8)
-          man:sshd_config(5)
-  Process: 1234 ExecStartPre=/usr/sbin/sshd -t (code=exited, status=0/SUCCESS)
- Main PID: 1234 (sshd)
-    Tasks: 1 (limit: 2200)
-   CGroup: /system.slice/${service}.service
-           └─1234 /usr/sbin/sshd -D`;
-          } else if (command.includes('df') || command.includes('disk')) {
-            output = `Filesystem      Size  Used Avail Use% Mounted on
-/dev/root        29G  4.2G   23G  16% /
-devtmpfs        460M     0  460M   0% /dev
-tmpfs           464M     0  464M   0% /dev/shm
-tmpfs           464M  6.3M  458M   2% /run
-tmpfs           5.0M  4.0K  5.0M   1% /run/lock
-tmpfs           464M     0  464M   0% /sys/fs/cgroup
-/dev/mmcblk0p1  253M   50M  203M  20% /boot
-tmpfs            93M     0   93M   0% /run/user/1000`;
-          } else if (command.includes('free') || command.includes('memory')) {
-            output = `              total        used        free      shared  buff/cache   available
-Mem:         949760      145280      234560       12800      569920      742400
-Swap:        102396           0      102396`;
-          } else if (command.includes('uptime')) {
-            output = ` ${new Date().toLocaleTimeString()}  up 5 days,  2:34,  1 user,  load average: 0.08, 0.12, 0.15`;
-          } else if (command.includes('whoami')) {
-            output = `pi`;
-          } else if (command.includes('pwd')) {
-            output = `/home/pi`;
-          } else if (command.includes('date')) {
-            output = new Date().toString();
-          } else if (command.includes('uname')) {
-            output = `Linux raspberrypi 5.10.63-v7l+ #1459 SMP Wed Oct 6 16:41:57 BST 2021 armv7l GNU/Linux`;
-          } else if (command.includes('ps')) {
-            output = `  PID TTY          TIME CMD
- 1234 ?        00:00:01 systemd
- 1235 ?        00:00:00 kthreadd
- 1236 ?        00:00:00 rcu_gp
- 1237 ?        00:00:00 rcu_par_gp
- 1238 ?        00:00:00 kworker/0:0H
- 1239 tty1     00:00:00 bash`;
-          } else if (command.includes('cat /proc/cpuinfo')) {
-            output = `processor	: 0
-model name	: ARMv7 Processor rev 3 (v7l)
-BogoMIPS	: 108.00
-Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm crc32
-CPU implementer	: 0x41
-CPU architecture: 7
-CPU variant	: 0x0
-CPU part	: 0xd08
-CPU revision	: 3
-
-Hardware	: BCM2711
-Revision	: c03112
-Serial		: 10000000abcdef01
-Model		: Raspberry Pi 4 Model B Rev 1.2`;
-          } else {
-            // Generic command output
-            output = `Command '${command}' executed successfully.
-Exit code: 0
-Timestamp: ${new Date().toISOString()}`;
-          }
-
-          resolve({
-            success: true,
-            output: output,
-            exitCode: 0
-          });
-        }, 1500 + Math.random() * 1000); // Simulate network delay
-      });
     }
 
     function fetchData() {
@@ -1206,22 +1127,15 @@ Timestamp: ${new Date().toISOString()}`;
       }, 2000);
     });
 
-    // Enhanced SSH command button handler
+    // SSH command button handler - Updated for backend API
     document.getElementById('runSSHCommandBtn').addEventListener('click', async function() {
       const btn = this;
-      const fileInput = document.getElementById('privateKeyInput');
-      const host = document.getElementById('hostInput').value.trim();
-      const port = document.getElementById('portInput').value.trim() || '22';
       const command = document.getElementById('commandInput').value.trim();
       const passphrase = document.getElementById('passphraseInput').value.trim();
 
       // Input validation
-      if (!fileInput.files.length) {
+      if (!currentPrivateKey) {
         addOutputLog("ERROR: No private key file selected. Please choose a valid key file.", 'error');
-        return;
-      }
-      if (!host) {
-        addOutputLog("ERROR: No host specified. Please enter a hostname or IP address.", 'error');
         return;
       }
       if (!command) {
@@ -1236,78 +1150,26 @@ Timestamp: ${new Date().toISOString()}`;
       lucide.createIcons();
 
       try {
-        const file = fileInput.files[0];
-        const reader = new FileReader();
+        await executeSSHCommand(currentPrivateKey, command, passphrase);
         
-        reader.onload = async function() {
-          const privateKey = reader.result;
-          
-          try {
-            await executeSSHCommand(privateKey, host, port, command, passphrase);
-            
-            btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
-            btn.className = 'btn btn-success btn-full';
-            lucide.createIcons();
-            
-          } catch (error) {
-            btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
-            btn.className = 'btn btn-danger btn-full';
-            lucide.createIcons();
-          }
-          
-          // Reset button after delay
-          setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-            btn.className = 'btn btn-full';
-            btn.classList.remove('loading');
-            lucide.createIcons();
-          }, 3000);
-        };
-        
-        reader.readAsText(file);
-        
-      } catch (error) {
-        addOutputLog(`Unexpected error: ${error.message}`, 'error');
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-        btn.classList.remove('loading');
-        lucide.createIcons();
-      }
-
-      /* 
-      // Real API implementation - uncomment and modify as needed
-      try {
-        const formData = new FormData();
-        formData.append('privateKey', fileInput.files[0]);
-        formData.append('host', host);
-        formData.append('port', port);
-        formData.append('command', command);
-        formData.append('passphrase', passphrase);
-
-        const response = await axios.post('/api/ssh_exec', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        addOutputLog({
-          command: command,
-          host: host,
-          output: response.data.output || 'Command executed successfully'
-        }, 'command');
-
         btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
         btn.className = 'btn btn-success btn-full';
-
-      } catch (error) {
-        const errorMessage = error.response?.data?.error || error.message;
-        addOutputLog(`SSH execution failed: ${errorMessage}`, 'error');
+        lucide.createIcons();
         
+      } catch (error) {
         btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
         btn.className = 'btn btn-danger btn-full';
+        lucide.createIcons();
       }
-      */
+      
+      // Reset button after delay
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        btn.className = 'btn btn-full';
+        btn.classList.remove('loading');
+        lucide.createIcons();
+      }, 3000);
     });
 
     // Keyboard shortcuts
@@ -1343,6 +1205,7 @@ Timestamp: ${new Date().toISOString()}`;
             • <code>df -h</code> - Show disk usage<br>
             • <code>free -h</code> - Show memory usage<br>
             • <code>uptime</code> - Show system uptime<br>
+            • <code>cat /proc/cpuinfo</code> - Show CPU information<br>
             • Press <strong>Ctrl+L</strong> to clear output
           </div>
         `;
