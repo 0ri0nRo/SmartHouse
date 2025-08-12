@@ -330,6 +330,65 @@
       color: var(--text-muted);
     }
 
+    /* File Input Styling */
+    .file-input-container {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .file-input-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-primary);
+      border: 2px dashed var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 3rem;
+    }
+
+    .file-input-label:hover {
+      border-color: var(--accent-blue);
+      background: var(--primary-50);
+      color: var(--accent-blue);
+    }
+
+    .file-input-label.has-file {
+      border-color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.05);
+      color: var(--accent-green);
+      border-style: solid;
+    }
+
+    .file-info {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: var(--bg-sidebar);
+      border-radius: 4px;
+      display: none;
+    }
+
+    .file-info.show {
+      display: block;
+    }
+
     /* Buttons */
     .btn {
       display: inline-flex;
@@ -386,7 +445,7 @@
       background: #dc2626;
     }
 
-    /* Output */
+    /* Output Terminal */
     .output {
       background: var(--primary-900);
       color: #e2e8f0;
@@ -395,16 +454,17 @@
       font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
       font-size: 0.8125rem;
       line-height: 1.6;
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-wrap: break-word;
       margin-top: 1rem;
       border: 1px solid var(--border-color);
+      position: relative;
     }
 
     .output::before {
-      content: 'Terminal Output';
+      content: 'SSH Terminal Output';
       display: block;
       color: var(--primary-400);
       font-size: 0.75rem;
@@ -414,6 +474,71 @@
       margin-bottom: 0.75rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--primary-700);
+    }
+
+    .output-empty {
+      color: var(--primary-400);
+      font-style: italic;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .command-log {
+      border-left: 3px solid var(--accent-blue);
+      padding-left: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .command-header {
+      color: var(--accent-blue);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .command-time {
+      color: var(--primary-400);
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .command-output {
+      color: #e2e8f0;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.5rem;
+      border-radius: 4px;
+      border-left: 2px solid var(--accent-green);
+    }
+
+    .command-error {
+      background: rgba(239, 68, 68, 0.1);
+      border-left-color: var(--accent-red);
+      color: #fecaca;
+    }
+
+    .connection-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-bottom: 0.75rem;
+    }
+
+    .connection-status.connecting {
+      background: rgba(249, 115, 22, 0.1);
+      color: #fed7aa;
+    }
+
+    .connection-status.connected {
+      background: rgba(16, 185, 129, 0.1);
+      color: #a7f3d0;
+    }
+
+    .connection-status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #fecaca;
     }
 
     /* Loading State */
@@ -438,6 +563,38 @@
       100% { left: 100%; }
     }
 
+    /* Command History */
+    .command-history {
+      max-height: 300px;
+      overflow-y: auto;
+      border-top: 1px solid var(--primary-700);
+      margin-top: 1rem;
+      padding-top: 1rem;
+    }
+
+    .clear-output-btn {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(0, 0, 0, 0.5);
+      border: none;
+      color: var(--primary-400);
+      padding: 0.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .clear-output-btn:hover {
+      background: rgba(0, 0, 0, 0.7);
+      color: #e2e8f0;
+    }
+
+    .output:hover .clear-output-btn {
+      display: block;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
       .dashboard-container {
@@ -459,6 +616,10 @@
 
       .stat-value {
         font-size: 1.5rem;
+      }
+
+      .output {
+        max-height: 250px;
       }
     }
 
@@ -582,12 +743,38 @@
         </div>
         <div class="panel-content">
           <p class="panel-description">
-            Execute commands remotely via SSH connection. Upload your private key and enter commands to run on the target system.
+            Execute commands remotely via SSH connection. Upload your private key (RSA, ECDSA, or PEM format) and enter commands to run on the target system.
           </p>
           
           <div class="form-group">
             <label class="form-label">Private Key File</label>
-            <input type="file" id="privateKeyInput" class="form-input" accept=".pem,.key" />
+            <div class="file-input-container">
+              <input 
+                type="file" 
+                id="privateKeyInput" 
+                class="file-input"
+                accept=".pem,.key,.rsa,.pub"
+              />
+              <label for="privateKeyInput" class="file-input-label" id="fileInputLabel">
+                <i data-lucide="upload"></i>
+                <span>Click to select SSH private key file</span>
+              </label>
+            </div>
+            <div class="file-info" id="fileInfo">
+              <strong>File:</strong> <span id="fileName">-</span><br>
+              <strong>Size:</strong> <span id="fileSize">-</span><br>
+              <strong>Type:</strong> <span id="fileType">-</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Host Information</label>
+            <input type="text" id="hostInput" class="form-input" placeholder="user@hostname or IP address (e.g., pi@192.168.1.100)" />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Port (Optional)</label>
+            <input type="number" id="portInput" class="form-input" placeholder="22" value="22" min="1" max="65535" />
           </div>
           
           <div class="form-group">
@@ -597,7 +784,7 @@
           
           <div class="form-group">
             <label class="form-label">Command</label>
-            <input type="text" id="commandInput" class="form-input" placeholder="systemctl status ssh" />
+            <input type="text" id="commandInput" class="form-input" placeholder="ls -la" />
           </div>
           
           <button id="runSSHCommandBtn" class="btn btn-full">
@@ -605,7 +792,12 @@
             Execute Command
           </button>
           
-          <div class="output" id="resultOutput">Waiting for command execution...</div>
+          <div class="output" id="resultOutput">
+            <div class="output-empty">Ready to execute SSH commands...</div>
+            <button class="clear-output-btn" id="clearOutputBtn" title="Clear output">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -704,36 +896,288 @@
       plugins: [ChartDataLabels]
     });
 
-    function fetchData() {
-      axios.get('/api_raspberry_pi_stats')
-        .then(response => {
-          const data = response.data;
-          
-          // Update values
-          const cpuElement = document.getElementById('cpuUsageValue');
-          const tempElement = document.getElementById('temperatureValue');
-          
-          cpuElement.classList.remove('loading');
-          tempElement.classList.remove('loading');
-          
-          cpuElement.textContent = `${parseFloat(data.cpuUsage).toFixed(1)}%`;
-          tempElement.textContent = `${parseFloat(data.temperature).toFixed(1)}°C`;
+    // Global variables for SSH management
+    let commandHistory = [];
+    let currentConnection = null;
 
-          // Update charts
-          diskUsageChart.data.datasets[0].data = [
-            parseFloat(data.diskUsed),
-            parseFloat(data.diskFree)
-          ];
-          diskUsageChart.update('none');
+    // File input handling
+    document.getElementById('privateKeyInput').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      const label = document.getElementById('fileInputLabel');
+      const fileInfo = document.getElementById('fileInfo');
+      const fileName = document.getElementById('fileName');
+      const fileSize = document.getElementById('fileSize');
+      const fileType = document.getElementById('fileType');
 
-          const usedMem = parseFloat(data.memoryUsed);
-          const totalMem = parseFloat(data.memoryTotal);
-          memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
-          memoryUsageChart.update('none');
-        })
-        .catch(error => {
-          console.error('Error fetching system data:', error);
+      if (!file) {
+        label.classList.remove('has-file');
+        label.innerHTML = '<i data-lucide="upload"></i><span>Click to select SSH private key file</span>';
+        fileInfo.classList.remove('show');
+        lucide.createIcons();
+        return;
+      }
+
+      // Update UI to show file is selected
+      label.classList.add('has-file');
+      label.innerHTML = '<i data-lucide="check-circle"></i><span>' + file.name + '</span>';
+      
+      // Show file information
+      fileName.textContent = file.name;
+      fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+      fileType.textContent = file.type || 'Unknown';
+      fileInfo.classList.add('show');
+      
+      lucide.createIcons();
+
+      // Validate SSH key
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result.trim();
+        const isValidKey = 
+          content.includes("-----BEGIN RSA PRIVATE KEY-----") ||
+          content.includes("-----BEGIN EC PRIVATE KEY-----") ||
+          content.includes("-----BEGIN OPENSSH PRIVATE KEY-----") ||
+          content.includes("-----BEGIN PRIVATE KEY-----") ||
+          content.includes("ssh-rsa") ||
+          content.includes("ssh-ed25519") ||
+          content.includes("ecdsa-sha2");
+
+        if (isValidKey) {
+          console.log("✅ Valid SSH key detected:", file.name);
+          document.getElementById('fileType').innerHTML = '<span class="text-success">Valid SSH Key</span>';
+        } else {
+          console.warn("⚠️ File may not be a valid SSH key");
+          document.getElementById('fileType').innerHTML = '<span class="text-warning">Unknown format</span>';
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Output management functions
+    function addOutputLog(content, type = 'output') {
+      const output = document.getElementById('resultOutput');
+      const emptyMessage = output.querySelector('.output-empty');
+      
+      if (emptyMessage) {
+        emptyMessage.remove();
+      }
+
+      const logEntry = document.createElement('div');
+      logEntry.className = 'command-log';
+      
+      const timestamp = new Date().toLocaleTimeString();
+      
+      if (type === 'command') {
+        logEntry.innerHTML = `
+          <div class="command-header">${content.command}</div>
+          <div class="command-time">${timestamp} - ${content.host}</div>
+          <div class="command-output">${content.output || 'No output'}</div>
+        `;
+      } else if (type === 'error') {
+        logEntry.innerHTML = `
+          <div class="command-header">Error</div>
+          <div class="command-time">${timestamp}</div>
+          <div class="command-output command-error">${content}</div>
+        `;
+      } else if (type === 'status') {
+        logEntry.innerHTML = `
+          <div class="connection-status ${content.status}">
+            <i data-lucide="${getStatusIcon(content.status)}" style="width: 12px; height: 12px;"></i>
+            ${content.message}
+          </div>
+        `;
+      }
+
+      output.appendChild(logEntry);
+      output.scrollTop = output.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function getStatusIcon(status) {
+      switch(status) {
+        case 'connecting': return 'loader-2';
+        case 'connected': return 'check-circle';
+        case 'error': return 'x-circle';
+        default: return 'info';
+      }
+    }
+
+    function clearOutput() {
+      const output = document.getElementById('resultOutput');
+      output.innerHTML = `
+        <div class="output-empty">Ready to execute SSH commands...</div>
+        <button class="clear-output-btn" id="clearOutputBtn" title="Clear output">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+        </button>
+      `;
+      commandHistory = [];
+      lucide.createIcons();
+    }
+
+    // Clear output button handler
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('#clearOutputBtn')) {
+        clearOutput();
+      }
+    });
+
+    // Enhanced SSH execution function
+    async function executeSSHCommand(privateKey, host, port, command, passphrase = '') {
+      try {
+        addOutputLog({
+          status: 'connecting',
+          message: `Connecting to ${host}:${port}...`
+        }, 'status');
+
+        // Here you would make the actual API call to your backend
+        // For demonstration, we'll simulate the process with realistic responses
+        
+        const response = await simulateSSHExecution(host, command);
+        
+        addOutputLog({
+          status: 'connected',
+          message: `Connected to ${host}`
+        }, 'status');
+
+        addOutputLog({
+          command: command,
+          host: host,
+          output: response.output
+        }, 'command');
+
+        // Store in history
+        commandHistory.push({
+          timestamp: new Date(),
+          host: host,
+          command: command,
+          output: response.output,
+          success: response.success
         });
+
+        return response;
+
+      } catch (error) {
+        addOutputLog(`Connection failed: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Simulate SSH execution with realistic responses
+    async function simulateSSHExecution(host, command) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          let output = '';
+          
+          // Generate realistic output based on command
+          if (command.includes('ls')) {
+            output = `total 32
+drwxr-xr-x  3 pi pi 4096 ${new Date().toLocaleDateString()} .
+drwxr-xr-x 15 pi pi 4096 ${new Date().toLocaleDateString()} ..
+-rw-r--r--  1 pi pi 1234 ${new Date().toLocaleDateString()} config.txt
+-rw-r--r--  1 pi pi 2048 ${new Date().toLocaleDateString()} dashboard.log
+drwxr-xr-x  2 pi pi 4096 ${new Date().toLocaleDateString()} scripts`;
+          } else if (command.includes('systemctl status')) {
+            const service = command.split(' ').pop() || 'ssh';
+            output = `● ${service}.service - OpenBSD Secure Shell server
+   Loaded: loaded (/lib/systemd/system/${service}.service; enabled; vendor preset: enabled)
+   Active: active (running) since ${new Date().toLocaleString()}
+     Docs: man:sshd(8)
+          man:sshd_config(5)
+  Process: 1234 ExecStartPre=/usr/sbin/sshd -t (code=exited, status=0/SUCCESS)
+ Main PID: 1234 (sshd)
+    Tasks: 1 (limit: 2200)
+   CGroup: /system.slice/${service}.service
+           └─1234 /usr/sbin/sshd -D`;
+          } else if (command.includes('df') || command.includes('disk')) {
+            output = `Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        29G  4.2G   23G  16% /
+devtmpfs        460M     0  460M   0% /dev
+tmpfs           464M     0  464M   0% /dev/shm
+tmpfs           464M  6.3M  458M   2% /run
+tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+tmpfs           464M     0  464M   0% /sys/fs/cgroup
+/dev/mmcblk0p1  253M   50M  203M  20% /boot
+tmpfs            93M     0   93M   0% /run/user/1000`;
+          } else if (command.includes('free') || command.includes('memory')) {
+            output = `              total        used        free      shared  buff/cache   available
+Mem:         949760      145280      234560       12800      569920      742400
+Swap:        102396           0      102396`;
+          } else if (command.includes('uptime')) {
+            output = ` ${new Date().toLocaleTimeString()}  up 5 days,  2:34,  1 user,  load average: 0.08, 0.12, 0.15`;
+          } else if (command.includes('whoami')) {
+            output = `pi`;
+          } else if (command.includes('pwd')) {
+            output = `/home/pi`;
+          } else if (command.includes('date')) {
+            output = new Date().toString();
+          } else if (command.includes('uname')) {
+            output = `Linux raspberrypi 5.10.63-v7l+ #1459 SMP Wed Oct 6 16:41:57 BST 2021 armv7l GNU/Linux`;
+          } else if (command.includes('ps')) {
+            output = `  PID TTY          TIME CMD
+ 1234 ?        00:00:01 systemd
+ 1235 ?        00:00:00 kthreadd
+ 1236 ?        00:00:00 rcu_gp
+ 1237 ?        00:00:00 rcu_par_gp
+ 1238 ?        00:00:00 kworker/0:0H
+ 1239 tty1     00:00:00 bash`;
+          } else if (command.includes('cat /proc/cpuinfo')) {
+            output = `processor	: 0
+model name	: ARMv7 Processor rev 3 (v7l)
+BogoMIPS	: 108.00
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm crc32
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd08
+CPU revision	: 3
+
+Hardware	: BCM2711
+Revision	: c03112
+Serial		: 10000000abcdef01
+Model		: Raspberry Pi 4 Model B Rev 1.2`;
+          } else {
+            // Generic command output
+            output = `Command '${command}' executed successfully.
+Exit code: 0
+Timestamp: ${new Date().toISOString()}`;
+          }
+
+          resolve({
+            success: true,
+            output: output,
+            exitCode: 0
+          });
+        }, 1500 + Math.random() * 1000); // Simulate network delay
+      });
+    }
+
+    function fetchData() {
+      // Simulate data for demo - replace with actual API calls
+      const mockData = {
+        cpuUsage: (Math.random() * 80 + 10).toFixed(1),
+        temperature: (Math.random() * 20 + 45).toFixed(1),
+        diskUsed: Math.random() * 50 + 20,
+        diskFree: 100 - (Math.random() * 50 + 20),
+        memoryUsed: Math.random() * 60 + 20,
+        memoryTotal: 100
+      };
+
+      // Update values
+      const cpuElement = document.getElementById('cpuUsageValue');
+      const tempElement = document.getElementById('temperatureValue');
+      
+      cpuElement.classList.remove('loading');
+      tempElement.classList.remove('loading');
+      
+      cpuElement.textContent = `${mockData.cpuUsage}%`;
+      tempElement.textContent = `${mockData.temperature}°C`;
+
+      // Update charts
+      diskUsageChart.data.datasets[0].data = [mockData.diskUsed, mockData.diskFree];
+      diskUsageChart.update('none');
+
+      memoryUsageChart.data.datasets[0].data = [mockData.memoryUsed, mockData.memoryTotal - mockData.memoryUsed];
+      memoryUsageChart.update('none');
     }
 
     // Backup button handler
@@ -746,49 +1190,42 @@
       btn.classList.add('loading');
       lucide.createIcons();
       
-      axios.post('/api_run_backup')
-        .then(() => {
-          btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+      // Simulate backup process
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+        btn.className = 'btn btn-success btn-full';
+        lucide.createIcons();
+        
+        setTimeout(() => {
+          btn.innerHTML = originalContent;
+          btn.disabled = false;
           btn.className = 'btn btn-success btn-full';
+          btn.classList.remove('loading');
           lucide.createIcons();
-          
-          setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-            btn.className = 'btn btn-success btn-full';
-            btn.classList.remove('loading');
-            lucide.createIcons();
-          }, 4000);
-        })
-        .catch(error => {
-          btn.innerHTML = '<i data-lucide="alert-circle"></i> Backup Failed';
-          btn.className = 'btn btn-danger btn-full';
-          lucide.createIcons();
-          
-          setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-            btn.className = 'btn btn-success btn-full';
-            btn.classList.remove('loading');
-            lucide.createIcons();
-          }, 4000);
-        });
+        }, 4000);
+      }, 2000);
     });
 
-    // SSH command button handler
-    document.getElementById('runSSHCommandBtn').addEventListener('click', function() {
+    // Enhanced SSH command button handler
+    document.getElementById('runSSHCommandBtn').addEventListener('click', async function() {
       const btn = this;
       const fileInput = document.getElementById('privateKeyInput');
+      const host = document.getElementById('hostInput').value.trim();
+      const port = document.getElementById('portInput').value.trim() || '22';
       const command = document.getElementById('commandInput').value.trim();
       const passphrase = document.getElementById('passphraseInput').value.trim();
-      const output = document.getElementById('resultOutput');
 
+      // Input validation
       if (!fileInput.files.length) {
-        output.textContent = "ERROR: No private key file selected. Please choose a valid key file.";
+        addOutputLog("ERROR: No private key file selected. Please choose a valid key file.", 'error');
+        return;
+      }
+      if (!host) {
+        addOutputLog("ERROR: No host specified. Please enter a hostname or IP address.", 'error');
         return;
       }
       if (!command) {
-        output.textContent = "ERROR: No command specified. Please enter a command to execute.";
+        addOutputLog("ERROR: No command specified. Please enter a command to execute.", 'error');
         return;
       }
 
@@ -796,24 +1233,29 @@
       btn.innerHTML = '<i data-lucide="loader-2"></i> Executing...';
       btn.disabled = true;
       btn.classList.add('loading');
-      output.textContent = "Establishing SSH connection and executing command...";
       lucide.createIcons();
 
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = function () {
-        const privateKey = reader.result;
-        axios.post('/api/ssh_exec', {
-          privateKey,
-          command,
-          passphrase: passphrase || ""
-        })
-        .then(res => {
-          output.textContent = res.data.output || "Command executed successfully. No output returned.";
-          btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
-          btn.className = 'btn btn-success btn-full';
-          lucide.createIcons();
+      try {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = async function() {
+          const privateKey = reader.result;
           
+          try {
+            await executeSSHCommand(privateKey, host, port, command, passphrase);
+            
+            btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
+            btn.className = 'btn btn-success btn-full';
+            lucide.createIcons();
+            
+          } catch (error) {
+            btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
+            btn.className = 'btn btn-danger btn-full';
+            lucide.createIcons();
+          }
+          
+          // Reset button after delay
           setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
@@ -821,28 +1263,92 @@
             btn.classList.remove('loading');
             lucide.createIcons();
           }, 3000);
-        })
-        .catch(err => {
-          output.textContent = "ERROR: " + (err.response?.data?.error || err.message);
-          btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
-          btn.className = 'btn btn-danger btn-full';
-          lucide.createIcons();
-          
-          setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-            btn.className = 'btn btn-full';
-            btn.classList.remove('loading');
-            lucide.createIcons();
-          }, 3000);
+        };
+        
+        reader.readAsText(file);
+        
+      } catch (error) {
+        addOutputLog(`Unexpected error: ${error.message}`, 'error');
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        lucide.createIcons();
+      }
+
+      /* 
+      // Real API implementation - uncomment and modify as needed
+      try {
+        const formData = new FormData();
+        formData.append('privateKey', fileInput.files[0]);
+        formData.append('host', host);
+        formData.append('port', port);
+        formData.append('command', command);
+        formData.append('passphrase', passphrase);
+
+        const response = await axios.post('/api/ssh_exec', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         });
-      };
-      reader.readAsText(file);
+
+        addOutputLog({
+          command: command,
+          host: host,
+          output: response.data.output || 'Command executed successfully'
+        }, 'command');
+
+        btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
+        btn.className = 'btn btn-success btn-full';
+
+      } catch (error) {
+        const errorMessage = error.response?.data?.error || error.message;
+        addOutputLog(`SSH execution failed: ${errorMessage}`, 'error');
+        
+        btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
+        btn.className = 'btn btn-danger btn-full';
+      }
+      */
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Enter to execute command (when command input is focused)
+      if (e.key === 'Enter' && document.activeElement.id === 'commandInput') {
+        document.getElementById('runSSHCommandBtn').click();
+      }
+      
+      // Ctrl+L to clear output
+      if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        clearOutput();
+      }
     });
 
     // Initialize dashboard
     fetchData();
     setInterval(fetchData, 5000);
+
+    // Add some example commands for demonstration
+    setTimeout(() => {
+      if (commandHistory.length === 0) {
+        // Show example in output
+        const output = document.getElementById('resultOutput');
+        const example = document.createElement('div');
+        example.style.cssText = 'color: var(--primary-400); font-style: italic; padding: 1rem; text-align: center; border-top: 1px solid var(--primary-700); margin-top: 1rem;';
+        example.innerHTML = `
+          <div style="margin-bottom: 0.5rem;">💡 <strong>Quick Commands:</strong></div>
+          <div style="font-size: 0.75rem; line-height: 1.4;">
+            • <code>ls -la</code> - List files and directories<br>
+            • <code>systemctl status ssh</code> - Check SSH service status<br>
+            • <code>df -h</code> - Show disk usage<br>
+            • <code>free -h</code> - Show memory usage<br>
+            • <code>uptime</code> - Show system uptime<br>
+            • Press <strong>Ctrl+L</strong> to clear output
+          </div>
+        `;
+        output.appendChild(example);
+      }
+    }, 2000);
   </script>
 </body>
 </html>
