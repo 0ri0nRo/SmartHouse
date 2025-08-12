@@ -62,8 +62,10 @@ class MongoDBHandler:
             "item_name": item_name,
             "quantity": quantity,
             "store": store,
-            "timestamp": timestamp  
+            "timestamp": timestamp,
+            "purchased": False  # campo aggiunto, default False
         }
+
         self.insert_document(document)
 
     def read_today_items(self):
@@ -102,10 +104,6 @@ class MongoDBHandler:
             return {"message": f"Error deleting item: {e}", "deleted_count": 0}
 
 
-    # Aggiungere altre funzioni per la gestione dei dati
-    # ...
-    # def query by item_name
-
     def range_timestamp(self, start_timestamp, end_timestamp):
         """Query the database for items with timestamp between start_timestamp and end_timestamp"""
         try:
@@ -132,3 +130,11 @@ class MongoDBHandler:
         except Exception as e:
             print(f"Error querying database: {e}")
             return []  # Restituiamo una lista vuota in caso di errore
+
+    def read_all_items(self):
+        try:
+            documents = self.collection.find()
+            return [{**doc, "_id": str(doc["_id"])} for doc in documents]
+        except Exception as e:
+            print(f"Errore durante la lettura di tutti gli item: {e}")
+            return []
