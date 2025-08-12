@@ -21,3 +21,8 @@ class TodolistService:
     def range_timestamp(self, start_ts, end_ts):
         """Searches items within a timestamp range"""
         return self.mongo.range_timestamp(start_ts, end_ts)
+    
+    def read_all(self):
+        """Read all items in mongo collection"""
+        return self.mongo.read_all_items()
+
