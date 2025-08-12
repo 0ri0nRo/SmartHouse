@@ -71,7 +71,7 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile
-    command: python3 scanner.py
+    command: python3 utils/scanner.py
     depends_on:
       - db
     environment:
