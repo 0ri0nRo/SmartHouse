@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, render_template
 import os
 from models.database import handle_db_error
-from expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
+from services.expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
 from config.settings import get_config
 
 # Blueprint for expense-related endpoints
