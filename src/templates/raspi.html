@@ -1072,61 +1072,77 @@
       }
     }
 
+    // Fetch system data from backend API
     function fetchData() {
-      // Simulate data for demo - replace with actual API calls
-      const mockData = {
-        cpuUsage: (Math.random() * 80 + 10).toFixed(1),
-        temperature: (Math.random() * 20 + 45).toFixed(1),
-        diskUsed: Math.random() * 50 + 20,
-        diskFree: 100 - (Math.random() * 50 + 20),
-        memoryUsed: Math.random() * 60 + 20,
-        memoryTotal: 100
-      };
+      axios.get('/api_raspberry_pi_stats')
+        .then(response => {
+          const data = response.data;
+          
+          // Update values
+          const cpuElement = document.getElementById('cpuUsageValue');
+          const tempElement = document.getElementById('temperatureValue');
+          
+          cpuElement.classList.remove('loading');
+          tempElement.classList.remove('loading');
+          
+          cpuElement.textContent = `${parseFloat(data.cpuUsage).toFixed(1)}%`;
+          tempElement.textContent = `${parseFloat(data.temperature).toFixed(1)}°C`;
 
-      // Update values
-      const cpuElement = document.getElementById('cpuUsageValue');
-      const tempElement = document.getElementById('temperatureValue');
-      
-      cpuElement.classList.remove('loading');
-      tempElement.classList.remove('loading');
-      
-      cpuElement.textContent = `${mockData.cpuUsage}%`;
-      tempElement.textContent = `${mockData.temperature}°C`;
+          // Update charts
+          diskUsageChart.data.datasets[0].data = [
+            parseFloat(data.diskUsed),
+            parseFloat(data.diskFree)
+          ];
+          diskUsageChart.update('none');
 
-      // Update charts
-      diskUsageChart.data.datasets[0].data = [mockData.diskUsed, mockData.diskFree];
-      diskUsageChart.update('none');
-
-      memoryUsageChart.data.datasets[0].data = [mockData.memoryUsed, mockData.memoryTotal - mockData.memoryUsed];
-      memoryUsageChart.update('none');
+          const usedMem = parseFloat(data.memoryUsed);
+          const totalMem = parseFloat(data.memoryTotal);
+          memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
+          memoryUsageChart.update('none');
+        })
+        .catch(error => {
+          console.error('Error fetching system data:', error);
+        });
     }
 
-    // Backup button handler
-    document.getElementById('backupButton').addEventListener('click', function() {
-      const btn = this;
-      const originalContent = btn.innerHTML;
-      
-      btn.innerHTML = '<i data-lucide="loader-2"></i> Initializing...';
-      btn.disabled = true;
-      btn.classList.add('loading');
+   // Backup button handler with real API call
+document.getElementById('backupButton').addEventListener('click', function() {
+  const btn = this;
+  const originalContent = btn.innerHTML;
+  
+  btn.innerHTML = '<i data-lucide="loader-2"></i> Initializing...';
+  btn.disabled = true;
+  btn.classList.add('loading');
+  lucide.createIcons();
+  
+  axios.post('/api_run_backup')
+    .then(() => {
+      btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+      btn.className = 'btn btn-success btn-full';
       lucide.createIcons();
       
-      // Simulate backup process
       setTimeout(() => {
-        btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
         btn.className = 'btn btn-success btn-full';
+        btn.classList.remove('loading');
         lucide.createIcons();
-        
-        setTimeout(() => {
-          btn.innerHTML = originalContent;
-          btn.disabled = false;
-          btn.className = 'btn btn-success btn-full';
-          btn.classList.remove('loading');
-          lucide.createIcons();
-        }, 4000);
-      }, 2000);
+      }, 4000);
+    })
+    .catch(error => {
+      btn.innerHTML = '<i data-lucide="alert-circle"></i> Backup Failed';
+      btn.className = 'btn btn-danger btn-full';
+      lucide.createIcons();
+      
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        btn.className = 'btn btn-success btn-full';
+        btn.classList.remove('loading');
+        lucide.createIcons();
+      }, 4000);
     });
-
+});
     // SSH command button handler - Updated for backend API
     document.getElementById('runSSHCommandBtn').addEventListener('click', async function() {
       const btn = this;
