@@ -10,7 +10,9 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
+  
+  <!-- Socket.IO -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
@@ -253,6 +255,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
       gap: 1.5rem;
+      margin-bottom: 2rem;
     }
 
     .control-panel {
@@ -267,6 +270,12 @@
       background: var(--bg-sidebar);
       border-bottom: 1px solid var(--border-color);
       padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title-section {
       display: flex;
       align-items: center;
       gap: 0.75rem;
@@ -446,6 +455,14 @@
       background: #dc2626;
     }
 
+    .btn-secondary {
+      background: var(--primary-500);
+    }
+
+    .btn-secondary:hover {
+      background: var(--primary-600);
+    }
+
     /* Output Terminal */
     .output {
       background: var(--primary-900);
@@ -564,15 +581,6 @@
       100% { left: 100%; }
     }
 
-    /* Command History */
-    .command-history {
-      max-height: 300px;
-      overflow-y: auto;
-      border-top: 1px solid var(--primary-700);
-      margin-top: 1rem;
-      padding-top: 1rem;
-    }
-
     .clear-output-btn {
       position: absolute;
       top: 0.75rem;
@@ -594,6 +602,211 @@
 
     .output:hover .clear-output-btn {
       display: block;
+    }
+
+    /* Pico W Logs Styles */
+    .pico-logs-container {
+      background: var(--primary-900);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pico-logs-header {
+      background: var(--primary-800);
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--primary-700);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .pico-logs-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .pico-connection-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .pico-connection-indicator.connected {
+      background: var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    .pico-connection-indicator.disconnected {
+      background: var(--accent-red);
+    }
+
+    .pico-connection-indicator.connecting {
+      background: var(--accent-amber);
+      animation: pulse 1s infinite;
+    }
+
+    .pico-logs-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .pico-logs-controls .btn {
+      padding: 0.5rem 1rem;
+      min-height: auto;
+      font-size: 0.75rem;
+    }
+
+    .pico-logs-output {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 1rem;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      background: var(--primary-900);
+      color: #e2e8f0;
+    }
+
+    .logs-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--primary-400);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-style: italic;
+    }
+
+    .log-entry {
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      border-left: 3px solid var(--primary-400);
+      background: rgba(0, 0, 0, 0.3);
+      animation: slideInLog 0.3s ease-out;
+    }
+
+    .log-entry.level-ERROR {
+      border-left-color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .log-entry.level-WARN {
+      border-left-color: var(--accent-amber);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .log-entry.level-INFO {
+      border-left-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .log-entry.level-DEBUG {
+      border-left-color: var(--accent-teal);
+      background: rgba(20, 184, 166, 0.1);
+    }
+
+    @keyframes slideInLog {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .log-level {
+      padding: 0.125rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .log-level.ERROR {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .log-level.WARN {
+      background: var(--accent-amber);
+      color: white;
+    }
+
+    .log-level.INFO {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .log-level.DEBUG {
+      background: var(--accent-teal);
+      color: white;
+    }
+
+    .log-timestamp {
+      font-size: 0.75rem;
+      color: var(--primary-400);
+      font-weight: 400;
+    }
+
+    .log-device {
+      font-size: 0.75rem;
+      color: var(--primary-300);
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+    }
+
+    .log-message {
+      color: #e2e8f0;
+      margin-bottom: 0.5rem;
+      word-wrap: break-word;
+    }
+
+    .log-sensor-data {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--primary-300);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sensor-data-item {
+      display: inline-block;
+      margin-right: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .sensor-data-key {
+      color: var(--accent-teal);
+      font-weight: 500;
+    }
+
+    .sensor-data-value {
+      color: #e2e8f0;
+      margin-left: 0.25rem;
     }
 
     /* Responsive Design */
@@ -622,6 +835,10 @@
       .output {
         max-height: 250px;
       }
+
+      .pico-logs-output {
+        max-height: 300px;
+      }
     }
 
     /* Scrollbar */
@@ -647,6 +864,12 @@
     .text-success { color: var(--accent-green); }
     .text-danger { color: var(--accent-red); }
     .text-warning { color: var(--accent-amber); }
+
+    /* Full width Pico logs section */
+    .pico-logs-section {
+      grid-column: 1 / -1;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -739,8 +962,10 @@
       <!-- SSH Control Panel -->
       <div class="control-panel">
         <div class="panel-header">
-          <i data-lucide="terminal" class="panel-icon"></i>
-          <h2 class="panel-title">Remote Command Execution</h2>
+          <div class="panel-title-section">
+            <i data-lucide="terminal" class="panel-icon"></i>
+            <h2 class="panel-title">Remote Command Execution</h2>
+          </div>
         </div>
         <div class="panel-content">
           <p class="panel-description">
@@ -795,8 +1020,10 @@
       <!-- Backup Control Panel -->
       <div class="control-panel">
         <div class="panel-header">
-          <i data-lucide="shield-check" class="panel-icon"></i>
-          <h2 class="panel-title">System Backup</h2>
+          <div class="panel-title-section">
+            <i data-lucide="shield-check" class="panel-icon"></i>
+            <h2 class="panel-title">System Backup</h2>
+          </div>
         </div>
         <div class="panel-content">
           <p class="panel-description">
@@ -815,6 +1042,39 @@
           </button>
         </div>
       </div>
+
+      <!-- Pico W Logs Panel - Full Width -->
+      <div class="control-panel pico-logs-section">
+        <div class="pico-logs-container">
+          <div class="pico-logs-header">
+            <div class="pico-logs-title">
+              <i data-lucide="wifi" style="width: 1rem; height: 1rem;"></i>
+              <span class="pico-connection-indicator" id="picoConnectionStatus"></span>
+              <span>Raspberry Pi Pico W Logs</span>
+              <span id="connectionStatusText">Disconnected</span>
+            </div>
+            <div class="pico-logs-controls">
+              <button id="clearPicoLogsBtn" class="btn btn-secondary">
+                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                Clear
+              </button>
+              <button id="pauseLogsBtn" class="btn btn-secondary">
+                <i data-lucide="pause" style="width: 12px; height: 12px;"></i>
+                Pause
+              </button>
+            </div>
+          </div>
+          <div class="pico-logs-output" id="picoLogsOutput">
+            <div class="logs-empty">
+              <i data-lucide="wifi-off" style="width: 2rem; height: 2rem; margin-bottom: 1rem; color: var(--primary-400);"></i>
+              <div>Waiting for Pico W connection...</div>
+              <div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--primary-500);">
+                Logs will appear here when your Pico W starts sending data
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -822,6 +1082,13 @@
     // Initialize Lucide icons
     lucide.createIcons();
 
+    // Global variables
+    let picoSocket = null;
+    let logsPaused = false;
+    let currentPrivateKey = null;
+    let commandHistory = [];
+
+    // Chart setup
     const ctxDisk = document.getElementById('diskUsageChart').getContext('2d');
     const ctxMemory = document.getElementById('memoryUsageChart').getContext('2d');
 
@@ -887,11 +1154,226 @@
       plugins: [ChartDataLabels]
     });
 
-    // Global variables for SSH management
-    let commandHistory = [];
-    let currentPrivateKey = null;
+    // Pico W WebSocket Functions
+    function initializePicoWebSocket() {
+      try {
+        picoSocket = io('/pico-logs');
+        
+        picoSocket.on('connect', function() {
+          console.log('✅ Connected to Pico W logs WebSocket');
+          updatePicoConnectionStatus('connected');
+        });
 
-    // File input handling
+        picoSocket.on('disconnect', function() {
+          console.log('❌ Disconnected from Pico W logs WebSocket');
+          updatePicoConnectionStatus('disconnected');
+        });
+
+        picoSocket.on('logs_history', function(data) {
+          console.log('📜 Received logs history:', data.logs.length, 'entries');
+          const logsOutput = document.getElementById('picoLogsOutput');
+          logsOutput.innerHTML = '';
+          
+          if (data.logs.length === 0) {
+            showEmptyLogsMessage();
+          } else {
+            data.logs.forEach(log => addPicoLogEntry(log, false));
+          }
+        });
+
+        picoSocket.on('new_log', function(logData) {
+          if (!logsPaused) {
+            console.log('📝 New Pico log:', logData.message);
+            addPicoLogEntry(logData, true);
+          }
+        });
+
+        picoSocket.on('logs_cleared', function() {
+          console.log('🧹 Logs cleared by server');
+          const logsOutput = document.getElementById('picoLogsOutput');
+          logsOutput.innerHTML = '';
+          showEmptyLogsMessage();
+        });
+
+        picoSocket.on('connect_error', function(error) {
+          console.error('❌ Pico WebSocket connection error:', error);
+          updatePicoConnectionStatus('error');
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize Pico WebSocket:', error);
+        updatePicoConnectionStatus('error');
+      }
+    }
+
+    function updatePicoConnectionStatus(status) {
+      const indicator = document.getElementById('picoConnectionStatus');
+      const statusText = document.getElementById('connectionStatusText');
+      
+      indicator.className = `pico-connection-indicator ${status}`;
+      
+      switch(status) {
+        case 'connected':
+          statusText.textContent = 'Connected';
+          statusText.style.color = 'var(--accent-green)';
+          break;
+        case 'connecting':
+          statusText.textContent = 'Connecting...';
+          statusText.style.color = 'var(--accent-amber)';
+          break;
+        case 'error':
+          statusText.textContent = 'Connection Error';
+          statusText.style.color = 'var(--accent-red)';
+          break;
+        default:
+          statusText.textContent = 'Disconnected';
+          statusText.style.color = 'var(--primary-400)';
+      }
+    }
+
+    function addPicoLogEntry(logData, animate = true) {
+      const logsOutput = document.getElementById('picoLogsOutput');
+      
+      // Remove empty message if present
+      const emptyMessage = logsOutput.querySelector('.logs-empty');
+      if (emptyMessage) {
+        emptyMessage.remove();
+      }
+
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry level-${logData.level}`;
+      
+      // Format timestamp
+      const timestamp = new Date(logData.timestamp).toLocaleString();
+      
+      let sensorDataHtml = '';
+      if (logData.sensor_data && Object.keys(logData.sensor_data).length > 0) {
+        sensorDataHtml = `
+          <div class="log-sensor-data">
+            ${Object.entries(logData.sensor_data).map(([key, value]) => 
+              `<span class="sensor-data-item">
+                <span class="sensor-data-key">${key}:</span>
+                <span class="sensor-data-value">${value}</span>
+              </span>`
+            ).join('')}
+          </div>
+        `;
+      }
+
+      logEntry.innerHTML = `
+        <div class="log-header">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="log-level ${logData.level}">${logData.level}</span>
+            <span class="log-device">${logData.device_id}</span>
+          </div>
+          <span class="log-timestamp">${timestamp}</span>
+        </div>
+        <div class="log-message">${logData.message}</div>
+        ${sensorDataHtml}
+      `;
+
+      // Add with animation if specified
+      if (animate) {
+        logEntry.style.opacity = '0';
+        logEntry.style.transform = 'translateY(10px)';
+      }
+
+      logsOutput.appendChild(logEntry);
+
+      if (animate) {
+        // Trigger animation
+        setTimeout(() => {
+          logEntry.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+          logEntry.style.opacity = '1';
+          logEntry.style.transform = 'translateY(0)';
+        }, 10);
+      }
+
+      // Auto-scroll to bottom
+      logsOutput.scrollTop = logsOutput.scrollHeight;
+
+      // Limit number of log entries (keep last 100)
+      const logEntries = logsOutput.querySelectorAll('.log-entry');
+      if (logEntries.length > 100) {
+        logEntries[0].remove();
+      }
+    }
+
+    function showEmptyLogsMessage() {
+      const logsOutput = document.getElementById('picoLogsOutput');
+      logsOutput.innerHTML = `
+        <div class="logs-empty">
+          <i data-lucide="wifi-off" style="width: 2rem; height: 2rem; margin-bottom: 1rem; color: var(--primary-400);"></i>
+          <div>No logs available</div>
+          <div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--primary-500);">
+            Logs will appear here when your Pico W starts sending data
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // Pico Logs Control Handlers
+    document.getElementById('clearPicoLogsBtn').addEventListener('click', function() {
+      if (picoSocket && picoSocket.connected) {
+        picoSocket.emit('clear_logs');
+      } else {
+        // Local clear if not connected
+        const logsOutput = document.getElementById('picoLogsOutput');
+        logsOutput.innerHTML = '';
+        showEmptyLogsMessage();
+      }
+    });
+
+    document.getElementById('pauseLogsBtn').addEventListener('click', function() {
+      const btn = this;
+      const icon = btn.querySelector('i');
+      
+      logsPaused = !logsPaused;
+      
+      if (logsPaused) {
+        btn.innerHTML = '<i data-lucide="play" style="width: 12px; height: 12px;"></i> Resume';
+        btn.title = 'Resume log updates';
+      } else {
+        btn.innerHTML = '<i data-lucide="pause" style="width: 12px; height: 12px;"></i> Pause';
+        btn.title = 'Pause log updates';
+      }
+      
+      lucide.createIcons();
+    });
+
+    // System data functions (existing code)
+    function fetchData() {
+      axios.get('/api_raspberry_pi_stats')
+        .then(response => {
+          const data = response.data;
+          
+          const cpuElement = document.getElementById('cpuUsageValue');
+          const tempElement = document.getElementById('temperatureValue');
+          
+          cpuElement.classList.remove('loading');
+          tempElement.classList.remove('loading');
+          
+          cpuElement.textContent = `${parseFloat(data.cpuUsage).toFixed(1)}%`;
+          tempElement.textContent = `${parseFloat(data.temperature).toFixed(1)}°C`;
+
+          diskUsageChart.data.datasets[0].data = [
+            parseFloat(data.diskUsed),
+            parseFloat(data.diskFree)
+          ];
+          diskUsageChart.update('none');
+
+          const usedMem = parseFloat(data.memoryUsed);
+          const totalMem = parseFloat(data.memoryTotal);
+          memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
+          memoryUsageChart.update('none');
+        })
+        .catch(error => {
+          console.error('Error fetching system data:', error);
+        });
+    }
+
+    // SSH Functions (existing code)
     document.getElementById('privateKeyInput').addEventListener('change', function(event) {
       const file = event.target.files[0];
       const label = document.getElementById('fileInputLabel');
@@ -909,11 +1391,9 @@
         return;
       }
 
-      // Update UI to show file is selected
       label.classList.add('has-file');
       label.innerHTML = '<i data-lucide="check-circle"></i><span>' + file.name + '</span>';
       
-      // Show file information
       fileName.textContent = file.name;
       fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
       fileType.textContent = file.type || 'Unknown';
@@ -921,7 +1401,6 @@
       
       lucide.createIcons();
 
-      // Read and validate SSH key
       const reader = new FileReader();
       reader.onload = function(e) {
         const content = e.target.result.trim();
@@ -947,7 +1426,7 @@
       reader.readAsText(file);
     });
 
-    // Output management functions
+    // SSH output management functions
     function addOutputLog(content, type = 'output') {
       const output = document.getElementById('resultOutput');
       const emptyMessage = output.querySelector('.output-empty');
@@ -1008,14 +1487,7 @@
       lucide.createIcons();
     }
 
-    // Clear output button handler
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('#clearOutputBtn')) {
-        clearOutput();
-      }
-    });
-
-    // SSH execution function - Updated for backend API
+    // SSH execution function
     async function executeSSHCommand(privateKey, command, passphrase = '') {
       try {
         addOutputLog({
@@ -1023,7 +1495,6 @@
           message: `Connecting to Raspberry Pi...`
         }, 'status');
 
-        // Make API call to backend
         const response = await axios.post('/api/ssh_exec', {
           privateKey: privateKey,
           command: command,
@@ -1044,7 +1515,6 @@
           output: response.data.output
         }, 'command');
 
-        // Store in history
         commandHistory.push({
           timestamp: new Date(),
           command: command,
@@ -1061,7 +1531,6 @@
         const errorMessage = error.response?.data?.error || error.message;
         addOutputLog(`SSH execution failed: ${errorMessage}`, 'error');
         
-        // Store error in history
         commandHistory.push({
           timestamp: new Date(),
           command: command,
@@ -1073,84 +1542,56 @@
       }
     }
 
-    // Fetch system data from backend API
-    function fetchData() {
-      axios.get('/api_raspberry_pi_stats')
-        .then(response => {
-          const data = response.data;
-          
-          // Update values
-          const cpuElement = document.getElementById('cpuUsageValue');
-          const tempElement = document.getElementById('temperatureValue');
-          
-          cpuElement.classList.remove('loading');
-          tempElement.classList.remove('loading');
-          
-          cpuElement.textContent = `${parseFloat(data.cpuUsage).toFixed(1)}%`;
-          tempElement.textContent = `${parseFloat(data.temperature).toFixed(1)}°C`;
+    // Event Listeners
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('#clearOutputBtn')) {
+        clearOutput();
+      }
+    });
 
-          // Update charts
-          diskUsageChart.data.datasets[0].data = [
-            parseFloat(data.diskUsed),
-            parseFloat(data.diskFree)
-          ];
-          diskUsageChart.update('none');
-
-          const usedMem = parseFloat(data.memoryUsed);
-          const totalMem = parseFloat(data.memoryTotal);
-          memoryUsageChart.data.datasets[0].data = [usedMem, totalMem - usedMem];
-          memoryUsageChart.update('none');
+    document.getElementById('backupButton').addEventListener('click', function() {
+      const btn = this;
+      const originalContent = btn.innerHTML;
+      
+      btn.innerHTML = '<i data-lucide="loader-2"></i> Initializing...';
+      btn.disabled = true;
+      btn.classList.add('loading');
+      lucide.createIcons();
+      
+      axios.post('/api_run_backup')
+        .then(() => {
+          btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
+          btn.className = 'btn btn-success btn-full';
+          lucide.createIcons();
+          
+          setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            btn.className = 'btn btn-success btn-full';
+            btn.classList.remove('loading');
+            lucide.createIcons();
+          }, 4000);
         })
         .catch(error => {
-          console.error('Error fetching system data:', error);
+          btn.innerHTML = '<i data-lucide="alert-circle"></i> Backup Failed';
+          btn.className = 'btn btn-danger btn-full';
+          lucide.createIcons();
+          
+          setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            btn.className = 'btn btn-success btn-full';
+            btn.classList.remove('loading');
+            lucide.createIcons();
+          }, 4000);
         });
-    }
-
-   // Backup button handler with real API call
-document.getElementById('backupButton').addEventListener('click', function() {
-  const btn = this;
-  const originalContent = btn.innerHTML;
-  
-  btn.innerHTML = '<i data-lucide="loader-2"></i> Initializing...';
-  btn.disabled = true;
-  btn.classList.add('loading');
-  lucide.createIcons();
-  
-  axios.post('/api_run_backup')
-    .then(() => {
-      btn.innerHTML = '<i data-lucide="check-circle"></i> Backup Initiated';
-      btn.className = 'btn btn-success btn-full';
-      lucide.createIcons();
-      
-      setTimeout(() => {
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-        btn.className = 'btn btn-success btn-full';
-        btn.classList.remove('loading');
-        lucide.createIcons();
-      }, 4000);
-    })
-    .catch(error => {
-      btn.innerHTML = '<i data-lucide="alert-circle"></i> Backup Failed';
-      btn.className = 'btn btn-danger btn-full';
-      lucide.createIcons();
-      
-      setTimeout(() => {
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-        btn.className = 'btn btn-success btn-full';
-        btn.classList.remove('loading');
-        lucide.createIcons();
-      }, 4000);
     });
-});
-    // SSH command button handler - Updated for backend API
+
     document.getElementById('runSSHCommandBtn').addEventListener('click', async function() {
       const btn = this;
       const command = document.getElementById('commandInput').value.trim();
       const passphrase = document.getElementById('passphraseInput').value.trim();
 
-      // Input validation
       if (!currentPrivateKey) {
         addOutputLog("ERROR: No private key file selected. Please choose a valid key file.", 'error');
         return;
@@ -1179,7 +1620,6 @@ document.getElementById('backupButton').addEventListener('click', function() {
         lucide.createIcons();
       }
       
-      // Reset button after delay
       setTimeout(() => {
         btn.innerHTML = originalContent;
         btn.disabled = false;
@@ -1191,26 +1631,27 @@ document.getElementById('backupButton').addEventListener('click', function() {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
-      // Enter to execute command (when command input is focused)
       if (e.key === 'Enter' && document.activeElement.id === 'commandInput') {
         document.getElementById('runSSHCommandBtn').click();
       }
       
-      // Ctrl+L to clear output
       if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
         clearOutput();
       }
     });
 
-    // Initialize dashboard
+    // Initialize everything
     fetchData();
     setInterval(fetchData, 5000);
+    
+    // Initialize Pico WebSocket connection
+    updatePicoConnectionStatus('connecting');
+    initializePicoWebSocket();
 
-    // Add some example commands for demonstration
+    // Add example commands after delay
     setTimeout(() => {
       if (commandHistory.length === 0) {
-        // Show example in output
         const output = document.getElementById('resultOutput');
         const example = document.createElement('div');
         example.style.cssText = 'color: var(--primary-400); font-style: italic; padding: 1rem; text-align: center; border-top: 1px solid var(--primary-700); margin-top: 1rem;';
@@ -1222,7 +1663,6 @@ document.getElementById('backupButton').addEventListener('click', function() {
             • <code>df -h</code> - Show disk usage<br>
             • <code>free -h</code> - Show memory usage<br>
             • <code>uptime</code> - Show system uptime<br>
-            • <code>cat /proc/cpuinfo</code> - Show CPU information<br>
             • Press <strong>Ctrl+L</strong> to clear output
           </div>
         `;
