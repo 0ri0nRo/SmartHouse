@@ -23,28 +23,28 @@
         .container {
             max-width: 100vw;
             margin: 0;
-            padding: 12px;
+            padding: 8px;
             overflow-x: hidden;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 16px;
-            padding: 16px 8px;
+            margin-bottom: 12px;
+            padding: 12px 8px;
             background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
         }
 
         .header h1 {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #4f46e5;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .header p {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: #6366f1;
             opacity: 0.8;
         }
@@ -52,13 +52,13 @@
         .status-bar {
             background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
             border: 1px solid #93c5fd;
-            border-radius: 12px;
-            padding: 8px 12px;
-            margin-bottom: 16px;
-            font-size: 0.8rem;
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 12px;
+            font-size: 0.75rem;
             color: #1e40af;
             text-align: center;
-            min-height: 36px;
+            min-height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -91,16 +91,16 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 6px;
+            margin-bottom: 12px;
         }
 
         .stat-card {
             background: white;
-            padding: 12px 8px;
-            border-radius: 12px;
+            padding: 8px 6px;
+            border-radius: 8px;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             border: 1px solid #f1f5f9;
             transition: all 0.2s ease;
         }
@@ -110,14 +110,14 @@
         }
 
         .stat-number {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #4f46e5;
             display: block;
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -125,9 +125,9 @@
 
         .add-form {
             background: white;
-            padding: 16px;
-            border-radius: 16px;
-            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f5f9;
         }
@@ -135,12 +135,16 @@
         .form-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
 
         .form-row:last-child {
             margin-bottom: 0;
+        }
+
+        .form-row.full-width {
+            grid-template-columns: 1fr;
         }
 
         .input-group {
@@ -149,19 +153,19 @@
         }
 
         label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: #64748b;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         input, select {
-            padding: 10px 12px;
+            padding: 8px 10px;
             border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             transition: all 0.2s ease;
             background: #fafafa;
         }
@@ -178,13 +182,13 @@
             background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
             color: white;
             border: none;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin-top: 8px;
+            margin-top: 6px;
             position: relative;
             overflow: hidden;
         }
@@ -212,9 +216,9 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
             border: 2px solid transparent;
             border-top-color: #ffffff;
             border-radius: 50%;
@@ -233,8 +237,8 @@
 
         .section {
             background: white;
-            border-radius: 16px;
-            margin-bottom: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f5f9;
@@ -242,8 +246,8 @@
 
         .section-header {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 12px 16px;
-            font-size: 0.9rem;
+            padding: 10px 12px;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #92400e;
             display: flex;
@@ -254,9 +258,9 @@
         .toggle-btn {
             background: rgba(146, 64, 14, 0.1);
             border: none;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-size: 0.7rem;
             color: #92400e;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -267,15 +271,15 @@
         }
 
         .section-content {
-            padding: 16px;
-            max-height: 300px;
+            padding: 12px;
+            max-height: 280px;
             overflow-y: auto;
             transition: all 0.3s ease;
         }
 
         .section-content.collapsed {
             max-height: 0;
-            padding: 0 16px;
+            padding: 0 12px;
             overflow: hidden;
         }
 
@@ -286,7 +290,7 @@
         .item {
             display: flex;
             align-items: center;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #f1f5f9;
             transition: all 0.3s ease;
             opacity: 1;
@@ -317,15 +321,16 @@
         }
 
         .checkbox {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            margin-right: 12px;
+            border-radius: 4px;
+            margin-right: 10px;
             position: relative;
             cursor: pointer;
             background: white;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
         .checkbox:hover {
@@ -344,7 +349,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: bold;
         }
 
@@ -355,8 +360,8 @@
 
         .checkbox.loading::after {
             content: '';
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border: 1px solid white;
             border-top: transparent;
             border-radius: 50%;
@@ -371,38 +376,39 @@
         .item-name {
             font-weight: 600;
             color: #334155;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-bottom: 2px;
+            word-wrap: break-word;
         }
 
         .item-details {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
         .store-tag {
             background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
             color: #5b21b6;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.65rem;
             font-weight: 500;
         }
 
         .quantity-badge {
             background: #f0fdf4;
             color: #166534;
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.65rem;
             font-weight: 600;
         }
 
         .priority-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             display: inline-block;
         }
@@ -412,22 +418,23 @@
         .priority-low { background: #bbf7d0; }
 
         .date-text {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #64748b;
         }
 
         .delete-btn {
             background: #fef2f2;
             border: none;
-            border-radius: 6px;
-            padding: 6px 8px;
+            border-radius: 4px;
+            padding: 4px 6px;
             color: #dc2626;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             cursor: pointer;
-            margin-left: 8px;
+            margin-left: 6px;
             transition: all 0.2s ease;
             position: relative;
-            min-width: 32px;
+            min-width: 28px;
+            flex-shrink: 0;
         }
 
         .delete-btn:hover:not(.loading) {
@@ -445,9 +452,9 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 12px;
-            height: 12px;
-            margin: -6px 0 0 -6px;
+            width: 10px;
+            height: 10px;
+            margin: -5px 0 0 -5px;
             border: 1px solid #d97706;
             border-top-color: transparent;
             border-radius: 50%;
@@ -455,25 +462,24 @@
         }
 
         .quick-actions {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
-            margin-bottom: 16px;
-            overflow-x: auto;
-            padding: 2px;
+            margin-bottom: 12px;
         }
 
         .quick-btn {
             background: white;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 0.75rem;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.7rem;
             color: #64748b;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
             position: relative;
-            min-width: 80px;
+            text-align: center;
         }
 
         .quick-btn:hover:not(.loading):not(.success) {
@@ -500,9 +506,9 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 12px;
-            height: 12px;
-            margin: -6px 0 0 -6px;
+            width: 10px;
+            height: 10px;
+            margin: -5px 0 0 -5px;
             border: 1px solid #ca8a04;
             border-top-color: transparent;
             border-radius: 50%;
@@ -511,36 +517,40 @@
 
         .empty-state {
             text-align: center;
-            padding: 24px 16px;
+            padding: 20px 12px;
             color: #94a3b8;
         }
 
         .empty-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
+            font-size: 1.5rem;
+            margin-bottom: 6px;
             opacity: 0.5;
         }
 
         .filter-row {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            gap: 8px;
-            margin-bottom: 12px;
-            align-items: end;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .filter-row-btn {
+            grid-column: 1 / -1;
+            margin-top: 6px;
         }
 
         .filter-btn {
             background: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 0.75rem;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.7rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
-            min-width: 60px;
+            width: 100%;
         }
 
         .filter-btn:hover:not(.loading) {
@@ -558,9 +568,9 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 14px;
-            height: 14px;
-            margin: -7px 0 0 -7px;
+            width: 12px;
+            height: 12px;
+            margin: -6px 0 0 -6px;
             border: 1px solid white;
             border-top-color: transparent;
             border-radius: 50%;
@@ -571,7 +581,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
 
@@ -587,44 +597,30 @@
         .history-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
 
         .frequency-badge {
             background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             color: #15803d;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 6px;
+            font-size: 0.65rem;
             font-weight: 600;
         }
 
-        .online-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #10b981;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .online-indicator.offline {
-            background: #ef4444;
-        }
+        /* RIMOSSO: .online-indicator - NON PIÙ PRESENTE */
 
         .sync-status {
             position: fixed;
-            bottom: 10px;
-            right: 10px;
+            bottom: 8px;
+            right: 8px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
             opacity: 0;
             transition: all 0.3s ease;
             z-index: 1000;
@@ -637,37 +633,63 @@
         /* Mobile optimizations */
         @media (max-width: 480px) {
             .container {
-                padding: 8px;
+                padding: 6px;
             }
 
             .header h1 {
-                font-size: 1.25rem;
-            }
-
-            .stats-grid {
-                gap: 6px;
-            }
-
-            .stat-card {
-                padding: 8px 4px;
-            }
-
-            .stat-number {
                 font-size: 1.1rem;
             }
 
+            .stats-grid {
+                gap: 4px;
+            }
+
+            .stat-card {
+                padding: 6px 4px;
+            }
+
+            .stat-number {
+                font-size: 1rem;
+            }
+
             .add-form {
-                padding: 12px;
+                padding: 10px;
             }
 
             .section-content {
-                max-height: 250px;
+                max-height: 220px;
+                padding: 10px;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+            }
+
+            .quick-btn {
+                padding: 6px 8px;
+                font-size: 0.65rem;
+            }
+
+            .form-row {
+                gap: 4px;
+                margin-bottom: 6px;
+            }
+
+            input, select {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+
+            .add-btn {
+                padding: 8px 12px;
+                font-size: 12px;
             }
         }
 
         /* Scrollbar styling */
         .section-content::-webkit-scrollbar {
-            width: 4px;
+            width: 3px;
         }
 
         .section-content::-webkit-scrollbar-track {
@@ -688,7 +710,7 @@
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(8px);
             }
             to {
                 opacity: 1;
@@ -720,8 +742,7 @@
     </style>
 </head>
 <body>
-    <!-- Online Indicator -->
-    <div class="online-indicator" id="online-indicator"></div>
+    <!-- RIMOSSO: Online Indicator pallino verde -->
     
     <!-- Sync Status -->
     <div class="sync-status" id="sync-status">Syncing...</div>
@@ -797,11 +818,13 @@
                 </div>
             </div>
            <div class="form-row">
-                <div class="input-group" style="flex: 1;">
+                <div class="input-group">
                     <label for="needed_by">Needed By (Optional)</label>
                     <input type="date" id="needed_by">
                 </div>
-                <div class="input-group" style="display: flex; align-items: flex-end;">
+            </div>
+            <div class="form-row full-width">
+                <div class="input-group">
                     <button class="add-btn" id="add-item-btn" onclick="addItem()">
                         <span id="add-btn-text">Add Item</span>
                     </button>
@@ -834,13 +857,17 @@
             <div class="section-content" id="history">
                 <div class="filter-row">
                     <div class="input-group">
-                        <input type="date" id="start_timestamp" style="font-size: 0.8rem;">
+                        <label for="start_timestamp">From</label>
+                        <input type="date" id="start_timestamp">
                     </div>
                     <div class="input-group">
-                        <input type="date" id="end_timestamp" style="font-size: 0.8rem;">
+                        <label for="end_timestamp">To</label>
+                        <input type="date" id="end_timestamp">
                     </div>
+                </div>
+                <div class="filter-row-btn">
                     <button class="filter-btn" onclick="loadItemsByTimestamp()" id="filter-btn">
-                        <span>Filter</span>
+                        <span>Filter History</span>
                     </button>
                 </div>
                 <div id="history_items">
@@ -863,7 +890,7 @@
             loadCurrentItems();
             updateStatistics();
             setDefaultDates();
-            updateOnlineStatus();
+            // RIMOSSO: updateOnlineStatus();
             showStatus('Welcome! Your shopping list is ready.', 'success');
             
             // Try to load historical data on startup
@@ -893,10 +920,7 @@
             }, duration);
         }
 
-        function updateOnlineStatus() {
-            const indicator = document.getElementById('online-indicator');
-            indicator.className = `online-indicator ${isOnline ? '' : 'offline'}`;
-        }
+        // RIMOSSA: funzione updateOnlineStatus()
 
         function setButtonState(buttonId, state, text) {
             const btn = document.getElementById(buttonId);
@@ -937,7 +961,7 @@
                 'complete-all-btn': '✅ Complete All',
                 'export-btn': '📤 Export',
                 'sync-btn': '🔄 Sync',
-                'filter-btn': 'Filter'
+                'filter-btn': 'Filter History'
             };
             
             textElement.textContent = originalTexts[buttonId] || 'Button';
@@ -1497,14 +1521,14 @@
         // Network status handling
         window.addEventListener('online', function() {
             isOnline = true;
-            updateOnlineStatus();
+            // RIMOSSO: updateOnlineStatus();
             showStatus('Back online - syncing...', 'success');
             syncWithServer();
         });
 
         window.addEventListener('offline', function() {
             isOnline = false;
-            updateOnlineStatus();
+            // RIMOSSO: updateOnlineStatus();
             showStatus('Gone offline - using local storage', 'warning');
         });
 
@@ -1575,6 +1599,7 @@
         console.log('- Smooth animations');
         console.log('- Offline mode support');
         console.log('- Auto-sync every 5 minutes');
+        console.log('- Mobile optimized layout');
         console.log('');
         console.log('Keyboard shortcuts:');
         console.log('- Ctrl/Cmd + Enter: Add item');
