@@ -23,57 +23,101 @@
         .container {
             max-width: 100vw;
             margin: 0;
-            padding: 12px;
+            padding: 8px;
             overflow-x: hidden;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 16px;
-            padding: 16px 8px;
+            margin-bottom: 12px;
+            padding: 12px 8px;
             background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            border-radius: 16px;
+            border-radius: 12px;
             box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
         }
 
         .header h1 {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: #4f46e5;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .header p {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: #6366f1;
             opacity: 0.8;
+        }
+
+        .status-bar {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-bottom: 12px;
+            font-size: 0.75rem;
+            color: #1e40af;
+            text-align: center;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .status-bar.show {
+            opacity: 1;
+        }
+
+        .status-bar.success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .status-bar.error {
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            border-color: #fca5a5;
+            color: #dc2626;
+        }
+
+        .status-bar.warning {
+            background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%);
+            border-color: #fde047;
+            color: #ca8a04;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 6px;
+            margin-bottom: 12px;
         }
 
         .stat-card {
             background: white;
-            padding: 12px 8px;
-            border-radius: 12px;
+            padding: 8px 6px;
+            border-radius: 8px;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             border: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card.updating {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         }
 
         .stat-number {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #4f46e5;
             display: block;
         }
 
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -81,9 +125,9 @@
 
         .add-form {
             background: white;
-            padding: 16px;
-            border-radius: 16px;
-            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f5f9;
         }
@@ -91,12 +135,16 @@
         .form-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
 
         .form-row:last-child {
             margin-bottom: 0;
+        }
+
+        .form-row.full-width {
+            grid-template-columns: 1fr;
         }
 
         .input-group {
@@ -105,19 +153,19 @@
         }
 
         label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             color: #64748b;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         input, select {
-            padding: 10px 12px;
+            padding: 8px 10px;
             border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             transition: all 0.2s ease;
             background: #fafafa;
         }
@@ -134,24 +182,63 @@
             background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
             color: white;
             border: none;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin-top: 8px;
+            margin-top: 6px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .add-btn:hover {
+        .add-btn:hover:not(.loading):not(.success):not(.error) {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
 
+        .add-btn.loading {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            cursor: not-allowed;
+        }
+
+        .add-btn.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .add-btn.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .add-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid transparent;
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            opacity: 0;
+        }
+
+        .add-btn.loading::after {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .section {
             background: white;
-            border-radius: 16px;
-            margin-bottom: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f5f9;
@@ -159,8 +246,8 @@
 
         .section-header {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 12px 16px;
-            font-size: 0.9rem;
+            padding: 10px 12px;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #92400e;
             display: flex;
@@ -171,22 +258,28 @@
         .toggle-btn {
             background: rgba(146, 64, 14, 0.1);
             border: none;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-size: 0.7rem;
             color: #92400e;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(146, 64, 14, 0.2);
         }
 
         .section-content {
-            padding: 16px;
-            max-height: 300px;
+            padding: 12px;
+            max-height: 280px;
             overflow-y: auto;
+            transition: all 0.3s ease;
         }
 
         .section-content.collapsed {
             max-height: 0;
-            padding: 0 16px;
+            padding: 0 12px;
             overflow: hidden;
         }
 
@@ -197,13 +290,20 @@
         .item {
             display: flex;
             align-items: center;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #f1f5f9;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
         }
 
         .item:last-child {
             border-bottom: none;
+        }
+
+        .item.completing {
+            opacity: 0.7;
+            transform: translateX(-10px);
         }
 
         .item.completed {
@@ -215,16 +315,26 @@
             color: #10b981;
         }
 
+        .item.removing {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+
         .checkbox {
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            margin-right: 12px;
+            border-radius: 4px;
+            margin-right: 10px;
             position: relative;
             cursor: pointer;
             background: white;
             transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .checkbox:hover {
+            border-color: #10b981;
         }
 
         .checkbox.checked {
@@ -239,8 +349,23 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: bold;
+        }
+
+        .checkbox.loading {
+            border-color: #fbbf24;
+            background: #fbbf24;
+        }
+
+        .checkbox.loading::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border: 1px solid white;
+            border-top: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
 
         .item-content {
@@ -251,38 +376,39 @@
         .item-name {
             font-weight: 600;
             color: #334155;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-bottom: 2px;
+            word-wrap: break-word;
         }
 
         .item-details {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
         }
 
         .store-tag {
             background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
             color: #5b21b6;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.65rem;
             font-weight: 500;
         }
 
         .quantity-badge {
             background: #f0fdf4;
             color: #166534;
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.65rem;
             font-weight: 600;
         }
 
         .priority-dot {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             display: inline-block;
         }
@@ -292,94 +418,170 @@
         .priority-low { background: #bbf7d0; }
 
         .date-text {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: #64748b;
         }
 
         .delete-btn {
             background: #fef2f2;
             border: none;
-            border-radius: 6px;
-            padding: 6px 8px;
+            border-radius: 4px;
+            padding: 4px 6px;
             color: #dc2626;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             cursor: pointer;
-            margin-left: 8px;
+            margin-left: 6px;
             transition: all 0.2s ease;
+            position: relative;
+            min-width: 28px;
+            flex-shrink: 0;
         }
 
-        .delete-btn:hover {
+        .delete-btn:hover:not(.loading) {
             background: #fee2e2;
         }
 
+        .delete-btn.loading {
+            background: #fef3c7;
+            color: #d97706;
+            cursor: not-allowed;
+        }
+
+        .delete-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            margin: -5px 0 0 -5px;
+            border: 1px solid #d97706;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
         .quick-actions {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
-            margin-bottom: 16px;
-            overflow-x: auto;
-            padding: 2px;
+            margin-bottom: 12px;
         }
 
         .quick-btn {
             background: white;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 0.75rem;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.7rem;
             color: #64748b;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
+            position: relative;
+            text-align: center;
         }
 
-        .quick-btn:hover {
+        .quick-btn:hover:not(.loading):not(.success) {
             background: #f8fafc;
             border-color: #c7d2fe;
             color: #4f46e5;
         }
 
+        .quick-btn.loading {
+            background: #fef3c7;
+            border-color: #fde047;
+            color: #ca8a04;
+            cursor: not-allowed;
+        }
+
+        .quick-btn.success {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .quick-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            margin: -5px 0 0 -5px;
+            border: 1px solid #ca8a04;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
         .empty-state {
             text-align: center;
-            padding: 24px 16px;
+            padding: 20px 12px;
             color: #94a3b8;
         }
 
         .empty-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
+            font-size: 1.5rem;
+            margin-bottom: 6px;
             opacity: 0.5;
         }
 
         .filter-row {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            gap: 8px;
-            margin-bottom: 12px;
-            align-items: end;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .filter-row-btn {
+            grid-column: 1 / -1;
+            margin-top: 6px;
         }
 
         .filter-btn {
             background: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 0.75rem;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.7rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
+            position: relative;
+            width: 100%;
         }
 
-        .filter-btn:hover {
+        .filter-btn:hover:not(.loading) {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .filter-btn.loading {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            cursor: not-allowed;
+        }
+
+        .filter-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            margin: -6px 0 0 -6px;
+            border: 1px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
 
         .history-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid #f1f5f9;
         }
 
@@ -395,53 +597,99 @@
         .history-right {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
         }
 
         .frequency-badge {
             background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
             color: #15803d;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 6px;
+            font-size: 0.65rem;
             font-weight: 600;
+        }
+
+        /* RIMOSSO: .online-indicator - NON PIÙ PRESENTE */
+
+        .sync-status {
+            position: fixed;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sync-status.show {
+            opacity: 1;
         }
 
         /* Mobile optimizations */
         @media (max-width: 480px) {
             .container {
-                padding: 8px;
+                padding: 6px;
             }
 
             .header h1 {
-                font-size: 1.25rem;
-            }
-
-            .stats-grid {
-                gap: 6px;
-            }
-
-            .stat-card {
-                padding: 8px 4px;
-            }
-
-            .stat-number {
                 font-size: 1.1rem;
             }
 
+            .stats-grid {
+                gap: 4px;
+            }
+
+            .stat-card {
+                padding: 6px 4px;
+            }
+
+            .stat-number {
+                font-size: 1rem;
+            }
+
             .add-form {
-                padding: 12px;
+                padding: 10px;
             }
 
             .section-content {
-                max-height: 250px;
+                max-height: 220px;
+                padding: 10px;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+            }
+
+            .quick-btn {
+                padding: 6px 8px;
+                font-size: 0.65rem;
+            }
+
+            .form-row {
+                gap: 4px;
+                margin-bottom: 6px;
+            }
+
+            input, select {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+
+            .add-btn {
+                padding: 8px 12px;
+                font-size: 12px;
             }
         }
 
         /* Scrollbar styling */
         .section-content::-webkit-scrollbar {
-            width: 4px;
+            width: 3px;
         }
 
         .section-content::-webkit-scrollbar-track {
@@ -462,7 +710,7 @@
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(8px);
             }
             to {
                 opacity: 1;
@@ -470,23 +718,35 @@
             }
         }
 
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #4f46e5;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .bounce-in {
+            animation: bounceIn 0.5s ease-out;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
     </style>
 </head>
 <body>
+    <!-- RIMOSSO: Online Indicator pallino verde -->
+    
+    <!-- Sync Status -->
+    <div class="sync-status" id="sync-status">Syncing...</div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -494,17 +754,22 @@
             <p>Your organized shopping companion</p>
         </div>
 
+        <!-- Status Bar -->
+        <div class="status-bar" id="status-bar">
+            Ready to help you shop smarter!
+        </div>
+
         <!-- Statistics -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" id="total-card">
                 <span class="stat-number" id="total-items">0</span>
-                <span class="stat-label">Total</span>
+                <span class="stat-label">Active</span>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="completed-card">
                 <span class="stat-number" id="completed-items">0</span>
                 <span class="stat-label">Done</span>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="stores-card">
                 <span class="stat-number" id="unique-stores">0</span>
                 <span class="stat-label">Stores</span>
             </div>
@@ -512,10 +777,18 @@
 
         <!-- Quick Actions -->
         <div class="quick-actions">
-            <button class="quick-btn" onclick="clearCompleted()">🗑️ Clear Done</button>
-            <button class="quick-btn" onclick="markAllComplete()">✅ Complete All</button>
-            <button class="quick-btn" onclick="exportList()">📤 Export</button>
-            <button class="quick-btn" onclick="groupByStore()">🏪 Group</button>
+            <button class="quick-btn" onclick="clearCompleted()" id="clear-btn">
+                <span>🗑️ Clear Done</span>
+            </button>
+            <button class="quick-btn" onclick="markAllComplete()" id="complete-all-btn">
+                <span>✅ Complete All</span>
+            </button>
+            <button class="quick-btn" onclick="exportList()" id="export-btn">
+                <span>📤 Export</span>
+            </button>
+            <button class="quick-btn" onclick="syncWithServer()" id="sync-btn">
+                <span>🔄 Sync</span>
+            </button>
         </div>
 
         <!-- Add Item Form -->
@@ -545,12 +818,16 @@
                 </div>
             </div>
            <div class="form-row">
-                <div class="input-group" style="flex: 1;">
+                <div class="input-group">
                     <label for="needed_by">Needed By (Optional)</label>
                     <input type="date" id="needed_by">
                 </div>
-                <div class="input-group" style="display: flex; align-items: flex-end;">
-                    <button class="add-btn" style="width: 100%;" onclick="addItem()">Add Item</button>
+            </div>
+            <div class="form-row full-width">
+                <div class="input-group">
+                    <button class="add-btn" id="add-item-btn" onclick="addItem()">
+                        <span id="add-btn-text">Add Item</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -580,12 +857,18 @@
             <div class="section-content" id="history">
                 <div class="filter-row">
                     <div class="input-group">
-                        <input type="date" id="start_timestamp" style="font-size: 0.8rem;">
+                        <label for="start_timestamp">From</label>
+                        <input type="date" id="start_timestamp">
                     </div>
                     <div class="input-group">
-                        <input type="date" id="end_timestamp" style="font-size: 0.8rem;">
+                        <label for="end_timestamp">To</label>
+                        <input type="date" id="end_timestamp">
                     </div>
-                    <button class="filter-btn" onclick="loadItemsByTimestamp()">Filter</button>
+                </div>
+                <div class="filter-row-btn">
+                    <button class="filter-btn" onclick="loadItemsByTimestamp()" id="filter-btn">
+                        <span>Filter History</span>
+                    </button>
                 </div>
                 <div id="history_items">
                     <div class="empty-state">
@@ -600,18 +883,93 @@
     <script>
         let shoppingData = [];
         let historicalData = [];
+        let isOnline = navigator.onLine;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadCurrentItems();
             updateStatistics();
             setDefaultDates();
+            // RIMOSSO: updateOnlineStatus();
+            showStatus('Welcome! Your shopping list is ready.', 'success');
             
-            // Try to load historical data on startup
-            setTimeout(() => {
-                loadItemsByTimestamp();
-            }, 1000);
         });
+
+        // Status and feedback functions
+        function showStatus(message, type = 'info', duration = 3000) {
+            const statusBar = document.getElementById('status-bar');
+            statusBar.textContent = message;
+            statusBar.className = `status-bar show ${type}`;
+            
+            setTimeout(() => {
+                statusBar.classList.remove('show');
+            }, duration);
+        }
+
+        function showSyncStatus(message, duration = 2000) {
+            const syncStatus = document.getElementById('sync-status');
+            syncStatus.textContent = message;
+            syncStatus.classList.add('show');
+            
+            setTimeout(() => {
+                syncStatus.classList.remove('show');
+            }, duration);
+        }
+
+        // RIMOSSA: funzione updateOnlineStatus()
+
+        function setButtonState(buttonId, state, text) {
+            const btn = document.getElementById(buttonId);
+            const textElement = btn.querySelector('span') || btn;
+            
+            // Remove all states
+            btn.classList.remove('loading', 'success', 'error');
+            
+            if (state === 'loading') {
+                btn.classList.add('loading');
+                btn.disabled = true;
+                textElement.textContent = text || 'Loading...';
+            } else if (state === 'success') {
+                btn.classList.add('success');
+                btn.disabled = false;
+                textElement.textContent = text || 'Success!';
+                setTimeout(() => resetButton(buttonId), 2000);
+            } else if (state === 'error') {
+                btn.classList.add('error');
+                btn.disabled = false;
+                textElement.textContent = text || 'Error';
+                setTimeout(() => resetButton(buttonId), 3000);
+            } else {
+                btn.disabled = false;
+                textElement.textContent = text;
+            }
+        }
+
+        function resetButton(buttonId) {
+            const btn = document.getElementById(buttonId);
+            const textElement = btn.querySelector('span') || btn;
+            btn.classList.remove('loading', 'success', 'error');
+            
+            // Reset to original text
+            const originalTexts = {
+                'add-item-btn': 'Add Item',
+                'clear-btn': '🗑️ Clear Done',
+                'complete-all-btn': '✅ Complete All',
+                'export-btn': '📤 Export',
+                'sync-btn': '🔄 Sync',
+                'filter-btn': 'Filter History'
+            };
+            
+            textElement.textContent = originalTexts[buttonId] || 'Button';
+        }
+
+        function animateStatCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.classList.add('updating');
+            setTimeout(() => {
+                card.classList.remove('updating');
+            }, 500);
+        }
 
         function setDefaultDates() {
             const today = new Date();
@@ -623,17 +981,23 @@
 
         async function loadCurrentItems() {
             try {
-                // Try to fetch from API first
+                showSyncStatus('Loading items...');
                 const response = await fetch('/api/shopping-list/current');
                 if (response.ok) {
                     shoppingData = await response.json();
+                    showStatus(`Loaded ${shoppingData.length} items from server`, 'success');
                 } else {
-                    // Fallback to localStorage
                     shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                    if (shoppingData.length > 0) {
+                        showStatus(`Using ${shoppingData.length} local items (server unavailable)`, 'warning');
+                    }
                 }
             } catch (error) {
                 console.error('API unavailable, using localStorage:', error);
                 shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                if (shoppingData.length > 0) {
+                    showStatus('Using offline mode', 'warning');
+                }
             }
             
             renderCurrentItems();
@@ -655,7 +1019,7 @@
 
             container.innerHTML = shoppingData.map((item, index) => `
                 <li class="item ${item.inCart ? 'completed' : ''} fade-in">
-                    <div class="checkbox ${item.inCart ? 'checked' : ''}" onclick="toggleItemInCart(${index})"></div>
+                    <div class="checkbox ${item.inCart ? 'checked' : ''}" onclick="toggleItemInCart(${index})" id="checkbox-${index}"></div>
                     <div class="item-content">
                         <div class="item-name">${item.name || item.item_name}</div>
                         <div class="item-details">
@@ -665,7 +1029,7 @@
                             ${item.neededBy ? `<span class="date-text">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
                         </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteItem(${index})">🗑️</button>
+                    <button class="delete-btn" onclick="deleteItem(${index})" id="delete-${index}">🗑️</button>
                 </li>
             `).join('');
         }
@@ -673,9 +1037,15 @@
         function updateStatistics() {
             const total = shoppingData.length;
             const completed = shoppingData.filter(item => item.inCart).length;
+            const active = total - completed;
             const uniqueStores = [...new Set(shoppingData.map(item => item.store))].length;
 
-            document.getElementById('total-items').textContent = total;
+            // Animate stat cards
+            animateStatCard('total-card');
+            animateStatCard('completed-card');
+            animateStatCard('stores-card');
+
+            document.getElementById('total-items').textContent = active;
             document.getElementById('completed-items').textContent = completed;
             document.getElementById('unique-stores').textContent = uniqueStores;
         }
@@ -688,24 +1058,26 @@
             const priority = document.getElementById('priority').value;
 
             if (!name || !store) {
-                alert('Please fill in item name and store');
+                showStatus('Please fill in item name and store', 'error');
                 return;
             }
 
+            setButtonState('add-item-btn', 'loading', 'Adding...');
+
+            const timestamp = new Date().toISOString();
             const newItem = {
                 id: Date.now(),
                 name,
-                item_name: name, // For API compatibility
+                item_name: name,
                 store,
                 quantity,
                 neededBy,
                 priority,
                 inCart: false,
-                dateAdded: new Date().toISOString()
+                dateAdded: timestamp
             };
 
             try {
-                // Try to send to server
                 const response = await fetch('/todolist/insert', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -714,183 +1086,309 @@
                         store: store,
                         quantity: quantity,
                         priority: priority,
-                        needed_by: neededBy
+                        timestamp: timestamp
                     })
                 });
 
                 if (response.ok) {
-                    console.log('Item added to server successfully');
+                    shoppingData.push(newItem);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    renderCurrentItems();
+                    updateStatistics();
+                    clearForm();
+                    setButtonState('add-item-btn', 'success', '✅ Added!');
+                    showStatus(`Added "${name}" to your list`, 'success');
+                } else {
+                    const errData = await response.json();
+                    setButtonState('add-item-btn', 'error', 'Failed');
+                    showStatus(`Failed to add item: ${errData.message || 'Server error'}`, 'error');
                 }
             } catch (error) {
-                console.error('Server unavailable, using local storage:', error);
+                console.error('Server unavailable, saving locally:', error);
+                shoppingData.push(newItem);
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                renderCurrentItems();
+                updateStatistics();
+                clearForm();
+                setButtonState('add-item-btn', 'success', '✅ Added (Local)');
+                showStatus(`Added "${name}" locally (server unavailable)`, 'warning');
             }
+        }
 
-            // Always update local state
-            shoppingData.push(newItem);
-            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-            
-            // Clear form
+        function clearForm() {
             document.getElementById('item_name').value = '';
             document.getElementById('store').value = '';
             document.getElementById('quantity').value = '1';
             document.getElementById('needed_by').value = '';
             document.getElementById('priority').value = 'medium';
-
-            // Re-render and update stats
-            renderCurrentItems();
-            updateStatistics();
         }
 
         async function toggleItemInCart(index) {
-            shoppingData[index].inCart = !shoppingData[index].inCart;
-
-            // If item is being marked as in cart, move to history
-            if (shoppingData[index].inCart) {
-                const completedItem = {
-                    ...shoppingData[index],
-                    purchaseDate: new Date().toISOString(),
-                    completedDate: new Date().toISOString(),
-                    timestamp: new Date().toISOString().split('T')[0]
-                };
-                
-                // Add to local history
-                historicalData = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-                historicalData.push(completedItem);
-                localStorage.setItem('shoppingHistory', JSON.stringify(historicalData));
-                
-                try {
-                    // Try to send completion to server
-                    await fetch(`/api/shopping-list/complete/${shoppingData[index].id}`, {
+            const item = shoppingData[index];
+            const checkbox = document.getElementById(`checkbox-${index}`);
+            const itemElement = checkbox.closest('.item');
+            const wasInCart = item.inCart;
+            
+            // Set checkbox to loading state
+            checkbox.classList.add('loading');
+            itemElement.classList.add('completing');
+            
+            try {
+                if (!wasInCart) {
+                    // Mark as completed
+                    const response = await fetch(`/api/shopping-list/complete/${item.id || item._id}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            item_name: completedItem.name || completedItem.item_name,
-                            store: completedItem.store,
-                            quantity: completedItem.quantity,
-                            timestamp: completedItem.timestamp
+                            item_name: item.name || item.item_name,
+                            store: item.store,
+                            quantity: item.quantity,
+                            priority: item.priority,
+                            timestamp: new Date().toISOString().split('T')[0]
                         })
                     });
-                } catch (error) {
-                    console.error('Error saving completion to server:', error);
+
+                    if (response.ok) {
+                        shoppingData[index].inCart = true;
+                        shoppingData[index].purchaseDate = new Date().toISOString();
+                        
+                        // Animate completion
+                        setTimeout(() => {
+                            itemElement.classList.add('removing');
+                            setTimeout(() => {
+                                shoppingData.splice(index, 1);
+                                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                                renderCurrentItems();
+                                updateStatistics();
+                            }, 300);
+                        }, 1000);
+                        
+                        showStatus(`"${item.name || item.item_name}" completed!`, 'success');
+                    } else {
+                        throw new Error('Server error');
+                    }
+                } else {
+                    // Unmark as completed (restore)
+                    const response = await fetch(`/api/shopping-list/uncomplete/${item.id || item._id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (response.ok) {
+                        shoppingData[index].inCart = false;
+                        shoppingData[index].purchaseDate = null;
+                        checkbox.classList.remove('loading', 'checked');
+                        itemElement.classList.remove('completing', 'completed');
+                        showStatus('Item restored to list', 'success');
+                    } else {
+                        throw new Error('Server error');
+                    }
                 }
+                
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                
+            } catch (error) {
+                console.error('Error toggling item:', error);
+                checkbox.classList.remove('loading');
+                itemElement.classList.remove('completing');
+                showStatus('Network error - please try again', 'error');
+            }
+        }
+
+        async function deleteItem(index) {
+            const item = shoppingData[index];
+            const deleteBtn = document.getElementById(`delete-${index}`);
+            const itemElement = deleteBtn.closest('.item');
+            const itemName = item.name || item.item_name;
+            
+            deleteBtn.classList.add('loading');
+            itemElement.classList.add('removing');
+
+            try {
+                const response = await fetch(`/todolist/delete/${item.id || item._id}`, {
+                    method: 'DELETE'
+                });
+                
+                setTimeout(() => {
+                    shoppingData.splice(index, 1);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    renderCurrentItems();
+                    updateStatistics();
+                    
+                    if (response.ok) {
+                        showStatus(`"${itemName}" deleted`, 'success');
+                    } else {
+                        showStatus(`"${itemName}" deleted locally`, 'warning');
+                    }
+                }, 300);
+                
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                setTimeout(() => {
+                    shoppingData.splice(index, 1);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    renderCurrentItems();
+                    updateStatistics();
+                    showStatus(`"${itemName}" deleted locally`, 'warning');
+                }, 300);
+            }
+        }
+
+        async function clearCompleted() {
+            const completedItems = shoppingData.filter(item => item.inCart);
+            if (completedItems.length === 0) {
+                showStatus('No completed items to clear', 'info');
+                return;
             }
 
+            setButtonState('clear-btn', 'loading', 'Clearing...');
+
+            try {
+                const response = await fetch('/api/shopping-list/clear-completed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    setButtonState('clear-btn', 'success', `✅ Cleared ${result.cleared_count}`);
+                    showStatus(`Cleared ${result.cleared_count} completed items`, 'success');
+                } else {
+                    setButtonState('clear-btn', 'success', '✅ Cleared (Local)');
+                    showStatus('Items cleared locally', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Error clearing items:', error);
+                setButtonState('clear-btn', 'success', '✅ Cleared (Local)');
+                showStatus('Items cleared locally (server unavailable)', 'warning');
+            }
+            
+            shoppingData = shoppingData.filter(item => !item.inCart);
             localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
             renderCurrentItems();
             updateStatistics();
         }
 
-        async function deleteItem(index) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                const deletedItem = shoppingData.splice(index, 1)[0];
+        async function markAllComplete() {
+            const incompleteItems = shoppingData.filter(item => !item.inCart);
+            
+            if (incompleteItems.length === 0) {
+                showStatus('No items to complete', 'info');
+                return;
+            }
+
+            setButtonState('complete-all-btn', 'loading', 'Completing...');
+
+            try {
+                const itemIds = incompleteItems
+                    .filter(item => item.id || item._id)
+                    .map(item => item.id || item._id);
                 
-                try {
-                    await fetch(`/todolist/delete/${deletedItem._id}`, {
-                        method: 'DELETE'
+                if (itemIds.length > 0) {
+                    const response = await fetch('/api/shopping-list/bulk-complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ item_ids: itemIds })
                     });
-                } catch (error) {
-                    console.error('Error deleting from server:', error);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        setButtonState('complete-all-btn', 'success', `✅ ${result.updated_count} Done`);
+                        showStatus(`Completed ${result.updated_count} items`, 'success');
+                    } else {
+                        setButtonState('complete-all-btn', 'success', '✅ Done (Local)');
+                        showStatus('Items completed locally', 'warning');
+                    }
+                } else {
+                    setButtonState('complete-all-btn', 'success', '✅ Done');
+                    showStatus(`Completed ${incompleteItems.length} items`, 'success');
                 }
-
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-            }
-        }
-
-        function clearCompleted() {
-            const completedItems = shoppingData.filter(item => item.inCart);
-            if (completedItems.length === 0) {
-                alert('No completed items to clear!');
-                return;
-            }
-
-            if (confirm(`Clear ${completedItems.length} completed items?`)) {
-                shoppingData = shoppingData.filter(item => !item.inCart);
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-            }
-        }
-
-        function markAllComplete() {
-            if (shoppingData.length === 0) {
-                alert('No items to complete!');
-                return;
-            }
-
-            if (confirm('Mark all items as completed?')) {
-                shoppingData.forEach((item, index) => {
+                
+                shoppingData.forEach(item => {
                     if (!item.inCart) {
-                        toggleItemInCart(index);
+                        item.inCart = true;
+                        item.purchaseDate = new Date().toISOString();
                     }
                 });
+                
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                
+                // Animate all items being completed
+                setTimeout(() => {
+                    shoppingData = shoppingData.filter(item => item.inCart === false);
+                    renderCurrentItems();
+                    updateStatistics();
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error completing all items:', error);
+                setButtonState('complete-all-btn', 'error', 'Failed');
+                showStatus('Failed to complete all items', 'error');
             }
         }
 
-        function exportList() {
+        async function exportList() {
             if (shoppingData.length === 0) {
-                alert('No items to export!');
+                showStatus('No items to export', 'info');
                 return;
             }
 
-            const exportData = {
-                currentList: shoppingData,
-                exportDate: new Date().toISOString(),
-                statistics: {
-                    totalItems: shoppingData.length,
-                    completedItems: shoppingData.filter(item => item.inCart).length,
-                    uniqueStores: [...new Set(shoppingData.map(item => item.store))].length
-                }
-            };
+            setButtonState('export-btn', 'loading', 'Exporting...');
 
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = `shopping-list-${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
+            try {
+                const exportData = {
+                    currentList: shoppingData,
+                    exportDate: new Date().toISOString(),
+                    statistics: {
+                        totalItems: shoppingData.length,
+                        completedItems: shoppingData.filter(item => item.inCart).length,
+                        uniqueStores: [...new Set(shoppingData.map(item => item.store))].length
+                    },
+                    metadata: {
+                        version: '2.0',
+                        exported_by: 'Smart Shopping List'
+                    }
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `shopping-list-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                setButtonState('export-btn', 'success', '✅ Exported');
+                showStatus('List exported successfully', 'success');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                setButtonState('export-btn', 'error', 'Export Failed');
+                showStatus('Export failed', 'error');
+            }
         }
 
-        function groupByStore() {
-            if (shoppingData.length === 0) return;
-
-            const groupedData = {};
-            shoppingData.forEach(item => {
-                if (!groupedData[item.store]) {
-                    groupedData[item.store] = [];
-                }
-                groupedData[item.store].push(item);
-            });
-
-            const container = document.getElementById('shopping_list_items');
-            let html = '';
-
-            Object.keys(groupedData).sort().forEach(store => {
-                html += `<li style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-weight: 600; color: #4f46e5;">🏪 ${store} (${groupedData[store].length})</li>`;
+        async function syncWithServer() {
+            setButtonState('sync-btn', 'loading', 'Syncing...');
+            showSyncStatus('Syncing with server...');
+            
+            try {
+                await loadCurrentItems();
                 
-                groupedData[store].forEach((item) => {
-                    const actualIndex = shoppingData.findIndex(i => i.id === item.id);
-                    html += `
-                        <li class="item ${item.inCart ? 'completed' : ''}" style="margin-left: 16px;">
-                            <div class="checkbox ${item.inCart ? 'checked' : ''}" onclick="toggleItemInCart(${actualIndex})"></div>
-                            <div class="item-content">
-                                <div class="item-name">${item.name || item.item_name}</div>
-                                <div class="item-details">
-                                    <span class="store-tag">${item.store}</span>
-                                    <span class="quantity-badge">${item.quantity}</span>
-                                    <span class="priority-dot priority-${item.priority || 'medium'}"></span>
-                                    ${item.neededBy ? `<span class="date-text">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
-                                </div>
-                            </div>
-                            <button class="delete-btn" onclick="deleteItem(${actualIndex})">🗑️</button>
-                        </li>
-                    `;
-                });
-            });
-
-            container.innerHTML = html;
+                const historyContainer = document.getElementById('history_items');
+                if (historyContainer && !historyContainer.querySelector('.empty-state')) {
+                    await loadItemsByTimestamp();
+                }
+                
+                setButtonState('sync-btn', 'success', '✅ Synced');
+                showStatus('Sync completed successfully', 'success');
+                
+            } catch (error) {
+                console.error('Sync error:', error);
+                setButtonState('sync-btn', 'error', 'Sync Failed');
+                showStatus('Sync failed - using offline mode', 'error');
+            }
         }
 
         async function loadItemsByTimestamp() {
@@ -898,39 +1396,54 @@
             const endDate = document.getElementById('end_timestamp').value;
 
             if (!startDate || !endDate) {
-                alert('Please select both dates');
+                showStatus('Please select both dates', 'error');
                 return;
             }
 
-            // Show loading state
+            setButtonState('filter-btn', 'loading', 'Loading...');
+            
             const container = document.getElementById('history_items');
             container.innerHTML = `
                 <div class="empty-state">
-                    <div class="loading"></div>
-                    <div style="margin-top: 8px;">Loading history...</div>
+                    <div class="empty-icon">⏳</div>
+                    <div>Loading history...</div>
                 </div>
             `;
 
             try {
-                // Try to fetch from API first
                 const response = await fetch(`/todolist/update/${startDate}/${endDate}`);
+                
                 if (response.ok) {
                     const data = await response.json();
                     renderHistoricalData(data);
+                    setButtonState('filter-btn', 'success', `✅ ${data.length} Found`);
+                    if (data.length > 0) {
+                        showStatus(`Found ${data.length} items in history`, 'success');
+                    } else {
+                        showStatus('No items found in selected date range', 'info');
+                    }
                     return;
+                } else {
+                    throw new Error('Server response not ok');
                 }
             } catch (error) {
-                console.error('API call failed, using localStorage:', error);
+                console.error('API call failed:', error);
+                const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
+                const filteredData = allHistory.filter(item => {
+                    const itemDate = new Date(item.purchaseDate || item.timestamp);
+                    const startDateObj = new Date(startDate);
+                    const endDateObj = new Date(endDate);
+                    return itemDate >= startDateObj && itemDate <= endDateObj;
+                });
+
+                renderHistoricalData(filteredData);
+                setButtonState('filter-btn', 'success', `✅ ${filteredData.length} Local`);
+                if (filteredData.length === 0) {
+                    showStatus('No items found locally for selected dates', 'info');
+                } else {
+                    showStatus(`Found ${filteredData.length} items locally`, 'warning');
+                }
             }
-
-            // Fallback to localStorage
-            const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-            const filteredData = allHistory.filter(item => {
-                const itemDate = new Date(item.purchaseDate || item.timestamp);
-                return itemDate >= new Date(startDate) && itemDate <= new Date(endDate);
-            });
-
-            renderHistoricalData(filteredData);
         }
 
         function renderHistoricalData(data) {
@@ -946,16 +1459,13 @@
                 return;
             }
 
-            // Calculate frequency for each item
             const itemFrequency = {};
             data.forEach(item => {
-                // Handle both API format (item_name) and localStorage format (name)
                 const itemName = item.item_name || item.name;
                 const key = `${itemName}-${item.store}`;
                 itemFrequency[key] = (itemFrequency[key] || 0) + 1;
             });
 
-            // Group items by name and store
             const groupedItems = {};
             data.forEach(item => {
                 const itemName = item.item_name || item.name;
@@ -971,14 +1481,12 @@
                 }
                 groupedItems[key].totalQuantity += parseInt(item.quantity) || 0;
                 
-                // Keep the most recent date
                 const currentDate = item.timestamp || item.purchaseDate || item.completedDate;
                 if (new Date(currentDate) > new Date(groupedItems[key].lastPurchased)) {
                     groupedItems[key].lastPurchased = currentDate;
                 }
             });
 
-            // Sort by frequency (most bought first)
             const sortedItems = Object.values(groupedItems).sort((a, b) => b.frequency - a.frequency);
 
             container.innerHTML = sortedItems.map(item => `
@@ -1006,6 +1514,20 @@
             btn.textContent = section.classList.contains('collapsed') ? 'Show' : 'Hide';
         }
 
+        // Network status handling
+        window.addEventListener('online', function() {
+            isOnline = true;
+            // RIMOSSO: updateOnlineStatus();
+            showStatus('Back online - syncing...', 'success');
+            syncWithServer();
+        });
+
+        window.addEventListener('offline', function() {
+            isOnline = false;
+            // RIMOSSO: updateOnlineStatus();
+            showStatus('Gone offline - using local storage', 'warning');
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -1013,253 +1535,73 @@
                 addItem();
             }
             
-            // Focus on item name input with Ctrl/Cmd + K
             if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 document.getElementById('item_name').focus();
             }
             
-            // Export with Ctrl/Cmd + E
             if (e.key === 'e' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 exportList();
+            }
+            
+            if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                syncWithServer();
             }
         });
 
         // Auto-save functionality
         setInterval(() => {
             localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-            if (historicalData.length > 0) {
-                localStorage.setItem('shoppingHistory', JSON.stringify(historicalData));
-            }
-        }, 30000); // Save every 30 seconds
+        }, 30000);
 
-        // Smart suggestions based on history
-        function setupSmartSuggestions() {
-            const itemInput = document.getElementById('item_name');
-            const storeInput = document.getElementById('store');
-            
-            // Get historical data for suggestions
-            const getHistoricalItems = () => {
-                return JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-            };
-            
-            itemInput.addEventListener('input', function() {
-                const value = this.value.toLowerCase();
-                if (value.length < 2) return;
-                
-                const historicalItems = getHistoricalItems();
-                const suggestions = [...new Set(historicalItems
-                    .filter(item => (item.item_name || item.name || '').toLowerCase().includes(value))
-                    .map(item => item.item_name || item.name)
-                    .slice(0, 5))];
-                
-                // You can implement a dropdown suggestion UI here if needed
-                console.log('Item suggestions:', suggestions);
-            });
-
-            storeInput.addEventListener('input', function() {
-                const value = this.value.toLowerCase();
-                if (value.length < 1) return;
-                
-                const historicalItems = getHistoricalItems();
-                const suggestions = [...new Set(historicalItems
-                    .filter(item => item.store.toLowerCase().includes(value))
-                    .map(item => item.store)
-                    .slice(0, 5))];
-                
-                console.log('Store suggestions:', suggestions);
-            });
-        }
-
-        // Initialize smart suggestions
-        setupSmartSuggestions();
-
-        // Service Worker for offline functionality (optional)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => {
-                console.log('Service Worker registration failed:', err);
-            });
-        }
-
-        // Handle online/offline status
-        window.addEventListener('online', function() {
-            console.log('Back online - syncing data...');
-            // You could implement data sync here
-        });
-
-        window.addEventListener('offline', function() {
-            console.log('Gone offline - using local storage...');
-        });
-
-        // Responsive adjustments
-        function adjustForMobile() {
-            if (window.innerWidth <= 480) {
-                // Reduce section heights on very small screens
-                const sections = document.querySelectorAll('.section-content');
-                sections.forEach(section => {
-                    if (!section.classList.contains('collapsed')) {
-                        section.style.maxHeight = '200px';
-                    }
-                });
-            }
-        }
-
-        window.addEventListener('resize', adjustForMobile);
-        adjustForMobile(); // Run on load
-
-        // Initialize tooltips for better UX
-        function addTooltips() {
-            const tooltipElements = [
-                { id: 'item_name', text: 'Enter the name of the item you want to buy' },
-                { id: 'quantity', text: 'How many do you need?' },
-                { id: 'store', text: 'Which store will you buy this from?' },
-                { id: 'priority', text: 'How urgent is this item?' },
-                { id: 'needed_by', text: 'When do you need this by?' }
-            ];
-
-            tooltipElements.forEach(elem => {
-                const element = document.getElementById(elem.id);
-                if (element) {
-                    element.title = elem.text;
+        // Auto-sync every 5 minutes if online
+        setInterval(async () => {
+            if (isOnline) {
+                showSyncStatus('Auto-syncing...', 1000);
+                try {
+                    await loadCurrentItems();
+                } catch (error) {
+                    console.error('Auto-sync failed:', error);
                 }
-            });
-        }
-
-        addTooltips();
-
-        // Performance optimization: Debounce expensive operations
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // Debounced render function for better performance
-        const debouncedRender = debounce(renderCurrentItems, 100);
-        const debouncedUpdateStats = debounce(updateStatistics, 100);
-
-        // Error handling and user feedback
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 12px 16px;
-                border-radius: 8px;
-                color: white;
-                font-size: 14px;
-                font-weight: 500;
-                z-index: 1000;
-                animation: slideIn 0.3s ease-out;
-                max-width: 300px;
-                background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
-            `;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'fadeOut 0.3s ease-out';
-                setTimeout(() => document.body.removeChild(toast), 300);
-            }, 3000);
-        }
-
-        // Enhanced error handling for API calls
-        async function apiCall(url, options = {}) {
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('API call failed:', error);
-                showToast('Network error. Using offline mode.', 'error');
-                throw error;
             }
-        }
+        }, 5 * 60 * 1000);
 
-        // Data validation
-        function validateItem(item) {
-            const errors = [];
-            
-            if (!item.name && !item.item_name) {
-                errors.push('Item name is required');
+        // Enhanced form validation
+        document.getElementById('item_name').addEventListener('input', function() {
+            const value = this.value.trim();
+            if (value.length > 0) {
+                this.style.borderColor = '#10b981';
+            } else {
+                this.style.borderColor = '#e2e8f0';
             }
-            
-            if (!item.store) {
-                errors.push('Store is required');
-            }
-            
-            if (item.quantity < 1) {
-                errors.push('Quantity must be at least 1');
-            }
-            
-            return {
-                isValid: errors.length === 0,
-                errors
-            };
-        }
-
-        // Export functionality with multiple formats
-        function exportToCSV() {
-            if (shoppingData.length === 0) {
-                showToast('No items to export!', 'error');
-                return;
-            }
-
-            const headers = ['Name', 'Store', 'Quantity', 'Priority', 'Needed By', 'Status'];
-            const csvContent = [
-                headers.join(','),
-                ...shoppingData.map(item => [
-                    `"${item.name || item.item_name}"`,
-                    `"${item.store}"`,
-                    item.quantity,
-                    item.priority || 'medium',
-                    item.neededBy || '',
-                    item.inCart ? 'Completed' : 'Pending'
-                ].join(','))
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `shopping-list-${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-            
-            showToast('List exported successfully!', 'success');
-        }
-
-        // Add CSV export option to quick actions
-        document.addEventListener('DOMContentLoaded', function() {
-            const quickActions = document.querySelector('.quick-actions');
-            const csvBtn = document.createElement('button');
-            csvBtn.className = 'quick-btn';
-            csvBtn.innerHTML = '📊 CSV Export';
-            csvBtn.onclick = exportToCSV;
-            quickActions.appendChild(csvBtn);
         });
 
-        console.log('🛒 Smart Shopping List loaded successfully!');
+        document.getElementById('store').addEventListener('input', function() {
+            const value = this.value.trim();
+            if (value.length > 0) {
+                this.style.borderColor = '#10b981';
+            } else {
+                this.style.borderColor = '#e2e8f0';
+            }
+        });
+
+        console.log('🛒 Enhanced Smart Shopping List loaded successfully!');
+        console.log('Features enabled:');
+        console.log('- Visual feedback for all actions');
+        console.log('- No popup alerts');
+        console.log('- Real-time status updates');
+        console.log('- Smooth animations');
+        console.log('- Offline mode support');
+        console.log('- Auto-sync every 5 minutes');
+        console.log('- Mobile optimized layout');
+        console.log('');
         console.log('Keyboard shortcuts:');
         console.log('- Ctrl/Cmd + Enter: Add item');
         console.log('- Ctrl/Cmd + K: Focus on item input');
         console.log('- Ctrl/Cmd + E: Export list');
+        console.log('- Ctrl/Cmd + S: Sync with server');
     </script>
 </body>
 </html>
