@@ -622,23 +622,25 @@
         }
 
         async function loadCurrentItems() {
-            try {
-                // Try to fetch from API first
-                const response = await fetch('/todolist/today');
-                if (response.ok) {
-                    shoppingData = await response.json();
-                } else {
-                    // Fallback to localStorage
-                    shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-                }
-            } catch (error) {
-                console.error('API unavailable, using localStorage:', error);
-                shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-            }
-            
-            renderCurrentItems();
-            updateStatistics();
+    try {
+        // Prova prima l'API del server
+        const response = await fetch('/api/shopping-list/current');
+        if (response.ok) {
+            shoppingData = await response.json();
+            console.log('Loaded current items from server:', shoppingData.length);
+        } else {
+            console.log('Server API failed, using localStorage');
+            shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
         }
+    } catch (error) {
+        console.error('API unavailable, using localStorage:', error);
+        shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+    }
+    
+    renderCurrentItems();
+    updateStatistics();
+}
+
 
         function renderCurrentItems() {
             const container = document.getElementById('shopping_list_items');
@@ -670,15 +672,60 @@
             `).join('');
         }
 
-        function updateStatistics() {
-            const total = shoppingData.length;
-            const completed = shoppingData.filter(item => item.inCart).length;
-            const uniqueStores = [...new Set(shoppingData.map(item => item.store))].length;
+        // Migliora la funzione di aggiornamento statistiche
+function updateStatistics() {
+    const total = shoppingData.length;
+    const completed = shoppingData.filter(item => item.inCart).length;
+    const pending = total - completed;
+    const uniqueStores = [...new Set(shoppingData.map(item => item.store))].length;
 
-            document.getElementById('total-items').textContent = total;
-            document.getElementById('completed-items').textContent = completed;
-            document.getElementById('unique-stores').textContent = uniqueStores;
+    document.getElementById('total-items').textContent = pending; // Mostra solo i pending
+    document.getElementById('completed-items').textContent = completed;
+    document.getElementById('unique-stores').textContent = uniqueStores;
+    
+    // Carica le statistiche dal server se disponibile
+    loadShoppingStats();
+}
+
+
+// Funzione per sincronizzare con il server
+async function syncWithServer() {
+    try {
+        showToast('Syncing with server...', 'info');
+        
+        // Ricarica i dati correnti
+        await loadCurrentItems();
+        
+        // Ricarica la cronologia se è visualizzata
+        const historyContainer = document.getElementById('history_items');
+        if (historyContainer && !historyContainer.querySelector('.empty-state')) {
+            await loadItemsByTimestamp();
         }
+        
+        showToast('Sync completed successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Sync error:', error);
+        showToast('Sync failed - using offline mode', 'error');
+    }
+}
+// Aggiungi pulsante di sync alle quick actions
+document.addEventListener('DOMContentLoaded', function() {
+    const quickActions = document.querySelector('.quick-actions');
+    
+    // Pulsante per sync
+    const syncBtn = document.createElement('button');
+    syncBtn.className = 'quick-btn';
+    syncBtn.innerHTML = '🔄 Sync';
+    syncBtn.onclick = syncWithServer;
+    quickActions.appendChild(syncBtn);
+    
+    // Modifica il pulsante export esistente per supportare più formati
+    const existingExportBtn = quickActions.querySelector('button[onclick="exportList()"]');
+    if (existingExportBtn) {
+        existingExportBtn.onclick = () => exportListAdvanced('json');
+    }
+});
 
         async function addItem() {
             const name = document.getElementById('item_name').value.trim();
@@ -758,91 +805,319 @@
 
 
         async function toggleItemInCart(index) {
-            shoppingData[index].inCart = !shoppingData[index].inCart;
-
-            // If item is being marked as in cart, move to history
-            if (shoppingData[index].inCart) {
-                const completedItem = {
-                    ...shoppingData[index],
-                    purchaseDate: new Date().toISOString(),
-                    completedDate: new Date().toISOString(),
+    const item = shoppingData[index];
+    const wasInCart = item.inCart;
+    
+    // Toggle lo stato locale temporaneamente
+    shoppingData[index].inCart = !shoppingData[index].inCart;
+    
+    try {
+        if (!wasInCart) {
+            // Item viene completato - invia al server
+            const response = await fetch(`/api/shopping-list/complete/${item.id || item._id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    item_name: item.name || item.item_name,
+                    store: item.store,
+                    quantity: item.quantity,
+                    priority: item.priority,
                     timestamp: new Date().toISOString().split('T')[0]
-                };
+                })
+            });
+
+            if (response.ok) {
+                console.log('Item marked as purchased on server');
+                showToast('Item completed successfully!', 'success');
                 
-                // Add to local history
-                historicalData = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-                historicalData.push(completedItem);
-                localStorage.setItem('shoppingHistory', JSON.stringify(historicalData));
+                // Rimuovi l'item dalla lista corrente dopo un breve delay
+                setTimeout(() => {
+                    shoppingData.splice(index, 1);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    renderCurrentItems();
+                    updateStatistics();
+                }, 1500);
+            } else {
+                // Se il server fallisce, ripristina lo stato
+                shoppingData[index].inCart = wasInCart;
+                showToast('Failed to complete item on server', 'error');
+            }
+        } else {
+            // Item viene de-completato - invia al server
+            const response = await fetch(`/api/shopping-list/uncomplete/${item.id || item._id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                console.log('Item marked as not purchased on server');
+                showToast('Item restored to list!', 'success');
+            } else {
+                // Se il server fallisce, ripristina lo stato
+                shoppingData[index].inCart = wasInCart;
+                showToast('Failed to restore item on server', 'error');
+            }
+        }
+        
+        // Aggiorna l'interfaccia
+        renderCurrentItems();
+        updateStatistics();
+        
+    } catch (error) {
+        console.error('Error toggling item:', error);
+        // Ripristina lo stato se c'è un errore
+        shoppingData[index].inCart = wasInCart;
+        renderCurrentItems();
+        showToast('Network error - changes not saved', 'error');
+    }
+    
+    // Salva in localStorage come backup
+    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+}
+
+
+        async function clearCompleted() {
+    const completedItems = shoppingData.filter(item => item.inCart);
+    if (completedItems.length === 0) {
+        showToast('No completed items to clear!', 'info');
+        return;
+    }
+
+    if (confirm(`Clear ${completedItems.length} completed items? This will permanently delete them from history.`)) {
+        try {
+            // Chiama l'API per cancellare dal server
+            const response = await fetch('/api/shopping-list/clear-completed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showToast(`Cleared ${result.cleared_count} completed items!`, 'success');
+            } else {
+                showToast('Failed to clear items on server', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error clearing completed items:', error);
+            showToast('Server unavailable - items cleared locally only', 'info');
+        }
+        
+        // Rimuovi gli item completati dalla lista locale comunque
+        shoppingData = shoppingData.filter(item => !item.inCart);
+        localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+        renderCurrentItems();
+        updateStatistics();
+    }
+}
+
+
+
+async function markAllComplete() {
+    const incompleteItems = shoppingData.filter(item => !item.inCart);
+    
+    if (incompleteItems.length === 0) {
+        showToast('No items to complete!', 'info');
+        return;
+    }
+
+    if (confirm(`Mark all ${incompleteItems.length} items as completed?`)) {
+        try {
+            // Raccogli gli ID degli item da completare
+            const itemIds = incompleteItems
+                .filter(item => item.id || item._id)
+                .map(item => item.id || item._id);
+            
+            if (itemIds.length > 0) {
+                // Usa l'API bulk per completare tutti gli item
+                const response = await fetch('/api/shopping-list/bulk-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_ids: itemIds })
+                });
                 
-                try {
-                    // Try to send completion to server
-                    await fetch(`/api/shopping-list/complete/${shoppingData[index].id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            item_name: completedItem.name || completedItem.item_name,
-                            store: completedItem.store,
-                            quantity: completedItem.quantity,
-                            timestamp: completedItem.timestamp
-                        })
-                    });
-                } catch (error) {
-                    console.error('Error saving completion to server:', error);
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(`Completed ${result.updated_count} items!`, 'success');
+                } else {
+                    showToast('Some items failed to complete on server', 'error');
                 }
             }
-
+            
+            // Aggiorna la lista locale
+            shoppingData.forEach(item => {
+                if (!item.inCart) {
+                    item.inCart = true;
+                    item.purchaseDate = new Date().toISOString();
+                }
+            });
+            
             localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
             renderCurrentItems();
             updateStatistics();
+            
+        } catch (error) {
+            console.error('Error marking all complete:', error);
+            showToast('Network error - changes may not be saved', 'error');
         }
-
-        async function deleteItem(index) {
-            if (confirm('Are you sure you want to delete this item?')) {
-                const deletedItem = shoppingData.splice(index, 1)[0];
-                
-                try {
-                    await fetch(`/todolist/delete/${deletedItem._id}`, {
-                        method: 'DELETE'
-                    });
-                } catch (error) {
-                    console.error('Error deleting from server:', error);
-                }
-
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-            }
+    }
+}
+async function loadShoppingStats() {
+    try {
+        const response = await fetch('/api/shopping-list/stats');
+        if (response.ok) {
+            const stats = await response.json();
+            
+            // Aggiorna le statistiche nell'interfaccia se ci sono elementi per mostrarle
+            document.getElementById('total-items').textContent = stats.total_current;
+            document.getElementById('completed-items').textContent = stats.total_purchased;
+            document.getElementById('unique-stores').textContent = stats.unique_stores;
+            
+            return stats;
         }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+    
+    // Fallback alle statistiche locali
+    return null;
+}
 
-        function clearCompleted() {
-            const completedItems = shoppingData.filter(item => item.inCart);
-            if (completedItems.length === 0) {
-                alert('No completed items to clear!');
-                return;
-            }
 
-            if (confirm(`Clear ${completedItems.length} completed items?`)) {
-                shoppingData = shoppingData.filter(item => !item.inCart);
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-            }
+// Funzione per suggerimenti intelligenti basati sulla cronologia
+async function loadSmartSuggestions(store = null) {
+    try {
+        let url = '/api/shopping-list/suggestions';
+        if (store) {
+            url += `?store=${encodeURIComponent(store)}`;
         }
-
-        function markAllComplete() {
-            if (shoppingData.length === 0) {
-                alert('No items to complete!');
-                return;
-            }
-
-            if (confirm('Mark all items as completed?')) {
-                shoppingData.forEach((item, index) => {
-                    if (!item.inCart) {
-                        toggleItemInCart(index);
-                    }
-                });
-            }
+        
+        const response = await fetch(url);
+        if (response.ok) {
+            const suggestions = await response.json();
+            return suggestions;
         }
+    } catch (error) {
+        console.error('Error loading suggestions:', error);
+    }
+    
+    return [];
+}
+
+// Migliora la funzione di setup dei suggerimenti
+function setupSmartSuggestions() {
+    const itemInput = document.getElementById('item_name');
+    const storeInput = document.getElementById('store');
+    
+    // Aggiungi suggerimenti più intelligenti
+    storeInput.addEventListener('blur', async function() {
+        const store = this.value.trim();
+        if (store.length > 0) {
+            const suggestions = await loadSmartSuggestions(store);
+            console.log(`Suggestions for ${store}:`, suggestions);
+            // Potresti implementare un dropdown di suggerimenti qui
+        }
+    });
+    
+    // Auto-complete per negozi frequenti
+    const getFrequentStores = () => {
+        const history = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
+        const storeCounts = {};
+        
+        history.forEach(item => {
+            storeCounts[item.store] = (storeCounts[item.store] || 0) + 1;
+        });
+        
+        return Object.keys(storeCounts)
+            .sort((a, b) => storeCounts[b] - storeCounts[a])
+            .slice(0, 5);
+    };
+    
+    storeInput.addEventListener('input', function() {
+        const value = this.value.toLowerCase();
+        if (value.length >= 1) {
+            const frequentStores = getFrequentStores();
+            const matches = frequentStores.filter(store => 
+                store.toLowerCase().includes(value)
+            );
+            console.log('Store suggestions:', matches);
+        }
+    });
+}
+
+
+// Funzione per esportare in più formati
+async function exportListAdvanced(format = 'json') {
+    if (shoppingData.length === 0) {
+        showToast('No items to export!', 'error');
+        return;
+    }
+
+    try {
+        // Carica anche le statistiche per l'export
+        const stats = await loadShoppingStats();
+        
+        const exportData = {
+            currentList: shoppingData,
+            exportDate: new Date().toISOString(),
+            statistics: stats || {
+                totalItems: shoppingData.length,
+                completedItems: shoppingData.filter(item => item.inCart).length,
+                uniqueStores: [...new Set(shoppingData.map(item => item.store))].length
+            },
+            metadata: {
+                version: '2.0',
+                format: format,
+                exported_by: 'Smart Shopping List'
+            }
+        };
+
+        if (format === 'csv') {
+            exportToCSVAdvanced(exportData);
+        } else {
+            // JSON export
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `shopping-list-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            
+            showToast('List exported successfully!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Export failed!', 'error');
+    }
+}
+
+function exportToCSVAdvanced(exportData) {
+    const headers = ['Name', 'Store', 'Quantity', 'Priority', 'Needed By', 'Status', 'Date Added'];
+    const csvContent = [
+        headers.join(','),
+        ...exportData.currentList.map(item => [
+            `"${(item.name || item.item_name).replace(/"/g, '""')}"`,
+            `"${item.store.replace(/"/g, '""')}"`,
+            item.quantity,
+            item.priority || 'medium',
+            item.neededBy || '',
+            item.inCart ? 'Completed' : 'Pending',
+            item.dateAdded || item.date_added || ''
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `shopping-list-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    showToast('List exported to CSV successfully!', 'success');
+}
+
+
 
         function exportList() {
             if (shoppingData.length === 0) {
@@ -909,45 +1184,91 @@
             container.innerHTML = html;
         }
 
-        async function loadItemsByTimestamp() {
-            const startDate = document.getElementById('start_timestamp').value;
-            const endDate = document.getElementById('end_timestamp').value;
+async function loadItemsByTimestamp() {
+    const startDate = document.getElementById('start_timestamp').value;
+    const endDate = document.getElementById('end_timestamp').value;
 
-            if (!startDate || !endDate) {
-                alert('Please select both dates');
-                return;
+    if (!startDate || !endDate) {
+        showToast('Please select both dates', 'error');
+        return;
+    }
+
+    // Show loading state
+    const container = document.getElementById('history_items');
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="loading"></div>
+            <div style="margin-top: 8px;">Loading history...</div>
+        </div>
+    `;
+
+    try {
+        // Costruisci la URL con i parametri corretti
+        const response = await fetch(`/todolist/update/${startDate}/${endDate}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            renderHistoricalData(data);
+            if (data.length > 0) {
+                showToast(`Found ${data.length} items in history`, 'success');
             }
-
-            // Show loading state
-            const container = document.getElementById('history_items');
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="loading"></div>
-                    <div style="margin-top: 8px;">Loading history...</div>
-                </div>
-            `;
-
-            try {
-                // Try to fetch from API first
-                const response = await fetch(`/todolist/update/${startDate}/${endDate}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    renderHistoricalData(data);
-                    return;
-                }
-            } catch (error) {
-                console.error('API call failed, using localStorage:', error);
-            }
-
-            // Fallback to localStorage
-            const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-            const filteredData = allHistory.filter(item => {
-                const itemDate = new Date(item.purchaseDate || item.timestamp);
-                return itemDate >= new Date(startDate) && itemDate <= new Date(endDate);
-            });
-
-            renderHistoricalData(filteredData);
+            return;
+        } else {
+            console.log('API call failed, using localStorage');
         }
+    } catch (error) {
+        console.error('API call failed:', error);
+    }
+
+    // Fallback a localStorage
+    const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
+    const filteredData = allHistory.filter(item => {
+        const itemDate = new Date(item.purchaseDate || item.timestamp);
+        const startDateObj = new Date(startDate);
+        const endDateObj = new Date(endDate);
+        return itemDate >= startDateObj && itemDate <= endDateObj;
+    });
+
+    renderHistoricalData(filteredData);
+    if (filteredData.length === 0) {
+        showToast('No items found in selected date range', 'info');
+    }
+}
+
+async function deleteItem(index) {
+    const item = shoppingData[index];
+    const itemName = item.name || item.item_name;
+    
+    if (confirm(`Are you sure you want to delete "${itemName}"?`)) {
+        try {
+            // Prima rimuovi dall'array locale
+            const deletedItem = shoppingData.splice(index, 1)[0];
+            
+            // Aggiorna immediatamente l'interfaccia
+            renderCurrentItems();
+            updateStatistics();
+            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+            
+            // Prova a cancellare dal server
+            const response = await fetch(`/todolist/delete/${deletedItem.id || deletedItem._id}`, {
+                method: 'DELETE'
+            });
+            
+            if (response.ok) {
+                showToast('Item deleted successfully!', 'success');
+            } else {
+                console.error('Failed to delete from server');
+                showToast('Item deleted locally (server sync failed)', 'info');
+            }
+            
+        } catch (error) {
+            console.error('Error deleting from server:', error);
+            showToast('Item deleted locally (server unavailable)', 'info');
+        }
+    }
+}
+
+
 
         function renderHistoricalData(data) {
             const container = document.getElementById('history_items');
@@ -1270,6 +1591,33 @@
             csvBtn.onclick = exportToCSV;
             quickActions.appendChild(csvBtn);
         });
+
+        // Auto-sync ogni 5 minuti
+setInterval(async () => {
+    if (navigator.onLine) {
+        console.log('Auto-syncing...');
+        await syncWithServer();
+    }
+}, 5 * 60 * 1000);
+
+// Miglior gestione offline/online
+window.addEventListener('online', function() {
+    showToast('Back online - syncing...', 'success');
+    syncWithServer();
+});
+
+window.addEventListener('offline', function() {
+    showToast('Gone offline - using local storage', 'info');
+});
+
+console.log('🛒 Enhanced Smart Shopping List loaded successfully!');
+console.log('New features:');
+console.log('- Real-time server synchronization');
+console.log('- Improved history management'); 
+console.log('- Smart suggestions based on purchase history');
+console.log('- Enhanced export options');
+console.log('- Auto-sync every 5 minutes when online');
+            
 
         console.log('🛒 Smart Shopping List loaded successfully!');
         console.log('Keyboard shortcuts:');

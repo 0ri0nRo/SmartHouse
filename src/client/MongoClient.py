@@ -31,26 +31,6 @@ class MongoDBHandler:
             return []  # Assicuriamoci di restituire sempre una lista
 
 
-    def delete_document(self, query):
-        try:
-            result = self.collection.delete_one(query)
-            if result.deleted_count > 0:
-                print("Documento cancellato con successo!")
-            else:
-                print("Nessun documento trovato con la query fornita.")
-        except Exception as e:
-            print(f"Errore durante la cancellazione del documento: {e}")
-
-    def update_document(self, query, update_values):
-        try:
-            result = self.collection.update_one(query, {'$set': update_values})
-            if result.modified_count > 0:
-                print("Documento aggiornato con successo!")
-            else:
-                print("Nessun documento trovato con la query fornita.")
-        except Exception as e:
-            print(f"Errore durante l'aggiornamento del documento: {e}")
-
     def add_shopping_item(self, item_name, quantity, store, timestamp_str):
         try:
             # Convertire la stringa timestamp in un oggetto datetime
@@ -138,3 +118,90 @@ class MongoDBHandler:
         except Exception as e:
             print(f"Errore durante la lettura di tutti gli item: {e}")
             return []
+
+        # Aggiungi questi metodi alla tua classe MongoDBHandler esistente
+
+    def add_document(self, document):
+        """Insert a single document into the collection"""
+        try:
+            result = self.collection.insert_one(document)
+            return result.inserted_id
+        except Exception as e:
+            print(f"Error inserting document: {e}")
+            raise e
+
+    def read_documents(self, filter_query=None, sort=None, limit=None):
+        """Read multiple documents with optional filtering, sorting, and limiting"""
+        try:
+            if filter_query is None:
+                filter_query = {}
+                
+            cursor = self.collection.find(filter_query)
+            
+            if sort:
+                cursor = cursor.sort(sort)
+                
+            if limit:
+                cursor = cursor.limit(limit)
+                
+            # Convert cursor to list and handle ObjectId conversion
+            documents = []
+            for doc in cursor:
+                if '_id' in doc:
+                    doc['_id'] = str(doc['_id'])
+                documents.append(doc)
+                
+            return documents
+            
+        except Exception as e:
+            print(f"Error reading documents: {e}")
+            return []
+
+    def read_all_documents(self):
+        """Read all documents in the collection"""
+        return self.read_documents()
+
+    def update_document(self, filter_query, update_data):
+        """Update a single document"""
+        try:
+            # Use $set to update fields
+            update_query = {'$set': update_data}
+            result = self.collection.update_one(filter_query, update_query)
+            return result
+        except Exception as e:
+            print(f"Error updating document: {e}")
+            return None
+
+    def update_documents(self, filter_query, update_data):
+        """Update multiple documents"""
+        try:
+            # Use $set to update fields
+            update_query = {'$set': update_data}
+            result = self.collection.update_many(filter_query, update_query)
+            return result
+        except Exception as e:
+            print(f"Error updating documents: {e}")
+            return None
+
+    def delete_document(self, filter_query):
+        """Delete a single document"""
+        try:
+            result = self.collection.delete_one(filter_query)
+            return result
+        except Exception as e:
+            print(f"Error deleting document: {e}")
+            return None
+
+    def delete_documents(self, filter_query):
+        """Delete multiple documents"""
+        try:
+            result = self.collection.delete_many(filter_query)
+            return result
+        except Exception as e:
+            print(f"Error deleting documents: {e}")
+            return None
+
+
+    def read_today_items(self):
+        """Legacy method - now reads current (unpurchased) items"""
+        return self.read_documents({'purchased': {'$ne': True}})
