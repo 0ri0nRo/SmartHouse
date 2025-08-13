@@ -45,6 +45,8 @@ pyserial==3.5
 
 # Real-time communication
 flask-socketio==5.3.6
+python-socketio>=5.8.0
+eventlet>=0.33.0
 
 # Development & testing
 pytest==7.4.2
