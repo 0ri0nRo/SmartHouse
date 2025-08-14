@@ -90,12 +90,22 @@ def api_ssh_exec():
     private_key = data.get('privateKey')
     command = data.get('command')
     passphrase = data.get('passphrase') or None
+    username = data.get('username') or None
+    password = data.get('password') or None
+    ip = data.get('ip') or None
 
-    if not private_key or not command:
-        return jsonify({"error": "Missing private key or command"}), 400
+    if (not private_key and not password) or not command:
+        return jsonify({"error": "Missing authentication method or command"}), 400
 
     try:
-        out = ssh_service.exec_command(private_key, command, passphrase)
+        out = ssh_service.exec_command(
+            command,
+            private_key_str=private_key,
+            passphrase=passphrase,
+            username=username,
+            password=password,
+            ip=ip
+        )
         return jsonify({"output": out})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
