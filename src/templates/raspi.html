@@ -979,7 +979,7 @@
                 type="file" 
                 id="privateKeyInput" 
                 class="file-input"
-                accept=".pem,.key,.rsa,.pub"
+                accept=""
               />
               <label for="privateKeyInput" class="file-input-label" id="fileInputLabel">
                 <i data-lucide="upload"></i>
@@ -992,6 +992,15 @@
               <strong>Type:</strong> <span id="fileType">-</span>
             </div>
           </div>
+          <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" id="usernameInput" class="form-input" placeholder="pi" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password (in alternativa alla chiave privata)</label>
+          <input type="password" id="passwordInput" class="form-input" placeholder="Inserisci password SSH" />
+        </div>
           
           <div class="form-group">
             <label class="form-label">Passphrase (Optional)</label>
@@ -1486,68 +1495,78 @@
       commandHistory = [];
       lucide.createIcons();
     }
-
-    // SSH execution function
-    async function executeSSHCommand(privateKey, command, passphrase = '') {
+    async function executeSSHCommand(privateKey, command, passphrase = '', username = '', password = '') {
       try {
-        addOutputLog({
-          status: 'connecting',
-          message: `Connecting to Raspberry Pi...`
-        }, 'status');
+        addOutputLog({ status: 'connecting', message: `Connecting to Raspberry Pi...` }, 'status');
 
         const response = await axios.post('/api/ssh_exec', {
-          privateKey: privateKey,
+          ip: "192.168.178.101",
+          username: username || null,
+          password: password || null,
+          privateKey: privateKey || null,
           command: command,
           passphrase: passphrase || null
         }, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        addOutputLog({
-          status: 'connected',
-          message: `Connected to Raspberry Pi`
-        }, 'status');
-
-        addOutputLog({
-          command: command,
-          output: response.data.output
-        }, 'command');
-
-        commandHistory.push({
-          timestamp: new Date(),
-          command: command,
-          output: response.data.output,
-          success: true
+          headers: { 'Content-Type': 'application/json' }
         });
 
-        return {
-          success: true,
-          output: response.data.output
-        };
+        addOutputLog({ status: 'connected', message: `Connected to Raspberry Pi` }, 'status');
+        addOutputLog({ command: command, output: response.data.output }, 'command');
 
+        return { success: true, output: response.data.output };
       } catch (error) {
         const errorMessage = error.response?.data?.error || error.message;
         addOutputLog(`SSH execution failed: ${errorMessage}`, 'error');
-        
-        commandHistory.push({
-          timestamp: new Date(),
-          command: command,
-          output: errorMessage,
-          success: false
-        });
-        
         throw error;
       }
     }
 
-    // Event Listeners
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('#clearOutputBtn')) {
-        clearOutput();
+    document.getElementById('runSSHCommandBtn').addEventListener('click', async function() {
+      const btn = this;
+      const command = document.getElementById('commandInput').value.trim();
+      const passphrase = document.getElementById('passphraseInput').value.trim();
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value.trim();
+
+      if (!username) {
+        addOutputLog("ERROR: No username specified.", 'error');
+        return;
       }
+      if (!password && !currentPrivateKey) {
+        addOutputLog("ERROR: Provide either a password or a private key.", 'error');
+        return;
+      }
+      if (!command) {
+        addOutputLog("ERROR: No command specified.", 'error');
+        return;
+      }
+
+      const originalContent = btn.innerHTML;
+      btn.innerHTML = '<i data-lucide="loader-2"></i> Executing...';
+      btn.disabled = true;
+      btn.classList.add('loading');
+      lucide.createIcons();
+
+      try {
+        await executeSSHCommand(currentPrivateKey, command, passphrase, username, password);
+        btn.innerHTML = '<i data-lucide="check-circle"></i> Completed';
+        btn.className = 'btn btn-success btn-full';
+        lucide.createIcons();
+      } catch (error) {
+        btn.innerHTML = '<i data-lucide="alert-circle"></i> Failed';
+        btn.className = 'btn btn-danger btn-full';
+        lucide.createIcons();
+      }
+
+      setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        btn.className = 'btn btn-full';
+        btn.classList.remove('loading');
+        lucide.createIcons();
+      }, 3000);
     });
+
 
     document.getElementById('backupButton').addEventListener('click', function() {
       const btn = this;
@@ -1592,7 +1611,7 @@
       const command = document.getElementById('commandInput').value.trim();
       const passphrase = document.getElementById('passphraseInput').value.trim();
 
-      if (!currentPrivateKey) {
+      if (!password && !currentPrivateKey) {
         addOutputLog("ERROR: No private key file selected. Please choose a valid key file.", 'error');
         return;
       }
