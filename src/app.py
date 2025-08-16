@@ -1,4 +1,5 @@
-""" Flask Application - Main Entry Point
+"""
+Flask Application - Main Entry Point
 
 Refactored Flask application with a modular structure to handle:
 - Temperature and humidity sensors
@@ -10,6 +11,7 @@ Refactored Flask application with a modular structure to handle:
 - Backup and SSH commands
 - Expense management
 - Raspberry Pi Pico W logs via WebSocket
+- Service Worker for offline functionality
 """
 
 from flask import Flask, send_from_directory # pyright: ignore[reportMissingImports]
@@ -95,11 +97,54 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
+        """Serve favicon from static directory."""
         return send_from_directory('static', 'favicon.ico')
+
+    @app.route('/sw.js')
+    def service_worker():
+        """
+        Serve the Service Worker file for offline functionality.
+        
+        The Service Worker enables:
+        - Offline access to the dashboard
+        - Intelligent caching of API responses
+        - Improved performance through cache-first strategies
+        - Fallback data when network is unavailable
+        
+        Returns:
+            The sw.js file with appropriate MIME type and cache headers.
+        """
+        try:
+            # Get the directory where the main app file is located (project root)
+            project_root = os.path.dirname(os.path.abspath(__file__))
+            
+            # Send the Service Worker file with proper headers
+            response = send_from_directory(
+                project_root, 
+                'sw.js', 
+                mimetype='application/javascript'
+            )
+            
+            # Add cache control headers for Service Worker
+            # Service Workers should not be cached too aggressively
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            
+            logger.info("Service Worker served successfully")
+            return response
+            
+        except FileNotFoundError:
+            logger.error("Service Worker file (sw.js) not found in project root")
+            return "Service Worker not found", 404
+        except Exception as e:
+            logger.error(f"Error serving Service Worker: {str(e)}")
+            return "Error serving Service Worker", 500
 
     # Add a health check endpoint
     @app.route('/health')
     def health_check():
+        """Health check endpoint for monitoring and load balancers."""
         return {'status': 'healthy', 'service': 'raspberry-pi-dashboard'}, 200
 
     logger.info("Flask application configured successfully")
