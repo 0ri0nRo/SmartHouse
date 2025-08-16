@@ -276,7 +276,7 @@
             
             .card {
                 padding: var(--space-md);
-                min-height: 80px;
+                min-height: 60px;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
@@ -345,7 +345,8 @@
             
             .card {
                 padding: var(--space-md);
-                min-height: 80px;
+                min-height: 60px;
+                display: flex;
                 border-radius: 12px;
             }
             
@@ -1357,19 +1358,6 @@
             });
         }
 
-        // Service Worker for offline functionality
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch((registrationError) => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
-
         // Handle visibility changes for better performance
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
@@ -1393,7 +1381,7 @@
         });
 
         // Initialize everything when DOM is loaded
-        document.addEventListener('DOMContentLoaded', initialize);
+        // document.addEventListener('DOMContentLoaded', initialize);
 
         // Legacy support for window.onload
         window.onload = initialize;
