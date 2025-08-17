@@ -100,6 +100,7 @@ def create_app():
         """Serve favicon from static directory."""
         return send_from_directory('static', 'favicon.ico')
 
+    """
     @app.route('/sw.js')
     def service_worker():
         """
@@ -140,7 +141,8 @@ def create_app():
         except Exception as e:
             logger.error(f"Error serving Service Worker: {str(e)}")
             return "Error serving Service Worker", 500
-
+    """
+    
     # Add a health check endpoint
     @app.route('/health')
     def health_check():
