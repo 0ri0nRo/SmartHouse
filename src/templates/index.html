@@ -563,6 +563,72 @@
             align-items: center;
         }
 
+        /* NEW: Enhanced Saldo card with visibility toggle */
+        .saldo-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-md);
+        }
+
+        .saldo-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .visibility-toggle {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            padding: 2px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .visibility-toggle:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+
+        .visibility-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .visibility-toggle svg {
+            width: 100%;
+            height: 100%;
+            stroke-width: 2;
+        }
+
+        .saldo-value-hidden {
+            font-family: monospace;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 430px) {
+            .visibility-toggle {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        @media (max-width: 375px) {
+            .visibility-toggle {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
         /* Specialized card styles */
         .card.temperature {
             background: linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
@@ -778,7 +844,8 @@
 
         /* Focus styles for keyboard navigation */
         .card:focus,
-        .toggle-switch:focus {
+        .toggle-switch:focus,
+        .visibility-toggle:focus {
             outline: 2px solid #667eea;
             outline-offset: 2px;
         }
@@ -961,19 +1028,32 @@
                 </div>
             </article>
 
-            <!-- Saldo Card -->
+            <!-- MODIFIED: Enhanced Saldo Card with Visibility Toggle -->
             <article class="card saldo" id="saldoCard" tabindex="0">
-                <div class="card-header">
+                <div class="saldo-header">
                     <h2 class="card-title">Saldo</h2>
-                    <div class="card-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="12" x2="12" y1="2" y2="22"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                        </svg>
+                    <div class="saldo-controls">
+                        <button class="visibility-toggle" id="saldoVisibilityToggle" tabindex="0" aria-label="Toggle balance visibility">
+                            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="m1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg id="eyeOffIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display: none;">
+                                <path d="m1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <path d="m21 9-9 9"/>
+                                <path d="m21 9-9-9"/>
+                            </svg>
+                        </button>
+                        <div class="card-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <line x1="12" x2="12" y1="2" y2="22"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
                     </div>
                 </div>
                 <div class="card-content">
-                    <div class="card-value" id="saldoValue">-- €</div>
+                    <div class="card-value" id="saldoValue">•••• €</div>
                     <div class="card-meta">
                         <span>Balance</span>
                         <span class="status-dot online"></span>
@@ -1004,6 +1084,62 @@
     </div>
 
     <script>
+        // NEW: Saldo visibility management
+        let saldoVisible = false;
+        let actualSaldoValue = null;
+        
+        function toggleSaldoVisibility() {
+            const saldoValueElement = document.getElementById("saldoValue");
+            const eyeIcon = document.getElementById("eyeIcon");
+            const eyeOffIcon = document.getElementById("eyeOffIcon");
+            const saldoToggle = document.getElementById("saldoVisibilityToggle");
+            
+            if (saldoVisible) {
+                // Hide saldo
+                saldoValueElement.textContent = "•••• €";
+                saldoValueElement.classList.add("saldo-value-hidden");
+                eyeIcon.style.display = "block";
+                eyeOffIcon.style.display = "none";
+                saldoVisible = false;
+                
+                // Save preference
+                localStorage.setItem('saldoVisible', 'false');
+            } else {
+                // Show saldo
+                if (actualSaldoValue !== null) {
+                    saldoValueElement.textContent = actualSaldoValue;
+                }
+                saldoValueElement.classList.remove("saldo-value-hidden");
+                eyeIcon.style.display = "none";
+                eyeOffIcon.style.display = "block";
+                saldoVisible = true;
+                
+                // Save preference
+                localStorage.setItem('saldoVisible', 'true');
+            }
+            
+            // Add haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        }
+
+        function loadSaldoVisibilityPreference() {
+            const savedPreference = localStorage.getItem('saldoVisible');
+            saldoVisible = savedPreference === 'true';
+            
+            const eyeIcon = document.getElementById("eyeIcon");
+            const eyeOffIcon = document.getElementById("eyeOffIcon");
+            
+            if (saldoVisible) {
+                eyeIcon.style.display = "none";
+                eyeOffIcon.style.display = "block";
+            } else {
+                eyeIcon.style.display = "block";
+                eyeOffIcon.style.display = "none";
+            }
+        }
+
         // FIXED: Enhanced theme management with better background refresh
         const themeToggle = document.getElementById('themeToggle');
         const body = document.body;
@@ -1043,6 +1179,20 @@
             }
         });
 
+        // Saldo visibility toggle event listeners
+        document.getElementById("saldoVisibilityToggle").addEventListener("click", (e) => {
+            e.stopPropagation(); // Prevent card navigation
+            toggleSaldoVisibility();
+        });
+
+        document.getElementById("saldoVisibilityToggle").addEventListener("keydown", (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSaldoVisibility();
+            }
+        });
+
         // Card navigation functions (unchanged)
         document.getElementById("temperatureCard").addEventListener("click", () => {
             window.location.href = "/temp";
@@ -1076,7 +1226,6 @@
             window.location.href = "/shopping-list";
         });
 
-
         // Utility functions (unchanged)
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
@@ -1097,6 +1246,7 @@
             }
         }
 
+        // MODIFIED: Enhanced fetchSaldoValue with visibility control
         async function fetchSaldoValue() {
             const saldoElement = document.getElementById("saldoValue");
             const saldoCard = document.getElementById("saldoCard");
@@ -1107,17 +1257,35 @@
                 const response = await fetch('/api/p48');
                 const data = await response.json();
 
+                let newSaldoValue = null;
+
                 if (data.cached_value !== undefined && data.cached_value !== null) {
-                    saldoElement.textContent = `${parseFloat(data.cached_value).toFixed(2)} €`;
+                    newSaldoValue = `${parseFloat(data.cached_value).toFixed(2)} €`;
                 }
 
                 if (data.P48_value !== undefined && data.P48_value !== null) {
-                    saldoElement.textContent = `${parseFloat(data.P48_value).toFixed(2)} €`;
+                    newSaldoValue = `${parseFloat(data.P48_value).toFixed(2)} €`;
+                }
+
+                if (newSaldoValue) {
+                    actualSaldoValue = newSaldoValue;
+                    
+                    // Only show the value if visibility is enabled
+                    if (saldoVisible) {
+                        saldoElement.textContent = actualSaldoValue;
+                    } else {
+                        saldoElement.textContent = "•••• €";
+                    }
                 }
 
             } catch (error) {
                 console.error("Errore nel recuperare il saldo da P48:", error);
-                saldoElement.textContent = "-- €";
+                actualSaldoValue = "-- €";
+                if (saldoVisible) {
+                    saldoElement.textContent = actualSaldoValue;
+                } else {
+                    saldoElement.textContent = "•••• €";
+                }
             } finally {
                 saldoCard.classList.remove('loading');
             }
@@ -1324,6 +1492,7 @@
         // Enhanced initialization
         function initialize() {
             loadTheme();
+            loadSaldoVisibilityPreference();
             addCardInteractions();
             
             // Add alarm card click listener
@@ -1358,19 +1527,6 @@
             });
         }
 
-        // Service Worker for offline functionality
-        // if ('serviceWorker' in navigator) {
-        //    window.addEventListener('load', () => {
-        //        navigator.serviceWorker.register('/sw.js')
-        //            .then((registration) => {
-        //                console.log('SW registered: ', registration);
-        //            })
-        //            .catch((registrationError) => {
-        //                console.log('SW registration failed: ', registrationError);
-        //            });
-        //    });
-        //}
-
         // Handle visibility changes for better performance
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
@@ -1394,9 +1550,6 @@
         });
 
         // Initialize everything when DOM is loaded
-        // document.addEventListener('DOMContentLoaded', initialize);
-
-        // Legacy support for window.onload
         window.onload = initialize;
     </script>
 </body>
