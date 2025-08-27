@@ -108,7 +108,7 @@ class GoogleSheetExpenseManager:
 
 
 class SheetValueFetcher:
-    CACHE_KEY = "p48_value"  # chiave per Redis
+    CACHE_KEY = "p49_value"  # chiave per Redis
 
     def __init__(self, credentials_path, sheet_name, redis_host='localhost', redis_port=6379):
         self.scope = [
@@ -155,7 +155,7 @@ class SheetValueFetcher:
         except redis.RedisError as e:
             print(f"Errore Redis set: {e}")
 
-    def get_cell_value_p48(self):
+    def get_cell_value_p49(self):
         current_year = datetime.now().year
         summary_sheet_name = f"{current_year}"
 
@@ -165,9 +165,9 @@ class SheetValueFetcher:
             raise ValueError(f"Worksheet '{summary_sheet_name}' non trovata.")
 
         try:
-            value = worksheet.acell("P48").value
+            value = worksheet.acell("P49").value
             self._update_cache(value)
-            print(f"Valore aggiornato da P48 ({summary_sheet_name}): {value}")
+            print(f"Valore aggiornato da P49 ({summary_sheet_name}): {value}")
             return value
         except gspread.exceptions.CellNotFound:
-            raise ValueError("Cell P48 non trovata.")
+            raise ValueError("Cell P49 non trovata.")
