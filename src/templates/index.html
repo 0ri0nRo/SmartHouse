@@ -1254,7 +1254,7 @@
             saldoCard.classList.add('loading');
 
             try {
-                const response = await fetch('/api/p48');
+                const response = await fetch('/api/p49');
                 const data = await response.json();
 
                 let newSaldoValue = null;
@@ -1263,8 +1263,8 @@
                     newSaldoValue = `${parseFloat(data.cached_value).toFixed(2)} €`;
                 }
 
-                if (data.P48_value !== undefined && data.P48_value !== null) {
-                    newSaldoValue = `${parseFloat(data.P48_value).toFixed(2)} €`;
+                if (data.P48_value !== undefined && data.P49_value !== null) {
+                    newSaldoValue = `${parseFloat(data.P49_value).toFixed(2)} €`;
                 }
 
                 if (newSaldoValue) {
@@ -1279,7 +1279,7 @@
                 }
 
             } catch (error) {
-                console.error("Errore nel recuperare il saldo da P48:", error);
+                console.error("Errore nel recuperare il saldo da P49:", error);
                 actualSaldoValue = "-- €";
                 if (saldoVisible) {
                     saldoElement.textContent = actualSaldoValue;

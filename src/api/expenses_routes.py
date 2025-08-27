@@ -55,11 +55,11 @@ def api_expenses():
             return jsonify({"error": str(e)}), 404
 
 
-@expense_bp.route('/api/p48', methods=['GET'])
+@expense_bp.route('/api/p49', methods=['GET'])
 @handle_db_error
-def api_p48():
+def api_p49():
     """
-    API endpoint to fetch the value of cell P48 from a Google Sheet.
+    API endpoint to fetch the value of cell P49 from a Google Sheet.
 
     - Returns both the cached value (from Redis) and the live value (directly from Google Sheets).
     - Live value retrieval may fail if Google API is unavailable, in which case only cached data is returned.
@@ -77,14 +77,14 @@ def api_p48():
         
         # Try to get live value from Google Sheets
         try:
-            live_value = fetcher.get_cell_value_p48()
+            live_value = fetcher.get_cell_value_p49()
             live_value = float(live_value.replace(",", "."))
         except Exception:
             live_value = None
         
         response = {
             "cached_value": float(cached.replace(",", ".")) if cached else None,
-            "P48_value": live_value
+            "P49_value": live_value
         }
         
         return jsonify(response), 200
