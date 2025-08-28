@@ -1,6 +1,6 @@
 # Smart House Project
-<img width="1359" height="383" alt="image" src="https://github.com/user-attachments/assets/e6e1fb7b-50d1-43c9-9956-43c9b8c6990c" />
-<img width="1201" height="396" alt="image" src="https://github.com/user-attachments/assets/d8531d3a-f611-41a7-90b5-4d08b6210411" />
+<img width="1772" height="635" alt="image" src="https://github.com/user-attachments/assets/a26d02bc-a605-4506-b765-d9aff4176c3f" />
+<img width="1730" height="625" alt="image" src="https://github.com/user-attachments/assets/66332432-de54-4671-bd43-acd508aff1c3" />
 
 
 This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
