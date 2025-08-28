@@ -12,6 +12,14 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
+  db-init:
+    image: postgres:latest
+    depends_on:
+      - db
+    volumes:
+      - ./src/sql/init_receipts.sql:/init_receipts.sql
+    entrypoint: ["sh", "-c", "until pg_isready -h db -U postgres; do sleep 2; done && psql -h db -U postgres -d sensor_data -f /init_receipts.sql"]
+
   mongodb:
     image: mongo:4.4.18
     container_name: mongodb
@@ -61,10 +69,14 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=1234
       - TZ=Europe/Rome
+      - UPLOAD_FOLDER=/app/uploads
+      - TESSERACT_CMD=/usr/bin/tesseract
     volumes:
       - ./src/backup.sh:/usr/local/bin/backup.sh
       - ./backup:/backup
       - ./src/static:/app/static
+      - ./uploads:/app/uploads
+    user: "1000:1000"
     restart: unless-stopped
 
   network_scanner:
@@ -81,6 +93,7 @@ services:
       - DB_PASSWORD=1234
       - TZ=Europe/Rome
     restart: unless-stopped
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -101,7 +114,6 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
-    
 volumes:
   postgres_data:
   mongo-data:
