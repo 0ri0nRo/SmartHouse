@@ -7,12 +7,24 @@ RUN addgroup -S appgroup \
     && adduser -S appuser -G appgroup \
     && addgroup appuser dialout
 
-# Install build dependencies required for compiling some Python packages
+# Install build dependencies AND OCR dependencies
 RUN apk add --no-cache --virtual .build-deps \
         gcc musl-dev python3-dev linux-headers libffi-dev postgresql-dev \
-    && apk add --no-cache nmap
+    && apk add --no-cache \
+        nmap \
+        tesseract-ocr \
+        tesseract-ocr-data-ita \
+        tesseract-ocr-data-eng \
+        poppler-utils \
+        jpeg-dev \
+        zlib-dev \
+        freetype-dev \
+        lcms2-dev \
+        openjpeg-dev \
+        tiff-dev \
+        tk-dev \
+        tcl-dev
 
-    
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
@@ -24,11 +36,20 @@ COPY requirements.txt .
 RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements.txt
 
-# Remove build dependencies to reduce image size
+# Remove build dependencies to reduce image size (keep runtime deps)
 RUN apk del .build-deps
 
 # Copy application code and set ownership to appuser and appgroup
 COPY --chown=appuser:appgroup . .
+
+# Create uploads directory for receipts
+RUN mkdir -p uploads && chown -R appuser:appgroup uploads
+
+# Create uploads directory and set correct permissions
+RUN mkdir -p /app/uploads && \
+    chmod 755 /app/uploads && \
+    chown -R 1000:1000 /app/uploads
+
 
 # Switch to non-root user
 USER appuser

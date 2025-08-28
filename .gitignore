@@ -99,3 +99,6 @@ yarn.lock
 *.local
 *.sublime-workspace
 *.sublime-project
+
+# Exclude uploads directory
+uploads/
