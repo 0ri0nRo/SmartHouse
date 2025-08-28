@@ -1,4 +1,5 @@
-""" Flask Application - Main Entry Point
+"""
+Flask Application - Main Entry Point
 
 Refactored Flask application with a modular structure to handle:
 - Temperature and humidity sensors
@@ -10,6 +11,7 @@ Refactored Flask application with a modular structure to handle:
 - Backup and SSH commands
 - Expense management
 - Raspberry Pi Pico W logs via WebSocket
+- Service Worker for offline functionality
 """
 
 from flask import Flask, send_from_directory # pyright: ignore[reportMissingImports]
@@ -95,11 +97,14 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
+        """Serve favicon from static directory."""
         return send_from_directory('static', 'favicon.ico')
 
+    
     # Add a health check endpoint
     @app.route('/health')
     def health_check():
+        """Health check endpoint for monitoring and load balancers."""
         return {'status': 'healthy', 'service': 'raspberry-pi-dashboard'}, 200
 
     logger.info("Flask application configured successfully")

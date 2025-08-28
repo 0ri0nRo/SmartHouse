@@ -1,7 +1,28 @@
+"""
+"""
+
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
+MAX_UPLOAD_SIZE = 16 * 1024 * 1024  # 16MB
+
+TESSERACT_CMD = os.environ.get('TESSERACT_CMD', '/usr/bin/tesseract')
+TESSERACT_LANGUAGE = 'ita+eng'
+
+RECEIPTS_DB_CONFIG = {
+    'host': os.environ.get('DB_HOST', 'db'),
+    'database': os.environ.get('DB_NAME', 'sensor_data'),
+    'user': os.environ.get('DB_USER', 'postgres'),
+    'password': os.environ.get('DB_PASSWORD', '1234'),
+    'port': int(os.environ.get('DB_PORT', '5432'))
+}
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'tiff', 'bmp'}
+
+RECEIPT_LOG_LEVEL = os.environ.get('RECEIPT_LOG_LEVEL', 'INFO')
 
 def get_config():
     """Centralize all application configurations."""
