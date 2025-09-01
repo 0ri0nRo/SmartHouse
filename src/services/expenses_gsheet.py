@@ -44,18 +44,17 @@ class GoogleSheetExpenseManager:
         day = datetime.strptime(date, "%Y-%m-%d").day
 
         """
-        Prefix with "=" to generate a Google Sheets formula automatically, 
+        Prefix with "=" to generate a Google Sheets formula automatically,
         avoiding manual editing of the cell value without updating the formula.
         """
-        eur = "=" + str(float(amount))
+        eur = f"={float(amount):.2f}".replace(".", ",")
 
         new_row = [name, day, eur, '', eur, category]
-
         col_a_values = ws.col_values(1)
         first_empty_row = len(col_a_values) + 1
 
         cell_range = f"A{first_empty_row}:F{first_empty_row}"
-        ws.update(cell_range, [new_row])
+        ws.update(cell_range, [new_row], value_input_option="USER_ENTERED")
         print(f"Expense '{name}' added to sheet '{ws.title}' on row {first_empty_row}")
 
     def get_summary_expenses(self, summary_sheet_name="2025 Expenses"):
