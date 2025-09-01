@@ -43,7 +43,11 @@ class GoogleSheetExpenseManager:
         ws = self._get_month_worksheet(date)
         day = datetime.strptime(date, "%Y-%m-%d").day
 
-        eur = float(amount)
+        """
+        Prefix with "=" to generate a Google Sheets formula automatically, 
+        avoiding manual editing of the cell value without updating the formula.
+        """
+        eur = "=" + str(float(amount))
 
         new_row = [name, day, eur, '', eur, category]
 
