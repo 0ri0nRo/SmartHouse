@@ -1522,15 +1522,18 @@
         </main>
     </div>
 
+
+
     <script>
         let shoppingData = [];
         let historicalData = [];
         let isOnline = navigator.onLine;
+        let pendingOperations = new Map(); // Track pending operations to avoid duplicates
+        let lastSyncTimestamp = null;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadCurrentItems();
-            updateStatistics();
             setDefaultDates();
             showStatus('Welcome! Your shopping list is ready.', 'success');
         });
@@ -1560,7 +1563,6 @@
             const btn = document.getElementById(buttonId);
             const textElement = btn.querySelector('span') || btn;
             
-            // Remove all states
             btn.classList.remove('loading', 'success', 'error');
             
             if (state === 'loading') {
@@ -1588,14 +1590,13 @@
             const textElement = btn.querySelector('span') || btn;
             btn.classList.remove('loading', 'success', 'error');
             
-            // Reset to original text
             const originalTexts = {
-                'add-item-btn': 'Add to Shopping List',
-                'clear-btn': '🗑️ Clear Completed',
-                'complete-all-btn': '✅ Complete All',
-                'export-btn': '📤 Export List',
-                'sync-btn': '🔄 Sync Data',
-                'filter-btn': 'Filter Purchase History'
+                'add-item-btn': 'Add to List',
+                'clear-btn': '🗑️ Clear Done',
+                'complete-all-btn': '✅ All Done',
+                'export-btn': '📤 Export',
+                'sync-btn': '🔄 Sync',
+                'filter-btn': 'Filter History'
             };
             
             textElement.textContent = originalTexts[buttonId] || 'Button';
@@ -1603,10 +1604,12 @@
 
         function animateStatCard(cardId) {
             const card = document.getElementById(cardId);
-            card.classList.add('updating');
-            setTimeout(() => {
-                card.classList.remove('updating');
-            }, 500);
+            if (card) {
+                card.classList.add('updating');
+                setTimeout(() => {
+                    card.classList.remove('updating');
+                }, 500);
+            }
         }
 
         function setDefaultDates() {
@@ -1617,22 +1620,38 @@
             document.getElementById('start_timestamp').value = oneMonthAgo.toISOString().split('T')[0];
         }
 
+        // Improved loadCurrentItems - eliminates duplicates
         async function loadCurrentItems() {
             try {
                 showSyncStatus('Loading items...');
                 const response = await fetch('/api/shopping-list/current');
+                
                 if (response.ok) {
-                    shoppingData = await response.json();
-                    showStatus(`Loaded ${shoppingData.length} items from server`, 'success');
+                    const serverData = await response.json();
+                    
+                    // Use server data as the single source of truth
+                    shoppingData = serverData || [];
+                    lastSyncTimestamp = Date.now();
+                    
+                    // Update localStorage with server data
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    localStorage.setItem('lastSyncTimestamp', lastSyncTimestamp.toString());
+                    
+                    showStatus(`Loaded ${shoppingData.length} items`, 'success', 2000);
                 } else {
-                    shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-                    if (shoppingData.length > 0) {
-                        showStatus(`Using ${shoppingData.length} local items (server unavailable)`, 'warning');
+                    // Fallback to localStorage only if server fails
+                    const localData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                    if (localData.length > 0) {
+                        shoppingData = localData;
+                        showStatus(`Using ${shoppingData.length} local items`, 'warning');
+                    } else {
+                        shoppingData = [];
                     }
                 }
             } catch (error) {
-                console.error('API unavailable, using localStorage:', error);
-                shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                console.error('Server unavailable:', error);
+                const localData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                shoppingData = localData;
                 if (shoppingData.length > 0) {
                     showStatus('Using offline mode', 'warning');
                 }
@@ -1655,21 +1674,43 @@
                 return;
             }
 
-            container.innerHTML = shoppingData.map((item, index) => `
-                <li class="shopping-item ${item.inCart ? 'completed' : ''} fade-in">
-                    <div class="item-checkbox ${item.inCart ? 'checked' : ''}" onclick="toggleItemInCart(${index})" id="checkbox-${index}"></div>
-                    <div class="item-details">
-                        <div class="item-name">${item.name || item.item_name}</div>
-                        <div class="item-metadata">
-                            <span class="metadata-tag">${item.store}</span>
-                            <span class="quantity-indicator">${item.quantity}</span>
-                            <span class="priority-indicator priority-${item.priority || 'medium'}"></span>
-                            ${item.neededBy ? `<span class="date-indicator">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
-                        </div>
+            // Filter out completed items for display
+            const activeItems = shoppingData.filter(item => !item.inCart);
+
+            if (activeItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <div class="empty-text">All items completed!</div>
                     </div>
-                    <button class="delete-button" onclick="deleteItem(${index})" id="delete-${index}">🗑️</button>
-                </li>
-            `).join('');
+                `;
+                return;
+            }
+
+            container.innerHTML = activeItems.map((item, index) => {
+                // Find the actual index in shoppingData array
+                const actualIndex = shoppingData.findIndex(dataItem => 
+                    (dataItem.id && dataItem.id === item.id) || 
+                    (dataItem._id && dataItem._id === item._id) ||
+                    (dataItem.name === item.name && dataItem.store === item.store && dataItem.dateAdded === item.dateAdded)
+                );
+
+                return `
+                    <li class="shopping-item fade-in" data-item-id="${item.id || item._id || actualIndex}">
+                        <div class="item-checkbox" onclick="toggleItemInCart(${actualIndex})" id="checkbox-${actualIndex}"></div>
+                        <div class="item-details">
+                            <div class="item-name">${item.name || item.item_name}</div>
+                            <div class="item-metadata">
+                                <span class="metadata-tag">${item.store}</span>
+                                <span class="quantity-indicator">${item.quantity}</span>
+                                <span class="priority-indicator priority-${item.priority || 'medium'}"></span>
+                                ${item.neededBy ? `<span class="date-indicator">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
+                            </div>
+                        </div>
+                        <button class="delete-button" onclick="deleteItem(${actualIndex})" id="delete-${actualIndex}">🗑️</button>
+                    </li>
+                `;
+            }).join('');
         }
 
         function updateStatistics() {
@@ -1688,6 +1729,7 @@
             document.getElementById('unique-stores').textContent = uniqueStores;
         }
 
+        // Improved addItem function - prevents duplicates
         async function addItem() {
             const name = document.getElementById('item_name').value.trim();
             const store = document.getElementById('store').value.trim();
@@ -1700,11 +1742,18 @@
                 return;
             }
 
-            setButtonState('add-item-btn', 'loading', 'Adding Item...');
+            // Check for duplicates
+            const duplicate = shoppingData.find(item => 
+                (item.name || item.item_name) === name && 
+                item.store === store && 
+                !item.inCart
+            );
 
             const timestamp = new Date().toISOString();
+            const tempId = 'temp_' + Date.now(); // Temporary ID for tracking
+            
             const newItem = {
-                id: Date.now(),
+                id: tempId,
                 name,
                 item_name: name,
                 store,
@@ -1714,6 +1763,12 @@
                 inCart: false,
                 dateAdded: timestamp
             };
+
+            // Check if operation is already pending
+            if (pendingOperations.has(tempId)) {
+                return;
+            }
+            pendingOperations.set(tempId, newItem);
 
             try {
                 const response = await fetch('/todolist/insert', {
@@ -1729,27 +1784,55 @@
                 });
 
                 if (response.ok) {
+                    const serverResponse = await response.json();
+                    
+                    // Remove temp item and add server response
+                    pendingOperations.delete(tempId);
+                    
+                    // Update the item with server-provided ID if available
+                    if (serverResponse.id || serverResponse._id) {
+                        newItem.id = serverResponse.id || serverResponse._id;
+                    }
+                    
+                    // Only add if not already present
+                    const existingIndex = shoppingData.findIndex(item => 
+                        (item.id === newItem.id) || 
+                        (item.name === name && item.store === store && !item.inCart)
+                    );
+                    
+                    if (existingIndex === -1) {
+                        shoppingData.push(newItem);
+                        localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    }
+                    
+                    renderCurrentItems();
+                    updateStatistics();
+                    clearForm();
+                    setButtonState('add-item-btn', 'success', '✅ Added!');
+                    showStatus(`Added "${name}" to your list`, 'success');
+                    
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (error) {
+                console.error('Server unavailable, saving locally:', error);
+                pendingOperations.delete(tempId);
+                
+                // Save locally only if not already present
+                const existingIndex = shoppingData.findIndex(item => 
+                    item.name === name && item.store === store && !item.inCart
+                );
+                
+                if (existingIndex === -1) {
                     shoppingData.push(newItem);
                     localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                     renderCurrentItems();
                     updateStatistics();
                     clearForm();
-                    setButtonState('add-item-btn', 'success', '✅ Item Added!');
-                    showStatus(`Added "${name}" to your list`, 'success');
+                    setButtonState('add-item-btn', 'success', '✅ Added Locally');
+                    showStatus(`Added "${name}" locally (server unavailable)`, 'warning');
                 } else {
-                    const errData = await response.json();
-                    setButtonState('add-item-btn', 'error', 'Failed to Add');
-                    showStatus(`Failed to add item: ${errData.message || 'Server error'}`, 'error');
                 }
-            } catch (error) {
-                console.error('Server unavailable, saving locally:', error);
-                shoppingData.push(newItem);
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-                clearForm();
-                setButtonState('add-item-btn', 'success', '✅ Added Locally');
-                showStatus(`Added "${name}" locally (server unavailable)`, 'warning');
             }
         }
 
@@ -1761,20 +1844,35 @@
             document.getElementById('priority').value = 'medium';
         }
 
+        // Improved toggleItemInCart - prevents race conditions
         async function toggleItemInCart(index) {
+            if (index < 0 || index >= shoppingData.length) {
+                console.error('Invalid index:', index);
+                return;
+            }
+
             const item = shoppingData[index];
+            const itemId = item.id || item._id;
             const checkbox = document.getElementById(`checkbox-${index}`);
-            const itemElement = checkbox.closest('.shopping-item');
-            const wasInCart = item.inCart;
+            const itemElement = checkbox ? checkbox.closest('.shopping-item') : null;
             
-            // Set checkbox to loading state
+            if (!checkbox || !itemElement) {
+                console.error('UI elements not found for index:', index);
+                return;
+            }
+
+            // Prevent double-clicking
+            if (checkbox.classList.contains('loading')) {
+                return;
+            }
+            
             checkbox.classList.add('loading');
             itemElement.classList.add('completing');
             
             try {
-                if (!wasInCart) {
+                if (!item.inCart) {
                     // Mark as completed
-                    const response = await fetch(`/api/shopping-list/complete/${item.id || item._id}`, {
+                    const response = await fetch(`/api/shopping-list/complete/${itemId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1786,74 +1884,70 @@
                         })
                     });
 
-                    if (response.ok) {
+                    if (response.ok || !isOnline) {
+                        // Update local data
                         shoppingData[index].inCart = true;
                         shoppingData[index].purchaseDate = new Date().toISOString();
+                        localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                         
-                        // Animate completion
+                        // Animate completion and remove from view
                         setTimeout(() => {
-                            itemElement.classList.add('removing');
-                            setTimeout(() => {
-                                shoppingData.splice(index, 1);
-                                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                                renderCurrentItems();
-                                updateStatistics();
-                            }, 300);
-                        }, 1000);
-                        
-                        showStatus(`"${item.name || item.item_name}" completed!`, 'success');
-                    } else {
-                        throw new Error('Server error');
-                    }
-                } else {
-                    // Unmark as completed (restore)
-                    const response = await fetch(`/api/shopping-list/uncomplete/${item.id || item._id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-
-                    if (response.ok) {
-                        shoppingData[index].inCart = false;
-                        shoppingData[index].purchaseDate = null;
-                        checkbox.classList.remove('loading', 'checked');
-                        itemElement.classList.remove('completing', 'completed');
-                        showStatus('Item restored to list', 'success');
+                            renderCurrentItems();
+                            updateStatistics();
+                            showStatus(`"${item.name || item.item_name}" completed!`, 'success');
+                        }, 800);
                     } else {
                         throw new Error('Server error');
                     }
                 }
                 
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                
             } catch (error) {
-                console.error('Error toggling item:', error);
+                console.error('Error completing item:', error);
                 checkbox.classList.remove('loading');
                 itemElement.classList.remove('completing');
-                showStatus('Network error - please try again', 'error');
+                showStatus('Failed to complete item - please try again', 'error');
             }
         }
 
+        // Improved deleteItem function
         async function deleteItem(index) {
+            if (index < 0 || index >= shoppingData.length) {
+                console.error('Invalid index:', index);
+                return;
+            }
+
             const item = shoppingData[index];
             const deleteBtn = document.getElementById(`delete-${index}`);
-            const itemElement = deleteBtn.closest('.shopping-item');
+            const itemElement = deleteBtn ? deleteBtn.closest('.shopping-item') : null;
             const itemName = item.name || item.item_name;
+            
+            if (!deleteBtn || !itemElement) {
+                console.error('UI elements not found for index:', index);
+                return;
+            }
+
+            // Prevent double-clicking
+            if (deleteBtn.classList.contains('loading')) {
+                return;
+            }
             
             deleteBtn.classList.add('loading');
             itemElement.classList.add('removing');
 
             try {
-                const response = await fetch(`/todolist/delete/${item.id || item._id}`, {
+                const itemId = item.id || item._id;
+                const response = await fetch(`/todolist/delete/${itemId}`, {
                     method: 'DELETE'
                 });
                 
+                // Remove from local data regardless of server response
                 setTimeout(() => {
                     shoppingData.splice(index, 1);
                     localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                     renderCurrentItems();
                     updateStatistics();
                     
-                    if (response.ok) {
+                    if (response && response.ok) {
                         showStatus(`"${itemName}" deleted`, 'success');
                     } else {
                         showStatus(`"${itemName}" deleted locally`, 'warning');
@@ -1862,6 +1956,7 @@
                 
             } catch (error) {
                 console.error('Error deleting item:', error);
+                // Still remove locally if server fails
                 setTimeout(() => {
                     shoppingData.splice(index, 1);
                     localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
@@ -1887,7 +1982,7 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
-                if (response.ok) {
+                if (response && response.ok) {
                     const result = await response.json();
                     setButtonState('clear-btn', 'success', `✅ Cleared ${result.cleared_count}`);
                     showStatus(`Cleared ${result.cleared_count} completed items`, 'success');
@@ -1902,6 +1997,8 @@
                 showStatus('Items cleared locally (server unavailable)', 'warning');
             }
             
+            // Remove completed items from local data
+            const clearedCount = completedItems.length;
             shoppingData = shoppingData.filter(item => !item.inCart);
             localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
             renderCurrentItems();
@@ -1930,7 +2027,7 @@
                         body: JSON.stringify({ item_ids: itemIds })
                     });
                     
-                    if (response.ok) {
+                    if (response && response.ok) {
                         const result = await response.json();
                         setButtonState('complete-all-btn', 'success', `✅ ${result.updated_count} Completed`);
                         showStatus(`Completed ${result.updated_count} items`, 'success');
@@ -1943,6 +2040,7 @@
                     showStatus(`Completed ${incompleteItems.length} items`, 'success');
                 }
                 
+                // Update local data
                 shoppingData.forEach(item => {
                     if (!item.inCart) {
                         item.inCart = true;
@@ -1952,12 +2050,11 @@
                 
                 localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                 
-                // Animate all items being completed
+                // Animate completion
                 setTimeout(() => {
-                    shoppingData = shoppingData.filter(item => item.inCart === false);
                     renderCurrentItems();
                     updateStatistics();
-                }, 1500);
+                }, 1000);
                 
             } catch (error) {
                 console.error('Error completing all items:', error);
@@ -2007,11 +2104,15 @@
             }
         }
 
+        // Improved syncWithServer function
         async function syncWithServer() {
             setButtonState('sync-btn', 'loading', 'Syncing...');
             showSyncStatus('Syncing with server...');
             
             try {
+                // Clear pending operations before sync
+                pendingOperations.clear();
+                
                 await loadCurrentItems();
                 
                 const historyContainer = document.getElementById('history_items');
@@ -2187,22 +2288,23 @@
             }
         });
 
-        // Auto-save functionality
-        setInterval(() => {
-            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-        }, 30000);
-
-        // Auto-sync every 5 minutes if online
+        // Enhanced auto-sync with collision detection
         setInterval(async () => {
-            if (isOnline) {
-                showSyncStatus('Auto-syncing...', 1000);
+            if (isOnline && pendingOperations.size === 0) {
                 try {
-                    await loadCurrentItems();
+                    const currentTimestamp = Date.now();
+                    const lastSync = parseInt(localStorage.getItem('lastSyncTimestamp') || '0');
+                    
+                    // Only sync if enough time has passed and no operations are pending
+                    if (currentTimestamp - lastSync > 30000) { // 30 seconds
+                        showSyncStatus('Auto-syncing...', 1000);
+                        await loadCurrentItems();
+                    }
                 } catch (error) {
                     console.error('Auto-sync failed:', error);
                 }
             }
-        }, 5 * 60 * 1000);
+        }, 60000); // Every minute
 
         // Enhanced form validation with visual feedback
         document.getElementById('item_name').addEventListener('input', function() {
@@ -2265,21 +2367,11 @@
             });
         }
 
-        console.log('🛒 Professional Shopping List loaded successfully!');
-        console.log('Features enabled:');
-        console.log('- Professional card-based layout');
-        console.log('- Responsive grid system for desktop and mobile');
-        console.log('- Soft pastel color scheme with CSS variables');
-        console.log('- Enhanced typography and spacing');
-        console.log('- Improved accessibility and focus states');
-        console.log('- Smooth animations and transitions');
-        console.log('- Touch-optimized mobile interface');
-        console.log('');
-        console.log('Keyboard shortcuts:');
-        console.log('- Ctrl/Cmd + Enter: Add item');
-        console.log('- Ctrl/Cmd + K: Focus on item input');
-        console.log('- Ctrl/Cmd + E: Export list');
-        console.log('- Ctrl/Cmd + S: Sync with server');
+        console.log('🛒 Shopping List v2.0 loaded successfully!');
+        console.log('✅ Duplicate prevention enabled');
+        console.log('✅ Improved sync mechanism');
+        console.log('✅ Better error handling');
+        console.log('✅ Enhanced user experience');
     </script>
 </body>
 </html>
