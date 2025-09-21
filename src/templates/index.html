@@ -122,9 +122,44 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: var(--space-md);
+            margin-bottom: var(--space-sm);
             animation: fadeInDown 0.8s ease-out;
             letter-spacing: -0.02em;
+        }
+
+        /* Date and time display */
+        .datetime-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-xs);
+            margin-bottom: var(--space-lg);
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .current-date {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+
+        .current-time {
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            letter-spacing: -0.02em;
+            transition: all var(--transition-normal);
+        }
+
+        .current-time.ticking {
+            transform: scale(1.02);
+        }
+
+        [data-theme="dark"] .current-time {
+            color: var(--text-primary);
         }
 
         [data-theme="dark"] .header h1 {
@@ -162,6 +197,17 @@
             }
         }
 
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @keyframes expandLine {
             from { 
                 width: 0; 
@@ -173,7 +219,7 @@
             }
         }
 
-        /* FIXED: Enhanced theme toggle */
+        /* Enhanced theme toggle */
         .theme-toggle {
             position: fixed;
             top: var(--space-lg);
@@ -198,7 +244,6 @@
             overflow: hidden;
         }
 
-        /* FIXED: Emoji positioning and sizing */
         .toggle-switch::before {
             content: '☀️';
             position: absolute;
@@ -235,7 +280,6 @@
             background: #374151;
         }
 
-        /* FIXED: Dark mode emoji positioning */
         [data-theme="dark"] .toggle-switch::before {
             content: '🌙';
             left: 36px;
@@ -267,6 +311,18 @@
             .container {
                 padding: var(--space-md);
             }
+
+            .datetime-display {
+                margin-bottom: var(--space-md);
+            }
+
+            .current-date {
+                font-size: 0.95rem;
+            }
+
+            .current-time {
+                font-size: 1.8rem;
+            }
             
             .dashboard-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -297,7 +353,6 @@
                 margin-top: var(--space-xs);
             }
 
-            /* FIXED: iPhone theme toggle size */
             .theme-toggle {
                 top: var(--space-md);
                 right: var(--space-md);
@@ -335,6 +390,18 @@
         @media (max-width: 430px) {
             .container {
                 padding: var(--space-sm);
+            }
+
+            .datetime-display {
+                margin-bottom: var(--space-sm);
+            }
+
+            .current-date {
+                font-size: 0.85rem;
+            }
+
+            .current-time {
+                font-size: 1.6rem;
             }
 
             .dashboard-grid {
@@ -375,7 +442,6 @@
                 font-size: 0.7rem;
             }
 
-            /* FIXED: Ultra small iPhone toggle */
             .toggle-switch {
                 width: 44px;
                 height: 24px;
@@ -406,6 +472,22 @@
 
         /* iPhone SE and smaller screens */
         @media (max-width: 375px) {
+            body {
+                font-size: 0.8rem;
+            }
+
+            .datetime-display {
+                margin-bottom: var(--space-sm);
+            }
+
+            .current-date {
+                font-size: 0.85rem;
+            }
+
+            .current-time {
+                font-size: 1.6rem;
+            }
+
             .dashboard-grid {
                 gap: 8px;
             }
@@ -424,7 +506,6 @@
                 height: 16px;
             }
 
-            /* FIXED: Smallest screen toggle */
             .toggle-switch {
                 width: 40px;
                 height: 22px;
@@ -563,7 +644,7 @@
             align-items: center;
         }
 
-        /* NEW: Enhanced Saldo card with visibility toggle */
+        /* Enhanced Saldo card with visibility toggle */
         .saldo-header {
             display: flex;
             align-items: center;
@@ -779,57 +860,52 @@
 
         /* Ottimizzazione iPhone - testo e bottoni più compatti */
         @media (max-width: 430px) {
-    body {
-        font-size: 0.85rem;
-    }
+            body {
+                font-size: 0.85rem;
+            }
 
-    .header h1 {
-        font-size: 1.6rem;
-        margin-bottom: var(--space-md);
-    }
+            .header h1 {
+                font-size: 1.6rem;
+                margin-bottom: var(--space-md);
+            }
 
-    .card {
-        aspect-ratio: unset;
-        min-height: 70px;
-        padding: var(--space-sm);
-    }
+            .card {
+                aspect-ratio: unset;
+                min-height: 70px;
+                padding: var(--space-sm);
+            }
 
+            .card-value {
+                font-size: 1.3rem;
+            }
 
-    .card-value {
-        font-size: 1.3rem;
-    }
+            .card-title,
+            .card-meta {
+                font-size: 0.65rem;
+            }
 
-    .card-title,
-    .card-meta {
-        font-size: 0.65rem;
-    }
+            .card-icon svg {
+                width: 16px;
+                height: 16px;
+            }
+        }
 
-    .card-icon svg {
-        width: 16px;
-        height: 16px;
-    }
-}
+        /* iPhone SE e schermi molto piccoli */
+        @media (max-width: 375px) {
+            .card {
+                padding: 8px;
+                max-height: 55px;
+            }
 
-/* iPhone SE e schermi molto piccoli */
-@media (max-width: 375px) {
-    body {
-        font-size: 0.8rem;
-    }
+            .card-value {
+                font-size: 1.2rem;
+            }
 
-    .card {
-        padding: 8px;
-        max-height: 55px;
-    }
-
-    .card-value {
-        font-size: 1.2rem;
-    }
-
-    .card-title,
-    .card-meta {
-        font-size: 0.6rem;
-    }
-}
+            .card-title,
+            .card-meta {
+                font-size: 0.6rem;
+            }
+        }
 
         /* Accessibility improvements */
         @media (prefers-reduced-motion: reduce) {
@@ -856,6 +932,10 @@
         <!-- Enhanced header -->
         <header class="header">
             <h1>Smart Homes</h1>
+            <div class="datetime-display">
+                <div class="current-date" id="currentDate"></div>
+                <div class="current-time" id="currentTime"></div>
+            </div>
         </header>
 
         <!-- Enhanced theme toggle -->
@@ -1028,7 +1108,7 @@
                 </div>
             </article>
 
-            <!-- MODIFIED: Enhanced Saldo Card with Visibility Toggle -->
+            <!-- Enhanced Saldo Card with Visibility Toggle -->
             <article class="card saldo" id="saldoCard" tabindex="0">
                 <div class="saldo-header">
                     <h2 class="card-title">Saldo</h2>
@@ -1084,7 +1164,47 @@
     </div>
 
     <script>
-        // NEW: Saldo visibility management
+        // Date and time management
+        function updateDateTime() {
+            const now = new Date();
+            const timeElement = document.getElementById("currentTime");
+            const dateElement = document.getElementById("currentDate");
+
+            // Format time (24-hour format)
+            const timeString = now.toLocaleTimeString('it-IT', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            // Format date
+            const dateOptions = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            const dateString = now.toLocaleDateString('en-GB', dateOptions);
+
+            // Add subtle animation on time change
+            if (timeElement.textContent !== timeString) {
+                timeElement.classList.add('ticking');
+                setTimeout(() => {
+                    timeElement.classList.remove('ticking');
+                }, 200);
+            }
+
+            timeElement.textContent = timeString;
+            dateElement.textContent = dateString;
+        }
+
+        // Update time every second
+        function startDateTimeUpdates() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        }
+
+        // Saldo visibility management
         let saldoVisible = false;
         let actualSaldoValue = null;
         
@@ -1140,7 +1260,7 @@
             }
         }
 
-        // FIXED: Enhanced theme management with better background refresh
+        // Enhanced theme management
         const themeToggle = document.getElementById('themeToggle');
         const body = document.body;
 
@@ -1193,7 +1313,7 @@
             }
         });
 
-        // Card navigation functions (unchanged)
+        // Card navigation functions
         document.getElementById("temperatureCard").addEventListener("click", () => {
             window.location.href = "/temp";
         });
@@ -1226,7 +1346,7 @@
             window.location.href = "/shopping-list";
         });
 
-        // Utility functions (unchanged)
+        // Utility functions
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             const hours = date.getHours().toString().padStart(2, '0');
@@ -1234,7 +1354,7 @@
             return `${hours}:${minutes}`;
         }
 
-        // API functions (unchanged)
+        // API functions
         async function fetchData() {
             try {
                 const response = await fetch('/api_sensors');
@@ -1246,7 +1366,7 @@
             }
         }
 
-        // MODIFIED: Enhanced fetchSaldoValue with visibility control
+        // Enhanced fetchSaldoValue with visibility control
         async function fetchSaldoValue() {
             const saldoElement = document.getElementById("saldoValue");
             const saldoCard = document.getElementById("saldoCard");
@@ -1493,6 +1613,7 @@
         function initialize() {
             loadTheme();
             loadSaldoVisibilityPreference();
+            startDateTimeUpdates(); // Start date and time updates
             addCardInteractions();
             
             // Add alarm card click listener
