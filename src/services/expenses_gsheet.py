@@ -168,9 +168,9 @@ class SheetValueFetcher:
             raise ValueError(f"Worksheet '{summary_sheet_name}' non trovata.")
 
         try:
-            value = worksheet.acell("P49").value
+            value = worksheet.acell("P50").value
             self._update_cache(value)
-            print(f"Valore aggiornato da P49 ({summary_sheet_name}): {value}")
+            print(f"Valore aggiornato da P50 ({summary_sheet_name}): {value}")
             return value
         except gspread.exceptions.CellNotFound:
-            raise ValueError("Cell P49 non trovata.")
+            raise ValueError("Cell P50 non trovata.")
