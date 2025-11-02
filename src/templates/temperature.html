@@ -101,81 +101,6 @@
             grid-template-columns: 1fr;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--bg-primary);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-xl);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius-lg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
-        .stat-icon.secondary {
-            background: var(--secondary-light);
-            color: var(--secondary-color);
-        }
-
-        .stat-icon.accent {
-            background: var(--accent-light);
-            color: var(--accent-color);
-        }
-
-        .stat-title {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
         .chart-section {
             display: grid;
             gap: 2rem;
@@ -188,7 +113,6 @@
             border: 1px solid var(--border-color);
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
         }
 
         .chart-card:hover {
@@ -200,7 +124,6 @@
             padding: 1.5rem 1.5rem 0 1.5rem;
             border-bottom: 1px solid var(--border-color);
             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            position: relative;
         }
 
         .chart-title {
@@ -228,28 +151,36 @@
         }
 
         .controls {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
+            align-items: end;
         }
 
         .control-group {
             display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group.checkbox-group {
+            flex-direction: row;
             align-items: center;
+            justify-content: center;
             gap: 0.75rem;
-            min-width: 200px;
         }
 
         .controls label {
             font-size: 0.875rem;
             font-weight: 500;
             color: var(--text-primary);
-            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .controls select, 
-        .controls input {
+        .controls input[type="datetime-local"] {
             padding: 0.75rem 1rem;
             font-size: 0.875rem;
             border: 1px solid var(--border-color);
@@ -257,8 +188,15 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             transition: all 0.2s ease;
-            min-width: 120px;
             font-family: inherit;
+            width: 100%;
+        }
+
+        .controls input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
         }
 
         .controls select:focus, 
@@ -305,6 +243,7 @@
             background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
             color: white;
             box-shadow: var(--shadow-md);
+            width: 100%;
         }
 
         .btn-primary:hover {
@@ -312,15 +251,10 @@
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-secondary {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-secondary);
-            border-color: var(--primary-color);
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .chart-container {
@@ -346,24 +280,16 @@
             100% { transform: rotate(360deg); }
         }
 
-        .chart-title {
-            display: flex;
-            align-items: center;  /* allinea verticalmente tutti gli elementi sulla stessa linea */
-            gap: 8px;             /* spazio tra icona, testo e badge */
-            }
-
-            .chart-title .badge {
+        .badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            padding: 0 8px;
-            height: 1.2em;       /* puoi aggiustare qui l’altezza */
-            line-height: 1.2em;  
-            border-radius: 9999px;
-            white-space: nowrap;
+            padding: 0.25rem 0.75rem;
             font-size: 0.75rem;
-            }
-
+            font-weight: 500;
+            border-radius: 9999px;
+            background: var(--primary-light);
+            color: var(--primary-color);
+        }
 
         .error-message {
             display: none;
@@ -376,38 +302,10 @@
             text-align: center;
         }
 
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-            gap: 2rem;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-            border-radius: 9999px;
-            background: var(--primary-light);
-            color: var(--primary-color);
-        }
-
         /* Responsive Design */
         @media (max-width: 1024px) {
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
-            
             .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .control-group {
-                min-width: auto;
-                flex-direction: column;
-                align-items: stretch;
+                grid-template-columns: 1fr 1fr;
             }
         }
 
@@ -421,20 +319,13 @@
                 font-size: 2rem;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
             .chart-container {
                 height: 350px;
                 padding: 1rem;
             }
 
-            .controls select, 
-            .controls input {
-                min-width: auto;
-                width: 100%;
+            .controls {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -450,40 +341,6 @@
             .chart-container {
                 height: 300px;
                 padding: 0.75rem;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text-primary: #f9fafb;
-                --text-secondary: #d1d5db;
-                --text-muted: #9ca3af;
-                --bg-primary: #1f2937;
-                --bg-secondary: #111827;
-                --bg-tertiary: #0f172a;
-                --border-color: #374151;
-            }
-        }
-
-        /* Animations */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
             }
         }
 
@@ -513,8 +370,6 @@
     </div>
 
     <div class="dashboard-container">
-
-
         <div class="chart-section">
             <!-- Today's Temperature Chart -->
             <div class="chart-card slide-up">
@@ -558,11 +413,11 @@
                 </div>
                 
                 <div class="controls-section">
-                    <div class="controls">
+                    <div class="controls" id="dailyControls">
                         <div class="control-group">
                             <label for="monthSelector">
                                 <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
-                                Month:
+                                Month
                             </label>
                             <select id="monthSelector">
                                 <option value="1">January</option>
@@ -583,11 +438,45 @@
                         <div class="control-group">
                             <label for="yearSelector">
                                 <i data-lucide="calendar-range" style="width: 16px; height: 16px;"></i>
-                                Year:
+                                Year
                             </label>
-                            <select id="yearSelector">
-                                <!-- Years will be dynamically generated by JavaScript -->
+                            <select id="yearSelector"></select>
+                        </div>
+
+                        <div class="control-group checkbox-group">
+                            <input type="checkbox" id="compareCheckbox">
+                            <label for="compareCheckbox" style="cursor: pointer; user-select: none;">
+                                Compare periods
+                            </label>
+                        </div>
+
+                        <div class="control-group" id="compareMonthGroup" style="display: none;">
+                            <label for="compareMonthSelector">
+                                <i data-lucide="calendar" style="width: 16px; height: 16px;"></i>
+                                Compare Month
+                            </label>
+                            <select id="compareMonthSelector">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
                             </select>
+                        </div>
+
+                        <div class="control-group" id="compareYearGroup" style="display: none;">
+                            <label for="compareYearSelector">
+                                <i data-lucide="calendar-range" style="width: 16px; height: 16px;"></i>
+                                Compare Year
+                            </label>
+                            <select id="compareYearSelector"></select>
                         </div>
 
                         <button id="updateChartsButton" class="btn btn-primary">
@@ -618,7 +507,7 @@
                         <div class="control-group">
                             <label for="startDate">
                                 <i data-lucide="calendar-plus" style="width: 16px; height: 16px;"></i>
-                                Start Date:
+                                Start Date
                             </label>
                             <input type="datetime-local" id="startDate" />
                         </div>
@@ -626,7 +515,7 @@
                         <div class="control-group">
                             <label for="endDate">
                                 <i data-lucide="calendar-minus" style="width: 16px; height: 16px;"></i>
-                                End Date:
+                                End Date
                             </label>
                             <input type="datetime-local" id="endDate" />
                         </div>
@@ -648,7 +537,6 @@
     </div>
 
     <script>
-        // Initialize Lucide icons
         lucide.createIcons();
 
         let dailyTemperatureChart = null;
@@ -682,7 +570,6 @@
                 return response.json();
             } catch (error) {
                 console.error('Error fetching daily temperature data:', error);
-                showError('Failed to fetch daily temperature data');
                 return {};
             } finally {
                 hideSpinner('dailySpinner');
@@ -697,7 +584,6 @@
                 return response.json();
             } catch (error) {
                 console.error('Error fetching monthly average temperature data:', error);
-                showError('Failed to fetch monthly average temperature data');
                 return {};
             } finally {
                 hideSpinner('monthlySpinner');
@@ -712,7 +598,6 @@
                 return response.json();
             } catch (error) {
                 console.error('Error fetching today temperature data:', error);
-                showError('Failed to fetch today\'s temperature data');
                 return {};
             } finally {
                 hideSpinner('todaySpinner');
@@ -741,7 +626,6 @@
             }
         }
 
-        // Enhanced chart configuration
         const chartDefaults = {
             responsive: true,
             maintainAspectRatio: false,
@@ -807,13 +691,36 @@
             }
         };
 
-        async function renderDailyTemperatureChart(month, year) {
+        async function renderDailyTemperatureChart(month, year, compareMonth = null, compareYear = null) {
             try {
                 const data = await fetchDailyTemperatureData(month, year);
-                console.log('Fetched data for daily chart:', data);
-
                 const days = Array.from({ length: 31 }, (_, i) => i + 1);
                 const temperatures = days.map(day => data[day] || null);
+
+                const datasets = [{
+                    label: `${getMonthName(month)} ${year}`,
+                    data: temperatures,
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                }];
+
+                if (compareMonth !== null && compareYear !== null) {
+                    const compareData = await fetchDailyTemperatureData(compareMonth, compareYear);
+                    const compareTemperatures = days.map(day => compareData[day] || null);
+                    
+                    datasets.push({
+                        label: `${getMonthName(compareMonth)} ${compareYear}`,
+                        data: compareTemperatures,
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    });
+                }
 
                 const ctx = document.getElementById('dailyTemperatureChart').getContext('2d');
                 clearChart(dailyTemperatureChart);
@@ -822,15 +729,7 @@
                     type: 'bar',
                     data: {
                         labels: days.map(day => `${day}`),
-                        datasets: [{
-                            label: `Daily Temperature for ${getMonthName(month)} ${year}`,
-                            data: temperatures,
-                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                            borderColor: 'rgba(99, 102, 241, 1)',
-                            borderWidth: 2,
-                            borderRadius: 4,
-                            borderSkipped: false,
-                        }]
+                        datasets: datasets
                     },
                     options: {
                         ...chartDefaults,
@@ -884,8 +783,6 @@
         async function renderMonthlyAverageTemperatureChart(year) {
             try {
                 const data = await fetchMonthlyAverageTemperatureData(year);
-                console.log('Fetched data for monthly average temperature chart:', data);
-
                 const months = Array.from({ length: 12 }, (_, i) => i + 1);
                 const temperatures = months.map(month => data[month] || null);
 
@@ -963,8 +860,6 @@
         async function renderTodayTemperatureChart() {
             try {
                 const data = await fetchTodayTemperatureData();
-                console.log('Fetched data for today\'s temperature chart:', data);
-
                 const hours = Object.keys(data).map(hour => parseInt(hour, 10)).sort((a, b) => a - b);
                 const temperatures = hours.map(hour => data[hour] || null);
 
@@ -1135,27 +1030,45 @@
         async function initializeYearSelector() {
             const currentYear = new Date().getFullYear();
             const yearSelector = document.getElementById('yearSelector');
+            const compareYearSelector = document.getElementById('compareYearSelector');
 
             for (let year = currentYear - 5; year <= currentYear; year++) {
                 const option = document.createElement('option');
                 option.value = year;
                 option.text = year;
                 yearSelector.add(option);
+
+                const compareOption = document.createElement('option');
+                compareOption.value = year;
+                compareOption.text = year;
+                compareYearSelector.add(compareOption);
             }
             yearSelector.value = currentYear;
+            compareYearSelector.value = currentYear - 1;
         }
 
         async function initializeMonthSelector() {
             const currentMonth = new Date().getMonth() + 1;
             const monthSelector = document.getElementById('monthSelector');
+            const compareMonthSelector = document.getElementById('compareMonthSelector');
+            
             monthSelector.value = currentMonth;
+            compareMonthSelector.value = currentMonth;
         }
 
         async function updateCharts() {
             const month = parseInt(document.getElementById('monthSelector').value, 10);
             const year = parseInt(document.getElementById('yearSelector').value, 10);
+            const compareEnabled = document.getElementById('compareCheckbox').checked;
+            
+            let compareMonth = null;
+            let compareYear = null;
+            
+            if (compareEnabled) {
+                compareMonth = parseInt(document.getElementById('compareMonthSelector').value, 10);
+                compareYear = parseInt(document.getElementById('compareYearSelector').value, 10);
+            }
 
-            // Add loading animation to button
             const updateButton = document.getElementById('updateChartsButton');
             const originalText = updateButton.innerHTML;
             updateButton.innerHTML = '<i data-lucide="loader-2" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Updating...';
@@ -1164,7 +1077,7 @@
             try {
                 await Promise.all([
                     renderTodayTemperatureChart(),
-                    renderDailyTemperatureChart(month, year),
+                    renderDailyTemperatureChart(month, year, compareMonth, compareYear),
                     renderMonthlyAverageTemperatureChart(year)
                 ]);
             } finally {
@@ -1174,8 +1087,22 @@
             }
         }
 
-        // Enhanced event listeners with better UX
         document.getElementById('updateChartsButton').addEventListener('click', updateCharts);
+
+        document.getElementById('compareCheckbox').addEventListener('change', function() {
+            const compareMonthGroup = document.getElementById('compareMonthGroup');
+            const compareYearGroup = document.getElementById('compareYearGroup');
+            
+            if (this.checked) {
+                compareMonthGroup.style.display = 'flex';
+                compareYearGroup.style.display = 'flex';
+            } else {
+                compareMonthGroup.style.display = 'none';
+                compareYearGroup.style.display = 'none';
+            }
+            
+            setTimeout(() => lucide.createIcons(), 50);
+        });
 
         document.getElementById('fetchDataButton').addEventListener('click', async () => {
             const startDate = document.getElementById('startDate').value;
@@ -1205,31 +1132,15 @@
             }
         });
 
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                if (e.key === 'u') {
-                    e.preventDefault();
-                    updateCharts();
-                } else if (e.key === 'f') {
-                    e.preventDefault();
-                    document.getElementById('fetchDataButton').click();
-                }
-            }
-        });
-
-        // Initialize the dashboard
         (async function initializeDashboard() {
             try {
                 await initializeYearSelector();
                 await initializeMonthSelector();
                 
-                // Add staggered animation to charts
                 setTimeout(() => {
                     updateCharts();
                 }, 300);
 
-                // Initialize icons
                 lucide.createIcons();
                 
                 console.log('Dashboard initialized successfully');
@@ -1239,24 +1150,12 @@
             }
         })();
 
-        // Add smooth scrolling for better UX
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
-            });
-        });
-
-        // Add resize listener to handle responsive charts
         window.addEventListener('resize', debounce(() => {
             [dailyTemperatureChart, monthlyAverageTemperatureChart, todayTemperatureChart, temperatureChart]
                 .filter(chart => chart)
                 .forEach(chart => chart.resize());
         }, 250));
 
-        // Debounce utility function
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {

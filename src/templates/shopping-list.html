@@ -1,233 +1,442 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Shopping List</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            color: #334155;
-            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background: #f5f7fa;
+            color: #1a202c;
             min-height: 100vh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
         }
 
-        .container {
-            max-width: 100vw;
-            margin: 0;
-            padding: 8px;
-            overflow-x: hidden;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 12px;
-            padding: 12px 8px;
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
-        }
-
-        .header h1 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #4f46e5;
-            margin-bottom: 2px;
-        }
-
-        .header p {
-            font-size: 0.75rem;
-            color: #6366f1;
-            opacity: 0.8;
-        }
-
-        .status-bar {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 1px solid #93c5fd;
-            border-radius: 8px;
-            padding: 6px 10px;
-            margin-bottom: 12px;
-            font-size: 0.75rem;
-            color: #1e40af;
-            text-align: center;
-            min-height: 32px;
+        .app-container {
+            min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
+            padding-bottom: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            max-width: 428px;
+            margin: 0 auto;
+            padding: 16px;
+            width: 100%;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 24px 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        .app-title {
+            font-size: 1.625rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .app-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .status-notification {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 0.8125rem;
+            color: #4b5563;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
             opacity: 0;
             transition: all 0.3s ease;
+            transform: translateY(-8px);
+            pointer-events: none;
         }
 
-        .status-bar.show {
+        .status-notification.show {
             opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
-        .status-bar.success {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        .status-notification.success {
+            background: #dcfce7;
             border-color: #86efac;
-            color: #166534;
+            color: #15803d;
         }
 
-        .status-bar.error {
-            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
-            border-color: #fca5a5;
-            color: #dc2626;
+        .status-notification.error {
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
         }
 
-        .status-bar.warning {
-            background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%);
-            border-color: #fde047;
-            color: #ca8a04;
+        .status-notification.warning {
+            background: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
         }
 
-        .stats-grid {
+        .stats-overview {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
         .stat-card {
             background: white;
-            padding: 8px 6px;
-            border-radius: 8px;
+            padding: 16px 12px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            border: 1px solid #f1f5f9;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
             transition: all 0.2s ease;
         }
 
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+
         .stat-card.updating {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            animation: pulse 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .stat-number {
-            font-size: 1.1rem;
+            font-size: 1.75rem;
             font-weight: 700;
-            color: #4f46e5;
+            color: #1e40af;
             display: block;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
         }
 
         .stat-label {
-            font-size: 0.65rem;
-            color: #64748b;
+            font-size: 0.6875rem;
+            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
-        .add-form {
-            background: white;
-            padding: 12px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
-        }
-
-        .form-row {
+        .action-bar {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 6px;
-            margin-bottom: 8px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
-        .form-row:last-child {
-            margin-bottom: 0;
+        .action-button {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px 12px;
+            font-size: 0.8125rem;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .form-row.full-width {
+        .action-button:active:not(:disabled) {
+            transform: scale(0.98);
+            background: #f3f4f6;
+        }
+
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-button.loading {
+            background: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+
+        .action-button.success {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
+        }
+
+        .form-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            margin-bottom: 16px;
+        }
+
+        .form-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-grid {
+            display: grid;
             grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
-        .input-group {
+        .form-grid.two-col {
+            grid-template-columns: 2fr 1fr;
+        }
+
+        .form-group {
             display: flex;
             flex-direction: column;
         }
 
-        label {
-            font-size: 0.7rem;
+        .form-label {
+            font-size: 0.75rem;
             font-weight: 600;
-            color: #64748b;
-            margin-bottom: 3px;
+            color: #6b7280;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
-        input, select {
-            padding: 8px 10px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 13px;
-            transition: all 0.2s ease;
-            background: #fafafa;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: #a78bfa;
+        .form-input {
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 0.9375rem;
+            font-weight: 400;
             background: white;
-            box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.1);
+            transition: all 0.2s ease;
+            outline: none;
+            font-family: inherit;
         }
 
-        .add-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        .form-input:focus {
+            border-color: #1e40af;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.08);
+        }
+
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+
+        .primary-button {
+            background: #1e40af;
             color: white;
             border: none;
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 0.9375rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin-top: 6px;
-            position: relative;
-            overflow: hidden;
+            letter-spacing: 0.2px;
+            width: 100%;
+            min-height: 52px;
         }
 
-        .add-btn:hover:not(.loading):not(.success):not(.error) {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        .primary-button:active:not(:disabled) {
+            transform: scale(0.98);
+            background: #1e3a8a;
         }
 
-        .add-btn.loading {
-            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+        .primary-button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .add-btn.success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .primary-button.loading {
+            background: #9ca3af;
         }
 
-        .add-btn.error {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        .primary-button.success {
+            background: #16a34a;
         }
 
-        .add-btn::after {
+        .primary-button.error {
+            background: #dc2626;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            background: #f9fafb;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-title {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-button {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            min-height: 32px;
+        }
+
+        .toggle-button:active {
+            transform: scale(0.95);
+            background: #f3f4f6;
+        }
+
+        .card-content {
+            padding: 16px;
+            max-height: 450px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .card-content.collapsed {
+            max-height: 0;
+            padding: 0 16px;
+            overflow: hidden;
+        }
+
+        .item-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .shopping-item {
+            display: flex;
+            align-items: center;
+            padding: 14px;
+            background: #fafbfc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            min-height: 72px;
+        }
+
+        .shopping-item:active {
+            background: #f3f4f6;
+            transform: scale(0.99);
+        }
+
+        .shopping-item.completing {
+            opacity: 0.6;
+            transform: translateX(-10px);
+        }
+
+        .shopping-item.removing {
+            opacity: 0;
+            transform: translateX(50px);
+        }
+
+        .item-checkbox {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            margin-right: 12px;
+            position: relative;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .item-checkbox:active {
+            transform: scale(0.95);
+        }
+
+        .item-checkbox.checked {
+            background: #dcfce7;
+            border-color: #16a34a;
+        }
+
+        .item-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #15803d;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .item-checkbox.loading::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 16px;
-            height: 16px;
-            margin: -8px 0 0 -8px;
-            border: 2px solid transparent;
-            border-top-color: #ffffff;
+            width: 14px;
+            height: 14px;
+            margin: -7px 0 0 -7px;
+            border: 2px solid #1e40af;
+            border-top-color: transparent;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            opacity: 0;
-        }
-
-        .add-btn.loading::after {
-            opacity: 1;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
@@ -235,482 +444,240 @@
             100% { transform: rotate(360deg); }
         }
 
-        .section {
-            background: white;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            border: 1px solid #f1f5f9;
-        }
-
-        .section-header {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 10px 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #92400e;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .toggle-btn {
-            background: rgba(146, 64, 14, 0.1);
-            border: none;
-            border-radius: 4px;
-            padding: 3px 6px;
-            font-size: 0.7rem;
-            color: #92400e;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .toggle-btn:hover {
-            background: rgba(146, 64, 14, 0.2);
-        }
-
-        .section-content {
-            padding: 12px;
-            max-height: 280px;
-            overflow-y: auto;
-            transition: all 0.3s ease;
-        }
-
-        .section-content.collapsed {
-            max-height: 0;
-            padding: 0 12px;
-            overflow: hidden;
-        }
-
-        .item-list {
-            list-style: none;
-        }
-
-        .item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
-            transition: all 0.3s ease;
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .item:last-child {
-            border-bottom: none;
-        }
-
-        .item.completing {
-            opacity: 0.7;
-            transform: translateX(-10px);
-        }
-
-        .item.completed {
-            opacity: 0.6;
-        }
-
-        .item.completed .item-name {
-            text-decoration: line-through;
-            color: #10b981;
-        }
-
-        .item.removing {
-            opacity: 0;
-            transform: translateX(100px);
-        }
-
-        .checkbox {
-            width: 18px;
-            height: 18px;
-            border: 2px solid #e2e8f0;
-            border-radius: 4px;
-            margin-right: 10px;
-            position: relative;
-            cursor: pointer;
-            background: white;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .checkbox:hover {
-            border-color: #10b981;
-        }
-
-        .checkbox.checked {
-            background: #10b981;
-            border-color: #10b981;
-        }
-
-        .checkbox.checked::after {
-            content: '✓';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-        }
-
-        .checkbox.loading {
-            border-color: #fbbf24;
-            background: #fbbf24;
-        }
-
-        .checkbox.loading::after {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border: 1px solid white;
-            border-top: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .item-content {
+        .item-details {
             flex: 1;
             min-width: 0;
         }
 
         .item-name {
             font-weight: 600;
-            color: #334155;
-            font-size: 0.85rem;
-            margin-bottom: 2px;
+            color: #1a202c;
+            font-size: 0.9375rem;
+            margin-bottom: 6px;
             word-wrap: break-word;
+            line-height: 1.4;
         }
 
-        .item-details {
+        .item-metadata {
             display: flex;
             align-items: center;
             gap: 6px;
             flex-wrap: wrap;
         }
 
-        .store-tag {
-            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
-            color: #5b21b6;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 0.65rem;
-            font-weight: 500;
+        .metadata-tag {
+            background: #f3f4f6;
+            color: #4b5563;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            border: 1px solid #e5e7eb;
         }
 
-        .quantity-badge {
-            background: #f0fdf4;
-            color: #166534;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-size: 0.65rem;
+        .quantity-indicator {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.6875rem;
             font-weight: 600;
         }
 
-        .priority-dot {
-            width: 6px;
-            height: 6px;
+        .priority-indicator {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             display: inline-block;
         }
 
-        .priority-high { background: #fca5a5; }
-        .priority-medium { background: #fed7aa; }
-        .priority-low { background: #bbf7d0; }
-
-        .date-text {
-            font-size: 0.65rem;
-            color: #64748b;
+        .priority-high { 
+            background: #ef4444;
+        }
+        .priority-medium { 
+            background: #f59e0b;
+        }
+        .priority-low { 
+            background: #10b981;
         }
 
-        .delete-btn {
-            background: #fef2f2;
-            border: none;
-            border-radius: 4px;
-            padding: 4px 6px;
-            color: #dc2626;
-            font-size: 0.7rem;
-            cursor: pointer;
-            margin-left: 6px;
-            transition: all 0.2s ease;
-            position: relative;
-            min-width: 28px;
-            flex-shrink: 0;
+        .date-indicator {
+            font-size: 0.6875rem;
+            color: #9ca3af;
+            font-weight: 500;
         }
 
-        .delete-btn:hover:not(.loading) {
+        .delete-button {
             background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 10px;
+            color: #dc2626;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s ease;
+            min-width: 44px;
+            min-height: 44px;
+            flex-shrink: 0;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .delete-btn.loading {
-            background: #fef3c7;
-            color: #d97706;
+        .delete-button:active:not(:disabled) {
+            transform: scale(0.95);
+            background: #fecaca;
+        }
+
+        .delete-button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .delete-btn.loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            margin: -5px 0 0 -5px;
-            border: 1px solid #d97706;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+        .filter-section {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
         }
 
-        .quick-actions {
+        .filter-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
+            grid-template-columns: 1fr;
+            gap: 10px;
             margin-bottom: 12px;
         }
 
-        .quick-btn {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 0.7rem;
-            color: #64748b;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-            position: relative;
-            text-align: center;
-        }
-
-        .quick-btn:hover:not(.loading):not(.success) {
-            background: #f8fafc;
-            border-color: #c7d2fe;
-            color: #4f46e5;
-        }
-
-        .quick-btn.loading {
-            background: #fef3c7;
-            border-color: #fde047;
-            color: #ca8a04;
-            cursor: not-allowed;
-        }
-
-        .quick-btn.success {
-            background: #dcfce7;
-            border-color: #86efac;
-            color: #166534;
-        }
-
-        .quick-btn.loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            margin: -5px 0 0 -5px;
-            border: 1px solid #ca8a04;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 20px 12px;
-            color: #94a3b8;
-        }
-
-        .empty-icon {
-            font-size: 1.5rem;
-            margin-bottom: 6px;
-            opacity: 0.5;
-        }
-
-        .filter-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-
-        .filter-row-btn {
-            grid-column: 1 / -1;
-            margin-top: 6px;
-        }
-
-        .filter-btn {
-            background: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
+        .filter-button {
+            background: #1e40af;
             color: white;
             border: none;
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 0.7rem;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.875rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
-            position: relative;
+            letter-spacing: 0.2px;
             width: 100%;
+            min-height: 48px;
         }
 
-        .filter-btn:hover:not(.loading) {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        .filter-button:active:not(:disabled) {
+            transform: scale(0.98);
+            background: #1e3a8a;
         }
 
-        .filter-btn.loading {
-            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+        .filter-button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-        }
-
-        .filter-btn.loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 12px;
-            height: 12px;
-            margin: -6px 0 0 -6px;
-            border: 1px solid white;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
         }
 
         .history-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 14px;
+            background: #fafbfc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+            min-height: 72px;
         }
 
-        .history-item:last-child {
-            border-bottom: none;
+        .history-item:active {
+            background: #f3f4f6;
+            transform: scale(0.99);
         }
 
-        .history-left {
+        .history-info {
             flex: 1;
             min-width: 0;
         }
 
-        .history-right {
+        .history-actions {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-shrink: 0;
+            margin-left: 10px;
         }
 
         .frequency-badge {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            background: #dcfce7;
             color: #15803d;
-            padding: 2px 5px;
-            border-radius: 6px;
-            font-size: 0.65rem;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.6875rem;
             font-weight: 600;
+            white-space: nowrap;
         }
 
-        /* RIMOSSO: .online-indicator - NON PIÙ PRESENTE */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
 
-        .sync-status {
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .sync-indicator {
             position: fixed;
-            bottom: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.8);
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 32, 44, 0.95);
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 4px 8px;
+            padding: 12px 20px;
             border-radius: 12px;
-            font-size: 0.65rem;
+            font-size: 0.8125rem;
             opacity: 0;
             transition: all 0.3s ease;
             z-index: 1000;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
-        .sync-status.show {
+        .sync-indicator.show {
             opacity: 1;
         }
 
-        /* Mobile optimizations */
-        @media (max-width: 480px) {
-            .container {
-                padding: 6px;
-            }
-
-            .header h1 {
-                font-size: 1.1rem;
-            }
-
-            .stats-grid {
-                gap: 4px;
-            }
-
-            .stat-card {
-                padding: 6px 4px;
-            }
-
-            .stat-number {
-                font-size: 1rem;
-            }
-
-            .add-form {
-                padding: 10px;
-            }
-
-            .section-content {
-                max-height: 220px;
-                padding: 10px;
-            }
-
-            .quick-actions {
-                grid-template-columns: 1fr 1fr;
-                gap: 4px;
-            }
-
-            .quick-btn {
-                padding: 6px 8px;
-                font-size: 0.65rem;
-            }
-
-            .form-row {
-                gap: 4px;
-                margin-bottom: 6px;
-            }
-
-            input, select {
-                padding: 6px 8px;
-                font-size: 12px;
-            }
-
-            .add-btn {
-                padding: 8px 12px;
-                font-size: 12px;
-            }
+        .card-content::-webkit-scrollbar {
+            width: 4px;
         }
 
-        /* Scrollbar styling */
-        .section-content::-webkit-scrollbar {
-            width: 3px;
+        .card-content::-webkit-scrollbar-track {
+            background: #f9fafb;
         }
 
-        .section-content::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 2px;
+        .card-content::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
         }
 
-        .section-content::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 2px;
-        }
-
-        /* Animation classes */
         .fade-in {
-            animation: fadeIn 0.3s ease-out;
+            animation: fadeIn 0.3s ease;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(8px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -718,188 +685,220 @@
             }
         }
 
-        .bounce-in {
-            animation: bounceIn 0.5s ease-out;
-        }
+        @media (min-width: 768px) {
+            .main-content {
+                max-width: 1200px;
+                padding: 32px;
+            }
 
-        @keyframes bounceIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.3);
+            .action-bar {
+                grid-template-columns: repeat(4, 1fr);
             }
-            50% {
-                opacity: 1;
-                transform: scale(1.05);
+
+            .stats-overview {
+                gap: 16px;
             }
-            70% {
-                transform: scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
+
+            .filter-grid {
+                grid-template-columns: 1fr 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <!-- RIMOSSO: Online Indicator pallino verde -->
-    
-    <!-- Sync Status -->
-    <div class="sync-status" id="sync-status">Syncing...</div>
+    <div class="app-container">
+        <div class="sync-indicator" id="sync-status">Syncing...</div>
 
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🛒 Smart Shopping</h1>
-            <p>Your organized shopping companion</p>
-        </div>
+        <main class="main-content">
+            <header class="app-header">
+                <h1 class="app-title">🛒 Smart Shopping</h1>
+                <p class="app-subtitle">Your intelligent shopping companion</p>
+            </header>
 
-        <!-- Status Bar -->
-        <div class="status-bar" id="status-bar">
-            Ready to help you shop smarter!
-        </div>
+            <div class="status-notification" id="status-bar">
+                Ready to help you shop smarter!
+            </div>
 
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card" id="total-card">
-                <span class="stat-number" id="total-items">0</span>
-                <span class="stat-label">Active</span>
-            </div>
-            <div class="stat-card" id="completed-card">
-                <span class="stat-number" id="completed-items">0</span>
-                <span class="stat-label">Done</span>
-            </div>
-            <div class="stat-card" id="stores-card">
-                <span class="stat-number" id="unique-stores">0</span>
-                <span class="stat-label">Stores</span>
-            </div>
-        </div>
+            <section class="stats-overview">
+                <div class="stat-card" id="total-card">
+                    <span class="stat-number" id="total-items">0</span>
+                    <span class="stat-label">Active Items</span>
+                </div>
+                <div class="stat-card" id="completed-card">
+                    <span class="stat-number" id="completed-items">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+                <div class="stat-card" id="stores-card">
+                    <span class="stat-number" id="unique-stores">0</span>
+                    <span class="stat-label">Stores</span>
+                </div>
+            </section>
 
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <button class="quick-btn" onclick="clearCompleted()" id="clear-btn">
-                <span>🗑️ Clear Done</span>
-            </button>
-            <button class="quick-btn" onclick="markAllComplete()" id="complete-all-btn">
-                <span>✅ Complete All</span>
-            </button>
-            <button class="quick-btn" onclick="exportList()" id="export-btn">
-                <span>📤 Export</span>
-            </button>
-            <button class="quick-btn" onclick="syncWithServer()" id="sync-btn">
-                <span>🔄 Sync</span>
-            </button>
-        </div>
+            <section class="action-bar">
+                <button class="action-button" onclick="clearCompleted()" id="clear-btn">
+                    <span>🗑️ Clear Done</span>
+                </button>
+                <button class="action-button" onclick="markAllComplete()" id="complete-all-btn">
+                    <span>✅ All Done</span>
+                </button>
+                <button class="action-button" onclick="exportList()" id="export-btn">
+                    <span>📤 Export</span>
+                </button>
+                <button class="action-button" onclick="syncWithServer()" id="sync-btn">
+                    <span>🔄 Sync</span>
+                </button>
+            </section>
 
-        <!-- Add Item Form -->
-        <div class="add-form">
-            <div class="form-row">
-                <div class="input-group">
-                    <label for="item_name">Item Name</label>
-                    <input type="text" id="item_name" placeholder="e.g., Milk, Bread..." required>
-                </div>
-                <div class="input-group">
-                    <label for="quantity">Quantity</label>
-                    <input type="number" id="quantity" placeholder="1" min="1" value="1" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="input-group">
-                    <label for="store">Store</label>
-                    <input type="text" id="store" placeholder="e.g., Conad, Maurys..." required>
-                </div>
-                <div class="input-group">
-                    <label for="priority">Priority</label>
-                    <select id="priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-            </div>
-           <div class="form-row">
-                <div class="input-group">
-                    <label for="needed_by">Needed By (Optional)</label>
-                    <input type="date" id="needed_by">
-                </div>
-            </div>
-            <div class="form-row full-width">
-                <div class="input-group">
-                    <button class="add-btn" id="add-item-btn" onclick="addItem()">
-                        <span id="add-btn-text">Add Item</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Shopping List -->
-        <div class="section">
-            <div class="section-header">
-                <span>🛍️ Shopping List</span>
-                <button class="toggle-btn" onclick="toggleSection('shopping-list')">Hide</button>
-            </div>
-            <div class="section-content" id="shopping-list">
-                <ul class="item-list" id="shopping_list_items">
-                    <div class="empty-state">
-                        <div class="empty-icon">🛒</div>
-                        <div>Add some items to get started!</div>
+            <div class="form-card">
+                <h2 class="form-title">
+                    <span>➕</span>
+                    Add Item
+                </h2>
+                
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label class="form-label" for="item_name">Item</label>
+                        <input type="text" class="form-input" id="item_name" placeholder="e.g., Milk, Bread..." required>
                     </div>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Purchase History -->
-        <div class="section">
-            <div class="section-header">
-                <span>📈 Purchase History</span>
-                <button class="toggle-btn" onclick="toggleSection('history')">Hide</button>
-            </div>
-            <div class="section-content" id="history">
-                <div class="filter-row">
-                    <div class="input-group">
-                        <label for="start_timestamp">From</label>
-                        <input type="date" id="start_timestamp">
-                    </div>
-                    <div class="input-group">
-                        <label for="end_timestamp">To</label>
-                        <input type="date" id="end_timestamp">
+                    <div class="form-group">
+                        <label class="form-label" for="quantity">Qty</label>
+                        <input type="number" class="form-input" id="quantity" placeholder="1" min="1" value="1" required>
                     </div>
                 </div>
-                <div class="filter-row-btn">
-                    <button class="filter-btn" onclick="loadItemsByTimestamp()" id="filter-btn">
-                        <span>Filter History</span>
-                    </button>
-                </div>
-                <div id="history_items">
-                    <div class="empty-state">
-                        <div class="empty-icon">📊</div>
-                        <div>No purchase history yet.</div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="store">Store</label>
+                        <input type="text" class="form-input" id="store" placeholder="e.g., Conad, Maurys..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="priority">Priority</label>
+                        <select class="form-input" id="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
                     </div>
                 </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="needed_by">Needed By</label>
+                        <input type="date" class="form-input" id="needed_by">
+                    </div>
+                </div>
+
+                <button class="primary-button" id="add-item-btn" onclick="addItem()">
+                    <span id="add-btn-text">Add to List</span>
+                </button>
             </div>
-        </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>🛍️</span>
+                        Shopping List
+                    </h2>
+                    <button class="toggle-button" onclick="toggleSection('shopping-list')">Hide</button>
+                </div>
+                <div class="card-content" id="shopping-list">
+                    <ul class="item-list" id="shopping_list_items">
+                        <div class="empty-state">
+                            <div class="empty-icon">🛒</div>
+                            <div class="empty-text">Add items to start!</div>
+                        </div>
+                    </ul>
+                </div>
+            </div>
+
+            <section class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>📈</span>
+                        Purchase History
+                    </h2>
+                    <button class="toggle-button" onclick="toggleSection('history')">Hide</button>
+                </div>
+                <div class="card-content" id="history">
+                    <div class="filter-section">
+                        <div class="filter-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="start_timestamp">From</label>
+                                <input type="date" class="form-input" id="start_timestamp">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="end_timestamp">To</label>
+                                <input type="date" class="form-input" id="end_timestamp">
+                            </div>
+                        </div>
+                        <button class="filter-button" onclick="loadItemsByTimestamp()" id="filter-btn">
+                            <span>Filter History</span>
+                        </button>
+                    </div>
+                    <div id="history_items">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <div class="empty-text">No history yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
         let shoppingData = [];
         let historicalData = [];
         let isOnline = navigator.onLine;
+        let pendingOperations = new Map();
+        let lastSyncTimestamp = null;
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadCurrentItems();
-            updateStatistics();
             setDefaultDates();
-            // RIMOSSO: updateOnlineStatus();
             showStatus('Welcome! Your shopping list is ready.', 'success');
-            
         });
 
-        // Status and feedback functions
+        async function loadCurrentItems() {
+            try {
+                showSyncStatus('Loading items...');
+                const response = await fetch('/api/shopping-list/current');
+                
+                if (response.ok) {
+                    const serverData = await response.json();
+                    shoppingData = serverData || [];
+                    lastSyncTimestamp = Date.now();
+                    
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    localStorage.setItem('lastSyncTimestamp', lastSyncTimestamp.toString());
+                    
+                    showStatus(`Loaded ${shoppingData.length} items`, 'success', 2000);
+                } else {
+                    const localData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                    if (localData.length > 0) {
+                        shoppingData = localData;
+                        showStatus(`Using ${shoppingData.length} local items`, 'warning');
+                    } else {
+                        shoppingData = [];
+                    }
+                }
+            } catch (error) {
+                console.error('Server unavailable:', error);
+                const localData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
+                shoppingData = localData;
+                if (shoppingData.length > 0) {
+                    showStatus('Using offline mode', 'warning');
+                }
+            }
+            
+            renderCurrentItems();
+            updateStatistics();
+        }
+
         function showStatus(message, type = 'info', duration = 3000) {
             const statusBar = document.getElementById('status-bar');
             statusBar.textContent = message;
-            statusBar.className = `status-bar show ${type}`;
+            statusBar.className = `status-notification show ${type}`;
             
             setTimeout(() => {
                 statusBar.classList.remove('show');
@@ -916,14 +915,14 @@
             }, duration);
         }
 
-        // RIMOSSA: funzione updateOnlineStatus()
-
         function setButtonState(buttonId, state, text) {
             const btn = document.getElementById(buttonId);
+            if (!btn) return;
+            
             const textElement = btn.querySelector('span') || btn;
             
-            // Remove all states
             btn.classList.remove('loading', 'success', 'error');
+            btn.disabled = false;
             
             if (state === 'loading') {
                 btn.classList.add('loading');
@@ -931,30 +930,29 @@
                 textElement.textContent = text || 'Loading...';
             } else if (state === 'success') {
                 btn.classList.add('success');
-                btn.disabled = false;
                 textElement.textContent = text || 'Success!';
                 setTimeout(() => resetButton(buttonId), 2000);
             } else if (state === 'error') {
                 btn.classList.add('error');
-                btn.disabled = false;
                 textElement.textContent = text || 'Error';
                 setTimeout(() => resetButton(buttonId), 3000);
             } else {
-                btn.disabled = false;
                 textElement.textContent = text;
             }
         }
 
         function resetButton(buttonId) {
             const btn = document.getElementById(buttonId);
+            if (!btn) return;
+            
             const textElement = btn.querySelector('span') || btn;
             btn.classList.remove('loading', 'success', 'error');
+            btn.disabled = false;
             
-            // Reset to original text
             const originalTexts = {
-                'add-item-btn': 'Add Item',
+                'add-item-btn': 'Add to List',
                 'clear-btn': '🗑️ Clear Done',
-                'complete-all-btn': '✅ Complete All',
+                'complete-all-btn': '✅ All Done',
                 'export-btn': '📤 Export',
                 'sync-btn': '🔄 Sync',
                 'filter-btn': 'Filter History'
@@ -965,10 +963,12 @@
 
         function animateStatCard(cardId) {
             const card = document.getElementById(cardId);
-            card.classList.add('updating');
-            setTimeout(() => {
-                card.classList.remove('updating');
-            }, 500);
+            if (card) {
+                card.classList.add('updating');
+                setTimeout(() => {
+                    card.classList.remove('updating');
+                }, 500);
+            }
         }
 
         function setDefaultDates() {
@@ -979,31 +979,6 @@
             document.getElementById('start_timestamp').value = oneMonthAgo.toISOString().split('T')[0];
         }
 
-        async function loadCurrentItems() {
-            try {
-                showSyncStatus('Loading items...');
-                const response = await fetch('/api/shopping-list/current');
-                if (response.ok) {
-                    shoppingData = await response.json();
-                    showStatus(`Loaded ${shoppingData.length} items from server`, 'success');
-                } else {
-                    shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-                    if (shoppingData.length > 0) {
-                        showStatus(`Using ${shoppingData.length} local items (server unavailable)`, 'warning');
-                    }
-                }
-            } catch (error) {
-                console.error('API unavailable, using localStorage:', error);
-                shoppingData = JSON.parse(localStorage.getItem('shoppingList') || '[]');
-                if (shoppingData.length > 0) {
-                    showStatus('Using offline mode', 'warning');
-                }
-            }
-            
-            renderCurrentItems();
-            updateStatistics();
-        }
-
         function renderCurrentItems() {
             const container = document.getElementById('shopping_list_items');
             
@@ -1011,27 +986,43 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">🛒</div>
-                        <div>Add some items to get started!</div>
+                        <div class="empty-text">Add some items to get started!</div>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = shoppingData.map((item, index) => `
-                <li class="item ${item.inCart ? 'completed' : ''} fade-in">
-                    <div class="checkbox ${item.inCart ? 'checked' : ''}" onclick="toggleItemInCart(${index})" id="checkbox-${index}"></div>
-                    <div class="item-content">
-                        <div class="item-name">${item.name || item.item_name}</div>
-                        <div class="item-details">
-                            <span class="store-tag">${item.store}</span>
-                            <span class="quantity-badge">${item.quantity}</span>
-                            <span class="priority-dot priority-${item.priority || 'medium'}"></span>
-                            ${item.neededBy ? `<span class="date-text">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
-                        </div>
+            const activeItems = shoppingData.filter(item => !item.inCart);
+
+            if (activeItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">✅</div>
+                        <div class="empty-text">All items completed!</div>
                     </div>
-                    <button class="delete-btn" onclick="deleteItem(${index})" id="delete-${index}">🗑️</button>
-                </li>
-            `).join('');
+                `;
+                return;
+            }
+
+            container.innerHTML = activeItems.map((item, index) => {
+                const actualIndex = shoppingData.findIndex(dataItem => dataItem.id === item.id);
+
+                return `
+                    <li class="shopping-item fade-in" data-item-id="${item.id}">
+                        <div class="item-checkbox" onclick="toggleItemInCart(${actualIndex})" id="checkbox-${actualIndex}"></div>
+                        <div class="item-details">
+                            <div class="item-name">${item.item_name || item.name}</div>
+                            <div class="item-metadata">
+                                <span class="metadata-tag">${item.store}</span>
+                                <span class="quantity-indicator">${item.quantity}</span>
+                                <span class="priority-indicator priority-${item.priority || 'medium'}"></span>
+                                ${item.neededBy ? `<span class="date-indicator">${new Date(item.neededBy).toLocaleDateString()}</span>` : ''}
+                            </div>
+                        </div>
+                        <button class="delete-button" onclick="deleteItem(${actualIndex})" id="delete-${actualIndex}">🗑️</button>
+                    </li>
+                `;
+            }).join('');
         }
 
         function updateStatistics() {
@@ -1040,7 +1031,6 @@
             const active = total - completed;
             const uniqueStores = [...new Set(shoppingData.map(item => item.store))].length;
 
-            // Animate stat cards
             animateStatCard('total-card');
             animateStatCard('completed-card');
             animateStatCard('stores-card');
@@ -1050,7 +1040,7 @@
             document.getElementById('unique-stores').textContent = uniqueStores;
         }
 
-        async function addItem() {
+        function addItem() {
             const name = document.getElementById('item_name').value.trim();
             const store = document.getElementById('store').value.trim();
             const quantity = parseInt(document.getElementById('quantity').value) || 1;
@@ -1065,8 +1055,10 @@
             setButtonState('add-item-btn', 'loading', 'Adding...');
 
             const timestamp = new Date().toISOString();
+            const tempId = 'temp_' + Date.now();
+            
             const newItem = {
-                id: Date.now(),
+                id: tempId,
                 name,
                 item_name: name,
                 store,
@@ -1077,42 +1069,70 @@
                 dateAdded: timestamp
             };
 
-            try {
-                const response = await fetch('/todolist/insert', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        item_name: name,
-                        store: store,
-                        quantity: quantity,
-                        priority: priority,
-                        timestamp: timestamp
-                    })
-                });
+            if (pendingOperations.has(tempId)) {
+                return;
+            }
+            pendingOperations.set(tempId, newItem);
 
+            fetch('/todolist/insert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    item_name: name,
+                    store: store,
+                    quantity: quantity,
+                    priority: priority,
+                    timestamp: timestamp
+                })
+            })
+            .then(response => {
                 if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Server error');
+                }
+            })
+            .then(serverResponse => {
+                pendingOperations.delete(tempId);
+                
+                if (serverResponse.id || serverResponse._id) {
+                    newItem.id = serverResponse.id || serverResponse._id;
+                }
+                
+                const existingIndex = shoppingData.findIndex(item => 
+                    (item.id === newItem.id) || 
+                    (item.name === name && item.store === store && !item.inCart)
+                );
+                
+                if (existingIndex === -1) {
+                    shoppingData.push(newItem);
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                }
+                
+                renderCurrentItems();
+                updateStatistics();
+                clearForm();
+                setButtonState('add-item-btn', 'success', '✅ Added!');
+                showStatus(`Added "${name}" to your list`, 'success');
+            })
+            .catch(error => {
+                console.error('Server unavailable, saving locally:', error);
+                pendingOperations.delete(tempId);
+                
+                const existingIndex = shoppingData.findIndex(item => 
+                    item.name === name && item.store === store && !item.inCart
+                );
+                
+                if (existingIndex === -1) {
                     shoppingData.push(newItem);
                     localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                     renderCurrentItems();
                     updateStatistics();
                     clearForm();
-                    setButtonState('add-item-btn', 'success', '✅ Added!');
-                    showStatus(`Added "${name}" to your list`, 'success');
-                } else {
-                    const errData = await response.json();
-                    setButtonState('add-item-btn', 'error', 'Failed');
-                    showStatus(`Failed to add item: ${errData.message || 'Server error'}`, 'error');
+                    setButtonState('add-item-btn', 'success', '✅ Added Locally');
+                    showStatus(`Added "${name}" locally (server unavailable)`, 'warning');
                 }
-            } catch (error) {
-                console.error('Server unavailable, saving locally:', error);
-                shoppingData.push(newItem);
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                renderCurrentItems();
-                updateStatistics();
-                clearForm();
-                setButtonState('add-item-btn', 'success', '✅ Added (Local)');
-                showStatus(`Added "${name}" locally (server unavailable)`, 'warning');
-            }
+            });
         }
 
         function clearForm() {
@@ -1123,106 +1143,87 @@
             document.getElementById('priority').value = 'medium';
         }
 
-        async function toggleItemInCart(index) {
+        function toggleItemInCart(index) {
+            if (index < 0 || index >= shoppingData.length) return;
+
             const item = shoppingData[index];
             const checkbox = document.getElementById(`checkbox-${index}`);
-            const itemElement = checkbox.closest('.item');
-            const wasInCart = item.inCart;
+            const itemElement = checkbox ? checkbox.closest('.shopping-item') : null;
             
-            // Set checkbox to loading state
+            if (!checkbox || !itemElement || checkbox.classList.contains('loading')) return;
+            
             checkbox.classList.add('loading');
             itemElement.classList.add('completing');
             
-            try {
-                if (!wasInCart) {
-                    // Mark as completed
-                    const response = await fetch(`/api/shopping-list/complete/${item.id || item._id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            item_name: item.name || item.item_name,
-                            store: item.store,
-                            quantity: item.quantity,
-                            priority: item.priority,
-                            timestamp: new Date().toISOString().split('T')[0]
-                        })
-                    });
-
-                    if (response.ok) {
-                        shoppingData[index].inCart = true;
-                        shoppingData[index].purchaseDate = new Date().toISOString();
-                        
-                        // Animate completion
-                        setTimeout(() => {
-                            itemElement.classList.add('removing');
-                            setTimeout(() => {
-                                shoppingData.splice(index, 1);
-                                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                                renderCurrentItems();
-                                updateStatistics();
-                            }, 300);
-                        }, 1000);
-                        
+            const itemId = item.id || item._id;
+            
+            fetch(`/api/shopping-list/complete/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    item_name: item.name || item.item_name,
+                    store: item.store,
+                    quantity: item.quantity,
+                    priority: item.priority,
+                    timestamp: new Date().toISOString().split('T')[0]
+                })
+            })
+            .then(response => {
+                if (response.ok || !isOnline) {
+                    shoppingData[index].inCart = true;
+                    shoppingData[index].purchaseDate = new Date().toISOString();
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    
+                    setTimeout(() => {
+                        renderCurrentItems();
+                        updateStatistics();
                         showStatus(`"${item.name || item.item_name}" completed!`, 'success');
-                    } else {
-                        throw new Error('Server error');
-                    }
+                    }, 800);
                 } else {
-                    // Unmark as completed (restore)
-                    const response = await fetch(`/api/shopping-list/uncomplete/${item.id || item._id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-
-                    if (response.ok) {
-                        shoppingData[index].inCart = false;
-                        shoppingData[index].purchaseDate = null;
-                        checkbox.classList.remove('loading', 'checked');
-                        itemElement.classList.remove('completing', 'completed');
-                        showStatus('Item restored to list', 'success');
-                    } else {
-                        throw new Error('Server error');
-                    }
+                    throw new Error('Server error');
                 }
-                
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                
-            } catch (error) {
-                console.error('Error toggling item:', error);
+            })
+            .catch(error => {
+                console.error('Error completing item:', error);
                 checkbox.classList.remove('loading');
                 itemElement.classList.remove('completing');
-                showStatus('Network error - please try again', 'error');
-            }
+                showStatus('Failed to complete item - please try again', 'error');
+            });
         }
 
-        async function deleteItem(index) {
+        function deleteItem(index) {
+            if (index < 0 || index >= shoppingData.length) return;
+
             const item = shoppingData[index];
             const deleteBtn = document.getElementById(`delete-${index}`);
-            const itemElement = deleteBtn.closest('.item');
+            const itemElement = deleteBtn ? deleteBtn.closest('.shopping-item') : null;
             const itemName = item.name || item.item_name;
             
-            deleteBtn.classList.add('loading');
+            if (!deleteBtn || !itemElement || deleteBtn.disabled) return;
+            
+            deleteBtn.disabled = true;
             itemElement.classList.add('removing');
 
-            try {
-                const response = await fetch(`/todolist/delete/${item.id || item._id}`, {
-                    method: 'DELETE'
-                });
-                
+            const itemId = item.id || item._id;
+            
+            fetch(`/todolist/delete/${itemId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
                 setTimeout(() => {
                     shoppingData.splice(index, 1);
                     localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
                     renderCurrentItems();
                     updateStatistics();
                     
-                    if (response.ok) {
+                    if (response && response.ok) {
                         showStatus(`"${itemName}" deleted`, 'success');
                     } else {
                         showStatus(`"${itemName}" deleted locally`, 'warning');
                     }
                 }, 300);
-                
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error deleting item:', error);
                 setTimeout(() => {
                     shoppingData.splice(index, 1);
@@ -1231,10 +1232,10 @@
                     updateStatistics();
                     showStatus(`"${itemName}" deleted locally`, 'warning');
                 }, 300);
-            }
+            });
         }
 
-        async function clearCompleted() {
+        function clearCompleted() {
             const completedItems = shoppingData.filter(item => item.inCart);
             if (completedItems.length === 0) {
                 showStatus('No completed items to clear', 'info');
@@ -1243,34 +1244,39 @@
 
             setButtonState('clear-btn', 'loading', 'Clearing...');
 
-            try {
-                const response = await fetch('/api/shopping-list/clear-completed', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    setButtonState('clear-btn', 'success', `✅ Cleared ${result.cleared_count}`);
-                    showStatus(`Cleared ${result.cleared_count} completed items`, 'success');
+            fetch('/api/shopping-list/clear-completed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => {
+                if (response && response.ok) {
+                    return response.json();
                 } else {
-                    setButtonState('clear-btn', 'success', '✅ Cleared (Local)');
-                    showStatus('Items cleared locally', 'warning');
+                    throw new Error('Server error');
                 }
+            })
+            .then(result => {
+                setButtonState('clear-btn', 'success', `✅ Cleared ${result.cleared_count}`);
+                showStatus(`Cleared ${result.cleared_count} completed items`, 'success');
                 
-            } catch (error) {
+                shoppingData = shoppingData.filter(item => !item.inCart);
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                renderCurrentItems();
+                updateStatistics();
+            })
+            .catch(error => {
                 console.error('Error clearing items:', error);
-                setButtonState('clear-btn', 'success', '✅ Cleared (Local)');
+                const clearedCount = completedItems.length;
+                shoppingData = shoppingData.filter(item => !item.inCart);
+                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                renderCurrentItems();
+                updateStatistics();
+                setButtonState('clear-btn', 'success', '✅ Cleared');
                 showStatus('Items cleared locally (server unavailable)', 'warning');
-            }
-            
-            shoppingData = shoppingData.filter(item => !item.inCart);
-            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-            renderCurrentItems();
-            updateStatistics();
+            });
         }
 
-        async function markAllComplete() {
+        function markAllComplete() {
             const incompleteItems = shoppingData.filter(item => !item.inCart);
             
             if (incompleteItems.length === 0) {
@@ -1280,55 +1286,69 @@
 
             setButtonState('complete-all-btn', 'loading', 'Completing...');
 
-            try {
-                const itemIds = incompleteItems
-                    .filter(item => item.id || item._id)
-                    .map(item => item.id || item._id);
-                
-                if (itemIds.length > 0) {
-                    const response = await fetch('/api/shopping-list/bulk-complete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ item_ids: itemIds })
+            const itemIds = incompleteItems
+                .filter(item => item.id || item._id)
+                .map(item => item.id || item._id);
+            
+            if (itemIds.length > 0) {
+                fetch('/api/shopping-list/bulk-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_ids: itemIds })
+                })
+                .then(response => {
+                    if (response && response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Server error');
+                    }
+                })
+                .then(result => {
+                    setButtonState('complete-all-btn', 'success', `✅ ${result.updated_count} Completed`);
+                    showStatus(`Completed ${result.updated_count} items`, 'success');
+                    
+                    shoppingData.forEach(item => {
+                        if (!item.inCart) {
+                            item.inCart = true;
+                            item.purchaseDate = new Date().toISOString();
+                        }
                     });
                     
-                    if (response.ok) {
-                        const result = await response.json();
-                        setButtonState('complete-all-btn', 'success', `✅ ${result.updated_count} Done`);
-                        showStatus(`Completed ${result.updated_count} items`, 'success');
-                    } else {
-                        setButtonState('complete-all-btn', 'success', '✅ Done (Local)');
-                        showStatus('Items completed locally', 'warning');
-                    }
-                } else {
-                    setButtonState('complete-all-btn', 'success', '✅ Done');
-                    showStatus(`Completed ${incompleteItems.length} items`, 'success');
-                }
-                
-                shoppingData.forEach(item => {
-                    if (!item.inCart) {
-                        item.inCart = true;
-                        item.purchaseDate = new Date().toISOString();
-                    }
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    
+                    setTimeout(() => {
+                        renderCurrentItems();
+                        updateStatistics();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error completing all items:', error);
+                    
+                    shoppingData.forEach(item => {
+                        if (!item.inCart) {
+                            item.inCart = true;
+                            item.purchaseDate = new Date().toISOString();
+                        }
+                    });
+                    
+                    localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
+                    
+                    const count = incompleteItems.length;
+                    setButtonState('complete-all-btn', 'success', `✅ ${count} Completed`);
+                    showStatus(`Completed ${count} items locally`, 'warning');
+                    
+                    setTimeout(() => {
+                        renderCurrentItems();
+                        updateStatistics();
+                    }, 1000);
                 });
-                
-                localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-                
-                // Animate all items being completed
-                setTimeout(() => {
-                    shoppingData = shoppingData.filter(item => item.inCart === false);
-                    renderCurrentItems();
-                    updateStatistics();
-                }, 1500);
-                
-            } catch (error) {
-                console.error('Error completing all items:', error);
-                setButtonState('complete-all-btn', 'error', 'Failed');
-                showStatus('Failed to complete all items', 'error');
+            } else {
+                setButtonState('complete-all-btn', 'success', '✅ Completed');
+                showStatus(`Completed ${incompleteItems.length} items`, 'success');
             }
         }
 
-        async function exportList() {
+        function exportList() {
             if (shoppingData.length === 0) {
                 showStatus('No items to export', 'info');
                 return;
@@ -1336,7 +1356,7 @@
 
             setButtonState('export-btn', 'loading', 'Exporting...');
 
-            try {
+            setTimeout(() => {
                 const exportData = {
                     currentList: shoppingData,
                     exportDate: new Date().toISOString(),
@@ -1344,10 +1364,6 @@
                         totalItems: shoppingData.length,
                         completedItems: shoppingData.filter(item => item.inCart).length,
                         uniqueStores: [...new Set(shoppingData.map(item => item.store))].length
-                    },
-                    metadata: {
-                        version: '2.0',
-                        exported_by: 'Smart Shopping List'
                     }
                 };
 
@@ -1361,89 +1377,87 @@
                 
                 setButtonState('export-btn', 'success', '✅ Exported');
                 showStatus('List exported successfully', 'success');
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                setButtonState('export-btn', 'error', 'Export Failed');
-                showStatus('Export failed', 'error');
-            }
+            }, 500);
         }
 
-        async function syncWithServer() {
+        function syncWithServer() {
             setButtonState('sync-btn', 'loading', 'Syncing...');
             showSyncStatus('Syncing with server...');
             
-            try {
-                await loadCurrentItems();
-                
-                const historyContainer = document.getElementById('history_items');
-                if (historyContainer && !historyContainer.querySelector('.empty-state')) {
-                    await loadItemsByTimestamp();
-                }
-                
-                setButtonState('sync-btn', 'success', '✅ Synced');
-                showStatus('Sync completed successfully', 'success');
-                
-            } catch (error) {
-                console.error('Sync error:', error);
-                setButtonState('sync-btn', 'error', 'Sync Failed');
-                showStatus('Sync failed - using offline mode', 'error');
-            }
+            pendingOperations.clear();
+            
+            loadCurrentItems()
+                .then(() => {
+                    const historyContainer = document.getElementById('history_items');
+                    if (historyContainer && !historyContainer.querySelector('.empty-state')) {
+                        return loadItemsByTimestamp();
+                    }
+                })
+                .then(() => {
+                    setButtonState('sync-btn', 'success', '✅ Synced');
+                    showStatus('Sync completed successfully', 'success');
+                })
+                .catch(error => {
+                    console.error('Sync error:', error);
+                    setButtonState('sync-btn', 'error', 'Sync Failed');
+                    showStatus('Sync failed - using offline mode', 'error');
+                });
         }
 
-        async function loadItemsByTimestamp() {
+        function loadItemsByTimestamp() {
             const startDate = document.getElementById('start_timestamp').value;
             const endDate = document.getElementById('end_timestamp').value;
 
             if (!startDate || !endDate) {
                 showStatus('Please select both dates', 'error');
-                return;
+                return Promise.reject('Missing dates');
             }
 
-            setButtonState('filter-btn', 'loading', 'Loading...');
+            setButtonState('filter-btn', 'loading', 'Loading History...');
             
             const container = document.getElementById('history_items');
             container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">⏳</div>
-                    <div>Loading history...</div>
+                    <div class="empty-text">Loading purchase history...</div>
                 </div>
             `;
 
-            try {
-                const response = await fetch(`/todolist/update/${startDate}/${endDate}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
+            return fetch(`/todolist/update/${startDate}/${endDate}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Server response not ok');
+                    }
+                })
+                .then(data => {
                     renderHistoricalData(data);
-                    setButtonState('filter-btn', 'success', `✅ ${data.length} Found`);
+                    setButtonState('filter-btn', 'success', `✅ Found ${data.length} Items`);
                     if (data.length > 0) {
                         showStatus(`Found ${data.length} items in history`, 'success');
                     } else {
                         showStatus('No items found in selected date range', 'info');
                     }
-                    return;
-                } else {
-                    throw new Error('Server response not ok');
-                }
-            } catch (error) {
-                console.error('API call failed:', error);
-                const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
-                const filteredData = allHistory.filter(item => {
-                    const itemDate = new Date(item.purchaseDate || item.timestamp);
-                    const startDateObj = new Date(startDate);
-                    const endDateObj = new Date(endDate);
-                    return itemDate >= startDateObj && itemDate <= endDateObj;
-                });
+                })
+                .catch(error => {
+                    console.error('API call failed:', error);
+                    const allHistory = JSON.parse(localStorage.getItem('shoppingHistory') || '[]');
+                    const filteredData = allHistory.filter(item => {
+                        const itemDate = new Date(item.purchaseDate || item.timestamp);
+                        const startDateObj = new Date(startDate);
+                        const endDateObj = new Date(endDate);
+                        return itemDate >= startDateObj && itemDate <= endDateObj;
+                    });
 
-                renderHistoricalData(filteredData);
-                setButtonState('filter-btn', 'success', `✅ ${filteredData.length} Local`);
-                if (filteredData.length === 0) {
-                    showStatus('No items found locally for selected dates', 'info');
-                } else {
-                    showStatus(`Found ${filteredData.length} items locally`, 'warning');
-                }
-            }
+                    renderHistoricalData(filteredData);
+                    setButtonState('filter-btn', 'success', `✅ ${filteredData.length} Local Items`);
+                    if (filteredData.length === 0) {
+                        showStatus('No items found locally for selected dates', 'info');
+                    } else {
+                        showStatus(`Found ${filteredData.length} items locally`, 'warning');
+                    }
+                });
         }
 
         function renderHistoricalData(data) {
@@ -1453,7 +1467,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">📊</div>
-                        <div>No purchase history found.</div>
+                        <div class="empty-text">No purchase history found for selected dates.</div>
                     </div>
                 `;
                 return;
@@ -1491,44 +1505,56 @@
 
             container.innerHTML = sortedItems.map(item => `
                 <div class="history-item fade-in">
-                    <div class="history-left">
+                    <div class="history-info">
                         <div class="item-name">${item.name}</div>
-                        <div class="item-details">
-                            <span class="store-tag">${item.store}</span>
-                            <span class="quantity-badge">${item.totalQuantity}</span>
-                            <span class="date-text">${new Date(item.lastPurchased).toLocaleDateString()}</span>
+                        <div class="item-metadata">
+                            <span class="metadata-tag">${item.store}</span>
+                            <span class="quantity-indicator">Total: ${item.totalQuantity}</span>
+                            <span class="date-indicator">Last: ${new Date(item.lastPurchased).toLocaleDateString()}</span>
                         </div>
                     </div>
-                    <div class="history-right">
-                        <span class="frequency-badge">${item.frequency}x</span>
+                    <div class="history-actions">
+                        <span class="frequency-badge">Bought ${item.frequency}x</span>
                     </div>
                 </div>
             `).join('');
         }
 
-        function toggleSection(sectionId) {
-            const section = document.getElementById(sectionId);
-            const btn = section.previousElementSibling.querySelector('.toggle-btn');
-            
-            section.classList.toggle('collapsed');
-            btn.textContent = section.classList.contains('collapsed') ? 'Show' : 'Hide';
-        }
-
-        // Network status handling
         window.addEventListener('online', function() {
             isOnline = true;
-            // RIMOSSO: updateOnlineStatus();
             showStatus('Back online - syncing...', 'success');
             syncWithServer();
         });
 
         window.addEventListener('offline', function() {
             isOnline = false;
-            // RIMOSSO: updateOnlineStatus();
             showStatus('Gone offline - using local storage', 'warning');
         });
 
-        // Keyboard shortcuts
+        setInterval(async () => {
+            if (isOnline && pendingOperations.size === 0) {
+                try {
+                    const currentTimestamp = Date.now();
+                    const lastSync = parseInt(localStorage.getItem('lastSyncTimestamp') || '0');
+                    
+                    if (currentTimestamp - lastSync > 30000) {
+                        showSyncStatus('Auto-syncing...', 1000);
+                        await loadCurrentItems();
+                    }
+                } catch (error) {
+                    console.error('Auto-sync failed:', error);
+                }
+            }
+        }, 60000);
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const btn = section.previousElementSibling.querySelector('.toggle-button');
+            
+            section.classList.toggle('collapsed');
+            btn.textContent = section.classList.contains('collapsed') ? 'Show' : 'Hide';
+        }
+
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -1551,57 +1577,27 @@
             }
         });
 
-        // Auto-save functionality
-        setInterval(() => {
-            localStorage.setItem('shoppingList', JSON.stringify(shoppingData));
-        }, 30000);
-
-        // Auto-sync every 5 minutes if online
-        setInterval(async () => {
-            if (isOnline) {
-                showSyncStatus('Auto-syncing...', 1000);
-                try {
-                    await loadCurrentItems();
-                } catch (error) {
-                    console.error('Auto-sync failed:', error);
-                }
-            }
-        }, 5 * 60 * 1000);
-
-        // Enhanced form validation
         document.getElementById('item_name').addEventListener('input', function() {
             const value = this.value.trim();
             if (value.length > 0) {
-                this.style.borderColor = '#10b981';
+                this.style.borderColor = '#34d399';
+                this.style.boxShadow = '0 0 0 3px rgba(52, 211, 153, 0.1)';
             } else {
-                this.style.borderColor = '#e2e8f0';
+                this.style.borderColor = 'var(--border-light)';
+                this.style.boxShadow = 'none';
             }
         });
 
         document.getElementById('store').addEventListener('input', function() {
             const value = this.value.trim();
             if (value.length > 0) {
-                this.style.borderColor = '#10b981';
+                this.style.borderColor = '#34d399';
+                this.style.boxShadow = '0 0 0 3px rgba(52, 211, 153, 0.1)';
             } else {
-                this.style.borderColor = '#e2e8f0';
+                this.style.borderColor = 'var(--border-light)';
+                this.style.boxShadow = 'none';
             }
         });
-
-        console.log('🛒 Enhanced Smart Shopping List loaded successfully!');
-        console.log('Features enabled:');
-        console.log('- Visual feedback for all actions');
-        console.log('- No popup alerts');
-        console.log('- Real-time status updates');
-        console.log('- Smooth animations');
-        console.log('- Offline mode support');
-        console.log('- Auto-sync every 5 minutes');
-        console.log('- Mobile optimized layout');
-        console.log('');
-        console.log('Keyboard shortcuts:');
-        console.log('- Ctrl/Cmd + Enter: Add item');
-        console.log('- Ctrl/Cmd + K: Focus on item input');
-        console.log('- Ctrl/Cmd + E: Export list');
-        console.log('- Ctrl/Cmd + S: Sync with server');
     </script>
 </body>
 </html>
