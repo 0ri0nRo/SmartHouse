@@ -1,10 +1,12 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Shopping List</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,37 +15,14 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        :root {
-            --primary-lavender: #e8e1ff;
-            --primary-lavender-dark: #d4c5ff;
-            --secondary-mint: #e0f9f5;
-            --secondary-mint-dark: #c7f5ed;
-            --accent-peach: #ffe8e1;
-            --accent-peach-dark: #ffd5c7;
-            --background-cream: #fefcf9;
-            --background-white: #ffffff;
-            --text-primary: #2d3748;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --border-light: rgba(226, 232, 240, 0.6);
-            --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-medium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-large: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --gradient-primary: linear-gradient(135deg, var(--primary-lavender) 0%, var(--primary-lavender-dark) 100%);
-            --gradient-secondary: linear-gradient(135deg, var(--secondary-mint) 0%, var(--secondary-mint-dark) 100%);
-            --gradient-accent: linear-gradient(135deg, var(--accent-peach) 0%, var(--accent-peach-dark) 100%);
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, var(--background-cream) 0%, #f8f6f3 100%);
-            color: var(--text-primary);
-            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+            background: #f5f7fa;
+            color: #1a202c;
             min-height: 100vh;
-            font-size: 15px;
-            font-weight: 400;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            line-height: 1.5;
         }
 
         .app-container {
@@ -55,51 +34,48 @@
 
         .main-content {
             flex: 1;
-            max-width: 100%;
+            max-width: 428px;
             margin: 0 auto;
-            padding: 12px;
+            padding: 16px;
             width: 100%;
         }
 
         .app-header {
             text-align: center;
-            margin-bottom: 16px;
-            padding: 20px 16px;
-            background: var(--background-white);
+            margin-bottom: 20px;
+            padding: 24px 20px;
+            background: white;
             border-radius: 16px;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-light);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
         }
 
         .app-title {
-            font-size: 1.75rem;
+            font-size: 1.625rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #a78bfa, #ec4899, #f59e0b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 6px;
-            letter-spacing: -0.02em;
+            color: #1a202c;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
         }
 
         .app-subtitle {
             font-size: 0.875rem;
-            color: var(--text-secondary);
+            color: #6b7280;
             font-weight: 500;
         }
 
         .status-notification {
-            background: var(--background-white);
-            border: 1px solid var(--border-light);
+            background: white;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
-            padding: 10px 14px;
+            padding: 12px 16px;
             margin-bottom: 16px;
             font-size: 0.8125rem;
-            color: var(--text-secondary);
+            color: #4b5563;
             text-align: center;
-            box-shadow: var(--shadow-soft);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             transform: translateY(-8px);
             pointer-events: none;
         }
@@ -111,20 +87,20 @@
         }
 
         .status-notification.success {
-            background: var(--gradient-secondary);
-            border-color: #a7f3d0;
-            color: #047857;
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
         }
 
         .status-notification.error {
-            background: var(--gradient-accent);
+            background: #fee2e2;
             border-color: #fecaca;
-            color: #dc2626;
+            color: #991b1b;
         }
 
         .status-notification.warning {
             background: #fef3c7;
-            border-color: #fed7aa;
+            border-color: #fde68a;
             color: #92400e;
         }
 
@@ -136,27 +112,13 @@
         }
 
         .stat-card {
-            background: var(--background-white);
+            background: white;
             padding: 16px 12px;
-            border-radius: 14px;
+            border-radius: 12px;
             text-align: center;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-soft);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gradient-primary);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
         }
 
         .stat-card:active {
@@ -164,7 +126,7 @@
         }
 
         .stat-card.updating {
-            animation: pulse 0.5s ease-in-out;
+            animation: pulse 0.5s ease;
         }
 
         @keyframes pulse {
@@ -175,54 +137,80 @@
         .stat-number {
             font-size: 1.75rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #a78bfa, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #1e40af;
             display: block;
             margin-bottom: 4px;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.5px;
         }
 
         .stat-label {
             font-size: 0.6875rem;
-            color: var(--text-secondary);
+            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
         }
 
-        .dashboard-grid {
+        .action-bar {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
             margin-bottom: 16px;
         }
 
-        .form-card {
-            background: var(--background-white);
-            padding: 18px 16px;
-            border-radius: 16px;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-soft);
-            position: relative;
-            overflow: hidden;
+        .action-button {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px 12px;
+            font-size: 0.8125rem;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .form-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gradient-primary);
+        .action-button:active:not(:disabled) {
+            transform: scale(0.98);
+            background: #f3f4f6;
+        }
+
+        .action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-button.loading {
+            background: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+
+        .action-button.success {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
+        }
+
+        .form-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            margin-bottom: 16px;
         }
 
         .form-title {
-            font-size: 1.0625rem;
+            font-size: 1rem;
             font-weight: 600;
-            color: var(--text-primary);
+            color: #1a202c;
             margin-bottom: 16px;
             display: flex;
             align-items: center;
@@ -246,179 +234,122 @@
         }
 
         .form-label {
-            font-size: 0.6875rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            color: var(--text-secondary);
+            color: #6b7280;
             margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         .form-input {
-            padding: 12px 14px;
-            border: 2px solid var(--border-light);
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
             border-radius: 10px;
-            font-size: 15px;
-            font-weight: 500;
-            background: var(--background-white);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9375rem;
+            font-weight: 400;
+            background: white;
+            transition: all 0.2s ease;
             outline: none;
             font-family: inherit;
         }
 
         .form-input:focus {
-            border-color: #a78bfa;
-            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+            border-color: #1e40af;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.08);
         }
 
         .form-input::placeholder {
-            color: var(--text-muted);
-            font-weight: 400;
+            color: #9ca3af;
         }
 
         .primary-button {
-            background: var(--gradient-primary);
-            color: var(--text-primary);
+            background: #1e40af;
+            color: white;
             border: none;
-            padding: 14px 20px;
+            padding: 16px 20px;
             border-radius: 12px;
-            font-size: 15px;
+            font-size: 0.9375rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            letter-spacing: 0.3px;
-            box-shadow: var(--shadow-soft);
+            transition: all 0.2s ease;
+            letter-spacing: 0.2px;
             width: 100%;
+            min-height: 52px;
         }
 
         .primary-button:active:not(:disabled) {
             transform: scale(0.98);
+            background: #1e3a8a;
         }
 
         .primary-button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .primary-button.loading {
-            background: #f1f5f9;
-            color: var(--text-muted);
+            background: #9ca3af;
         }
 
         .primary-button.success {
-            background: var(--gradient-secondary);
-            color: #047857;
+            background: #16a34a;
         }
 
         .primary-button.error {
-            background: var(--gradient-accent);
-            color: #dc2626;
-        }
-
-        .action-bar {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .action-button {
-            background: var(--background-white);
-            border: 1px solid var(--border-light);
-            border-radius: 12px;
-            padding: 12px 12px;
-            font-size: 0.8125rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            font-weight: 500;
-            box-shadow: var(--shadow-soft);
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-height: 44px;
-        }
-
-        .action-button:active:not(:disabled) {
-            transform: scale(0.98);
-            background: var(--gradient-primary);
-            border-color: #c7d2fe;
-            color: var(--text-primary);
-        }
-
-        .action-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .action-button.loading {
-            background: #fef3c7;
-            border-color: #fed7aa;
-            color: #92400e;
-        }
-
-        .action-button.success {
-            background: var(--gradient-secondary);
-            border-color: #a7f3d0;
-            color: #047857;
+            background: #dc2626;
         }
 
         .content-card {
-            background: var(--background-white);
+            background: white;
             border-radius: 16px;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-soft);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
             overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             margin-bottom: 16px;
         }
 
         .card-header {
-            background: var(--gradient-primary);
-            padding: 14px 16px;
+            background: #f9fafb;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .card-title {
             font-size: 0.9375rem;
             font-weight: 600;
-            color: var(--text-primary);
+            color: #1a202c;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .toggle-button {
-            background: var(--background-white);
-            border: 1px solid rgba(167, 139, 250, 0.3);
+            background: white;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
             padding: 6px 12px;
-            font-size: 0.6875rem;
-            color: var(--text-secondary);
+            font-size: 0.75rem;
+            color: #6b7280;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-weight: 500;
+            transition: all 0.2s ease;
+            font-weight: 600;
             min-height: 32px;
         }
 
         .toggle-button:active {
             transform: scale(0.95);
-            background: var(--primary-lavender);
+            background: #f3f4f6;
         }
 
         .card-content {
-            padding: 16px 16px;
+            padding: 16px;
             max-height: 450px;
             overflow-y: auto;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -438,22 +369,21 @@
         .shopping-item {
             display: flex;
             align-items: center;
-            padding: 12px;
-            background: var(--background-cream);
-            border: 1px solid var(--border-light);
+            padding: 14px;
+            background: #fafbfc;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-height: 64px;
+            transition: all 0.2s ease;
+            min-height: 72px;
         }
 
         .shopping-item:active {
-            background: var(--gradient-primary);
-            border-color: rgba(167, 139, 250, 0.4);
+            background: #f3f4f6;
             transform: scale(0.99);
         }
 
         .shopping-item.completing {
-            opacity: 0.7;
+            opacity: 0.6;
             transform: translateX(-10px);
         }
 
@@ -463,15 +393,15 @@
         }
 
         .item-checkbox {
-            width: 28px;
-            height: 28px;
-            border: 2px solid var(--border-light);
+            width: 32px;
+            height: 32px;
+            border: 2px solid #d1d5db;
             border-radius: 8px;
             margin-right: 12px;
             position: relative;
             cursor: pointer;
-            background: var(--background-white);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            transition: all 0.2s ease;
             flex-shrink: 0;
         }
 
@@ -480,8 +410,8 @@
         }
 
         .item-checkbox.checked {
-            background: var(--gradient-secondary);
-            border-color: #10b981;
+            background: #dcfce7;
+            border-color: #16a34a;
         }
 
         .item-checkbox.checked::after {
@@ -490,8 +420,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #047857;
-            font-size: 16px;
+            color: #15803d;
+            font-size: 18px;
             font-weight: bold;
         }
 
@@ -500,10 +430,10 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 12px;
-            height: 12px;
-            margin: -6px 0 0 -6px;
-            border: 2px solid #92400e;
+            width: 14px;
+            height: 14px;
+            margin: -7px 0 0 -7px;
+            border: 2px solid #1e40af;
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -521,7 +451,7 @@
 
         .item-name {
             font-weight: 600;
-            color: var(--text-primary);
+            color: #1a202c;
             font-size: 0.9375rem;
             margin-bottom: 6px;
             word-wrap: break-word;
@@ -536,19 +466,19 @@
         }
 
         .metadata-tag {
-            background: var(--gradient-primary);
-            color: var(--text-primary);
-            padding: 3px 8px;
+            background: #f3f4f6;
+            color: #4b5563;
+            padding: 4px 8px;
             border-radius: 6px;
             font-size: 0.6875rem;
             font-weight: 600;
-            letter-spacing: 0.3px;
+            border: 1px solid #e5e7eb;
         }
 
         .quantity-indicator {
-            background: var(--gradient-secondary);
-            color: #047857;
-            padding: 3px 7px;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 8px;
             border-radius: 6px;
             font-size: 0.6875rem;
             font-weight: 600;
@@ -559,38 +489,36 @@
             height: 10px;
             border-radius: 50%;
             display: inline-block;
-            box-shadow: var(--shadow-soft);
         }
 
         .priority-high { 
-            background: linear-gradient(135deg, #fecaca, #f87171);
+            background: #ef4444;
         }
         .priority-medium { 
-            background: linear-gradient(135deg, #fed7aa, #fdba74);
+            background: #f59e0b;
         }
         .priority-low { 
-            background: linear-gradient(135deg, #bbf7d0, #86efac);
+            background: #10b981;
         }
 
         .date-indicator {
             font-size: 0.6875rem;
-            color: var(--text-muted);
+            color: #9ca3af;
             font-weight: 500;
         }
 
         .delete-button {
-            background: var(--gradient-accent);
+            background: #fee2e2;
             border: 1px solid #fecaca;
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 10px;
             color: #dc2626;
             font-size: 1rem;
             cursor: pointer;
             margin-left: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            min-width: 40px;
-            min-height: 40px;
+            transition: all 0.2s ease;
+            min-width: 44px;
+            min-height: 44px;
             flex-shrink: 0;
             font-weight: 500;
             display: flex;
@@ -604,17 +532,16 @@
         }
 
         .delete-button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
         .filter-section {
-            background: var(--gradient-primary);
-            padding: 16px 16px;
+            background: #f9fafb;
+            padding: 16px;
             border-radius: 12px;
             margin-bottom: 16px;
-            margin-left: 0;
-            margin-right: 0;
+            border: 1px solid #e5e7eb;
         }
 
         .filter-grid {
@@ -625,28 +552,27 @@
         }
 
         .filter-button {
-            background: var(--background-white);
-            color: var(--text-primary);
-            border: 1px solid var(--border-light);
+            background: #1e40af;
+            color: white;
+            border: none;
             border-radius: 12px;
-            padding: 12px 16px;
+            padding: 14px 16px;
             font-size: 0.875rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            letter-spacing: 0.3px;
-            box-shadow: var(--shadow-soft);
+            transition: all 0.2s ease;
+            letter-spacing: 0.2px;
             width: 100%;
-            min-height: 44px;
+            min-height: 48px;
         }
 
         .filter-button:active:not(:disabled) {
             transform: scale(0.98);
-            background: var(--gradient-secondary);
+            background: #1e3a8a;
         }
 
         .filter-button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
@@ -654,18 +580,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
-            background: var(--background-cream);
-            border: 1px solid var(--border-light);
+            padding: 14px;
+            background: #fafbfc;
+            border: 1px solid #e5e7eb;
             border-radius: 12px;
             margin-bottom: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-height: 64px;
+            transition: all 0.2s ease;
+            min-height: 72px;
         }
 
         .history-item:active {
-            background: var(--gradient-primary);
-            border-color: rgba(167, 139, 250, 0.4);
+            background: #f3f4f6;
             transform: scale(0.99);
         }
 
@@ -683,50 +608,49 @@
         }
 
         .frequency-badge {
-            background: var(--gradient-secondary);
-            color: #047857;
-            padding: 5px 9px;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 6px 10px;
             border-radius: 8px;
             font-size: 0.6875rem;
             font-weight: 600;
-            letter-spacing: 0.3px;
             white-space: nowrap;
         }
 
         .empty-state {
             text-align: center;
-            padding: 32px 16px;
-            color: var(--text-muted);
+            padding: 40px 20px;
+            color: #9ca3af;
         }
 
         .empty-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            opacity: 0.6;
+            font-size: 3rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
         }
 
         .empty-text {
             font-size: 0.9375rem;
             font-weight: 500;
+            color: #6b7280;
         }
 
         .sync-indicator {
             position: fixed;
-            bottom: 16px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(45, 55, 72, 0.95);
-            backdrop-filter: blur(20px);
+            background: rgba(26, 32, 44, 0.95);
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 10px 16px;
+            padding: 12px 20px;
             border-radius: 12px;
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             z-index: 1000;
-            font-weight: 500;
-            letter-spacing: 0.3px;
-            box-shadow: var(--shadow-large);
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
         .sync-indicator.show {
@@ -738,17 +662,16 @@
         }
 
         .card-content::-webkit-scrollbar-track {
-            background: var(--background-cream);
-            border-radius: 4px;
+            background: #f9fafb;
         }
 
         .card-content::-webkit-scrollbar-thumb {
-            background: var(--gradient-primary);
+            background: #d1d5db;
             border-radius: 4px;
         }
 
         .fade-in {
-            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.3s ease;
         }
 
         @keyframes fadeIn {
@@ -764,12 +687,8 @@
 
         @media (min-width: 768px) {
             .main-content {
+                max-width: 1200px;
                 padding: 32px;
-            }
-
-            .dashboard-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 24px;
             }
 
             .action-bar {
@@ -782,42 +701,6 @@
 
             .filter-grid {
                 grid-template-columns: 1fr 1fr;
-                gap: 16px;
-            }
-
-            .stat-number {
-                font-size: 2rem;
-            }
-
-            .app-title {
-                font-size: 2.5rem;
-            }
-
-            .card-content {
-                max-height: 500px;
-            }
-
-            .item-checkbox,
-            .delete-button,
-            .toggle-button,
-            .action-button,
-            .filter-button,
-            .primary-button {
-                cursor: pointer;
-            }
-
-            .shopping-item:hover,
-            .history-item:hover {
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-soft);
-            }
-
-            .action-button:hover:not(:disabled) {
-                background: var(--gradient-primary);
-                border-color: #c7d2fe;
-                color: var(--text-primary);
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-medium);
             }
         }
     </style>
@@ -866,71 +749,65 @@
                 </button>
             </section>
 
-            <div class="dashboard-grid">
-                <div class="dashboard-left">
-                    <div class="form-card">
-                        <h2 class="form-title">
-                            <span>➕</span>
-                            Add Item
-                        </h2>
-                        
-                        <div class="form-grid two-col">
-                            <div class="form-group">
-                                <label class="form-label" for="item_name">Item</label>
-                                <input type="text" class="form-input" id="item_name" placeholder="e.g., Milk, Bread..." required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="quantity">Qty</label>
-                                <input type="number" class="form-input" id="quantity" placeholder="1" min="1" value="1" required>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="store">Store</label>
-                                <input type="text" class="form-input" id="store" placeholder="e.g., Conad, Maurys..." required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="priority">Priority</label>
-                                <select class="form-input" id="priority">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="needed_by">Needed By</label>
-                                <input type="date" class="form-input" id="needed_by">
-                            </div>
-                        </div>
-
-                        <button class="primary-button" id="add-item-btn" onclick="addItem()">
-                            <span id="add-btn-text">Add to List</span>
-                        </button>
+            <div class="form-card">
+                <h2 class="form-title">
+                    <span>➕</span>
+                    Add Item
+                </h2>
+                
+                <div class="form-grid two-col">
+                    <div class="form-group">
+                        <label class="form-label" for="item_name">Item</label>
+                        <input type="text" class="form-input" id="item_name" placeholder="e.g., Milk, Bread..." required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="quantity">Qty</label>
+                        <input type="number" class="form-input" id="quantity" placeholder="1" min="1" value="1" required>
                     </div>
                 </div>
 
-                <div class="dashboard-right">
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h2 class="card-title">
-                                <span>🛍️</span>
-                                Shopping List
-                            </h2>
-                            <button class="toggle-button" onclick="toggleSection('shopping-list')">Hide</button>
-                        </div>
-                        <div class="card-content" id="shopping-list">
-                            <ul class="item-list" id="shopping_list_items">
-                                <div class="empty-state">
-                                    <div class="empty-icon">🛒</div>
-                                    <div class="empty-text">Add items to start!</div>
-                                </div>
-                            </ul>
-                        </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="store">Store</label>
+                        <input type="text" class="form-input" id="store" placeholder="e.g., Conad, Maurys..." required>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label" for="priority">Priority</label>
+                        <select class="form-input" id="priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="needed_by">Needed By</label>
+                        <input type="date" class="form-input" id="needed_by">
+                    </div>
+                </div>
+
+                <button class="primary-button" id="add-item-btn" onclick="addItem()">
+                    <span id="add-btn-text">Add to List</span>
+                </button>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <span>🛍️</span>
+                        Shopping List
+                    </h2>
+                    <button class="toggle-button" onclick="toggleSection('shopping-list')">Hide</button>
+                </div>
+                <div class="card-content" id="shopping-list">
+                    <ul class="item-list" id="shopping_list_items">
+                        <div class="empty-state">
+                            <div class="empty-icon">🛒</div>
+                            <div class="empty-text">Add items to start!</div>
+                        </div>
+                    </ul>
                 </div>
             </div>
 
