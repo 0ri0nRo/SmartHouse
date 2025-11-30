@@ -11,14 +11,20 @@ RUN apk add --no-cache \
     linux-headers \
     libffi-dev \
     postgresql-dev \
+    postgresql-client \
     nmap
 
 # Upgrade pip
 RUN pip install --upgrade pip
+RUN mkdir -p /backup && chmod 777 /backup
 
 # Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backup script
+COPY backup.sh /usr/local/bin/backup.sh
+RUN chmod +x /usr/local/bin/backup.sh
 
 # Copy the rest of the code
 COPY . .

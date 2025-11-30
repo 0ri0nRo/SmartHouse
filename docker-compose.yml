@@ -72,7 +72,6 @@ services:
       - UPLOAD_FOLDER=/app/uploads
       - TESSERACT_CMD=/usr/bin/tesseract
     volumes:
-      - ./src/backup.sh:/usr/local/bin/backup.sh
       - ./backup:/backup
       - ./src/static:/app/static
       - ./uploads:/app/uploads
