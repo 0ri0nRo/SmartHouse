@@ -175,7 +175,7 @@ class ActivityService:
                 
                 # Verifica se esiste già
                 check_query = "SELECT id FROM activity_events WHERE google_event_id = %s"
-                existing = self.pg.execute_query(check_query, (event.google_event_id,))
+                existing = self.pg.execute_query(check_query, (event.google_event_id,), fetch=True)
                 
                 if existing:
                     # Update

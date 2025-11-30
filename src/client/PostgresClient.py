@@ -624,16 +624,14 @@ class PostgresHandler:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
     
-    def execute_query(self, query, params=None, fetch_one=False, fetch_all=True):
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                cur.execute(query, params)
-                if fetch_one:
-                    return cur.fetchone()
-                elif fetch_all:
-                    return cur.fetchall()
-                else:
-                    return cur.rowcount
+    def execute_query(self, query, params=None, fetch=False):
+        with self.connection.cursor() as cur:
+            cur.execute(query, params or ())
+            if fetch:
+                return cur.fetchall()
+            else:
+                self.connection.commit()
+                return []
 
 
     @contextmanager
