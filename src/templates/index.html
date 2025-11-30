@@ -808,6 +808,11 @@
             100% { left: 100%; }
         }
 
+        .card.activity-monitor {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
         /* Status indicators */
         .status-dot {
             width: 8px;
@@ -1140,6 +1145,33 @@
                     </div>
                 </div>
             </article>
+            <!-- Activity Monitor Card -->
+<article class="card activity-monitor" id="activityCard" tabindex="0">
+    <div class="card-header">
+        <h2 class="card-title">Activity Monitor</h2>
+        <div class="card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M8 2v4"/>
+                <path d="M16 2v4"/>
+                <rect width="18" height="18" x="3" y="4" rx="2"/>
+                <path d="M3 10h18"/>
+                <path d="M8 14h.01"/>
+                <path d="M12 14h.01"/>
+                <path d="M16 14h.01"/>
+                <path d="M8 18h.01"/>
+                <path d="M12 18h.01"/>
+                <path d="M16 18h.01"/>
+            </svg>
+        </div>
+    </div>
+    <div class="card-content">
+        <div class="card-value">Activities</div>
+        <div class="card-meta">
+            <span>Calendar</span>
+            <span class="status-dot online"></span>
+        </div>
+    </div>
+</article>  
 
             <!-- Home Alarm Card -->
             <article class="card alarm" id="alarmCard" tabindex="0">
@@ -1164,6 +1196,10 @@
     </div>
 
     <script>
+
+        document.getElementById("activityCard").addEventListener("click", () => {
+    window.location.href = "/api/activity/dashboard";
+});
         // Date and time management
         function updateDateTime() {
             const now = new Date();

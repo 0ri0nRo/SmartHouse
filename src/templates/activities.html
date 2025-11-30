@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Monitor - Smart Homes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: #6B7FBD;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1em;
+            font-weight: 400;
+        }
+
+        .datetime {
+            color: #4a5568;
+            font-size: 0.95em;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .controls input {
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.95em;
+            font-family: 'Inter', sans-serif;
+            color: #2d3748;
+            transition: all 0.2s;
+            background: #fafbfc;
+        }
+
+        .controls input:focus {
+            outline: none;
+            border-color: #6B7FBD;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(107, 127, 189, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #6B7FBD;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6ba3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(107, 127, 189, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            border-color: #cbd5e0;
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6B7FBD, #8B9DC3);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            border-color: #cbd5e0;
+        }
+
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+
+        .stat-card h3 {
+            color: #2d3748;
+            margin-bottom: 24px;
+            font-size: 1.1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-card h3::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, #e2e8f0, transparent);
+            margin-left: 12px;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .category-item:last-child {
+            border-bottom: none;
+        }
+
+        .category-name {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .category-icon {
+            font-size: 1.8em;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7fafc;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .category-item:hover .category-icon {
+            background: #edf2f7;
+            transform: scale(1.05);
+        }
+
+        .category-label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .macro-cat {
+            font-size: 0.8em;
+            color: #a0aec0;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .micro-cat {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95em;
+        }
+
+        .category-time {
+            text-align: right;
+        }
+
+        .hours {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #6B7FBD;
+            letter-spacing: -0.5px;
+        }
+
+        .percentage {
+            font-size: 0.85em;
+            color: #a0aec0;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #f7fafc;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6B7FBD, #8B9DC3);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 8px rgba(107, 127, 189, 0.3);
+        }
+
+        .total-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .total-card h3 {
+            color: white;
+        }
+
+        .total-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .sync-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Activity Monitor</h1>
+            <p class="subtitle">Monitora le tue attività giornaliere da Google Calendar</p>
+        </header>
+
+        <div class="controls">
+            <input type="date" id="dateInput" />
+            <button class="btn btn-primary" onclick="loadDailyStats()">Carica Statistiche</button>
+            <button class="btn btn-secondary" onclick="syncEvents()">🔄 Sincronizza</button>
+            <button class="btn btn-secondary" onclick="loadWeekly()">Settimana</button>
+            <button class="btn btn-secondary" onclick="loadMonthly()">Mese</button>
+            <span class="sync-info" id="syncInfo"></span>
+        </div>
+
+        <div id="message"></div>
+
+        <div id="loading" class="loading" style="display: none;">
+            Caricamento in corso...
+        </div>
+
+        <div id="statsContainer" class="stats-grid"></div>
+    </div>
+
+    <script>
+        // Imposta la data di oggi come default
+        document.getElementById('dateInput').valueAsDate = new Date();
+
+        async function loadDailyStats() {
+            const date = document.getElementById('dateInput').value;
+            if (!date) {
+                showMessage('Seleziona una data', 'error');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch(`/api/activity/stats/daily?date=${date}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayDailyStats(data);
+                    showMessage(`Statistiche caricate per ${date}`, 'success');
+                } else {
+                    showMessage('Errore: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Errore di connessione: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function syncEvents() {
+            showLoading(true);
+            showMessage('Sincronizzazione in corso...', 'success');
+            
+            try {
+                const response = await fetch('/api/activity/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.stats;
+                    showMessage(`✓ Sincronizzazione completata: ${stats.added} aggiunti, ${stats.updated} aggiornati`, 'success');
+                    document.getElementById('syncInfo').textContent = `Ultima sync: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Ricarica le statistiche
+                    setTimeout(() => loadDailyStats(), 1000);
+                } else {
+                    showMessage('Errore sync: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Errore di connessione: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function loadWeekly() {
+            showLoading(true);
+            const today = new Date();
+            const year = today.getFullYear();
+            const week = getWeekNumber(today);
+
+            try {
+                const response = await fetch(`/api/activity/stats/weekly?year=${year}&week=${week}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayStats(data, 'Settimana ' + week);
+                    showMessage(`Statistiche settimanali caricate`, 'success');
+                }
+            } catch (error) {
+                showMessage('Errore: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function loadMonthly() {
+            showLoading(true);
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1;
+
+            try {
+                const response = await fetch(`/api/activity/stats/monthly?year=${year}&month=${month}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayStats(data, getMonthName(month) + ' ' + year);
+                    showMessage(`Statistiche mensili caricate`, 'success');
+                }
+            } catch (error) {
+                showMessage('Errore: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        function displayDailyStats(data) {
+            displayStats(data, formatDate(data.date));
+        }
+
+        function displayStats(data, title) {
+            const container = document.getElementById('statsContainer');
+            container.innerHTML = '';
+
+            // Card totale
+            const totalCard = document.createElement('div');
+            totalCard.className = 'stat-card total-card';
+            totalCard.innerHTML = `
+                <h3>Tempo Totale</h3>
+                <div class="total-value">${data.total_hours}h</div>
+                <div>${data.total_minutes} minuti tracciati</div>
+                <div style="margin-top: 10px; font-size: 0.9em;">${title}</div>
+            `;
+            container.appendChild(totalCard);
+
+            // Raggruppa per macrocategoria
+            const grouped = {};
+            data.stats.forEach(stat => {
+                if (!grouped[stat.macro_category]) {
+                    grouped[stat.macro_category] = [];
+                }
+                grouped[stat.macro_category].push(stat);
+            });
+
+            // Crea card per ogni macrocategoria
+            Object.entries(grouped).forEach(([macro, stats]) => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                
+                const totalMacro = stats.reduce((sum, s) => sum + s.total_hours, 0);
+                
+                let html = `<h3>${macro} (${totalMacro.toFixed(1)}h)</h3>`;
+                
+                stats.forEach(stat => {
+                    html += `
+                        <div class="category-item">
+                            <div class="category-name">
+                                <span class="category-icon">${stat.icon}</span>
+                                <div class="category-label">
+                                    <span class="micro-cat">${stat.micro_category}</span>
+                                    <span class="macro-cat">${stat.code}</span>
+                                </div>
+                            </div>
+                            <div class="category-time">
+                                <div class="hours">${stat.total_hours}h</div>
+                                <div class="percentage">${stat.percentage.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${stat.percentage}%"></div>
+                        </div>
+                    `;
+                });
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.className = type;
+            msgDiv.textContent = text;
+            msgDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                msgDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('it-IT', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function getMonthName(month) {
+            const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                          'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+            return months[month - 1];
+        }
+
+        // Carica statistiche di oggi all'avvio
+        window.onload = () => {
+            loadDailyStats();
+        };
+    </script>
+</body>
+</html>
