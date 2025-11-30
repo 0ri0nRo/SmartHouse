@@ -89,18 +89,26 @@ def sync_events():
 
 @activity_bp.route('/stats/daily', methods=['GET'])
 def get_daily_stats():
-    """GET /api/activity/stats/daily?date=YYYY-MM-DD - Statistiche per una data"""
+    """
+    GET /api/activity/stats/daily?date=YYYY-MM-DD
+    Restituisce le statistiche delle attività per una data specifica
+    """
     try:
+        # Recupera la data dai parametri o usa oggi come default
         date_str = request.args.get('date')
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else date.today()
-        
-        service = get_activity_service()
+
+        # Ottieni l'istanza del servizio
+        service = get_activity_service()  # qui creiamo l'istanza di ActivityService
+
+        # Calcola le statistiche giornaliere
         service.calculate_daily_stats(target_date)
         stats = service.get_daily_stats(target_date)
-        
+
+        # Totali
         total_minutes = sum(s['total_minutes'] for s in stats)
         total_hours = round(total_minutes / 60, 2)
-        
+
         return jsonify({
             'success': True,
             'date': target_date.isoformat(),
@@ -109,85 +117,86 @@ def get_daily_stats():
             'stats': stats,
             'count': len(stats)
         })
-    
+
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
-
-
-@activity_bp.route('/stats/weekly', methods=['GET'])
+@activity_bp.route("/stats/weekly", methods=['GET'])
 def get_weekly_stats():
-    """GET /api/activity/stats/weekly?year=YYYY&week=N - Statistiche settimanali"""
+    """
+    Restituisce le statistiche aggregate della settimana.
+    Parametri query: ?year=YYYY&week=N
+    """
     try:
         year = request.args.get('year', type=int)
         week = request.args.get('week', type=int)
-        
+
         if not year or not week:
             today = date.today()
             year = today.year
             week = today.isocalendar()[1]
-        
+
         service = get_activity_service()
-        stats = service.get_weekly_stats(year, week)
-        
-        total_minutes = sum(s['total_minutes'] for s in stats)
+        stats_list = service.get_weekly_stats(year, week)
+
+        total_minutes = sum(s['total_minutes'] for s in stats_list)
         total_hours = round(total_minutes / 60, 2)
-        
-        return jsonify({
-            'success': True,
-            'year': year,
-            'week': week,
-            'total_minutes': total_minutes,
-            'total_hours': total_hours,
-            'stats': stats,
-            'count': len(stats)
-        })
-    
+
+        response = {
+            "success": True,
+            "title": f"Settimana {week} - {year}",
+            "total_minutes": total_minutes,
+            "total_hours": total_hours,
+            "stats": stats_list
+        }
+        return jsonify(response)
+
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
+        return jsonify({"success": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
-@activity_bp.route('/stats/monthly', methods=['GET'])
+@activity_bp.route("/stats/monthly", methods=['GET'])
 def get_monthly_stats():
-    """GET /api/activity/stats/monthly?year=YYYY&month=N - Statistiche mensili"""
+    """
+    Restituisce le statistiche aggregate del mese.
+    Parametri query: ?year=YYYY&month=N
+    """
     try:
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
-        
+
         if not year or not month:
             today = date.today()
             year = today.year
             month = today.month
-        
+
         service = get_activity_service()
-        stats = service.get_monthly_stats(year, month)
-        
-        total_minutes = sum(s['total_minutes'] for s in stats)
+        stats_list = service.get_monthly_stats(year, month)
+
+        total_minutes = sum(s['total_minutes'] for s in stats_list)
         total_hours = round(total_minutes / 60, 2)
-        
-        return jsonify({
-            'success': True,
-            'year': year,
-            'month': month,
-            'total_minutes': total_minutes,
-            'total_hours': total_hours,
-            'stats': stats,
-            'count': len(stats)
-        })
-    
+
+        response = {
+            "success": True,
+            "title": f"{get_month_name(month)} {year}",
+            "total_minutes": total_minutes,
+            "total_hours": total_hours,
+            "stats": stats_list
+        }
+        return jsonify(response)
+
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }), 500
+        return jsonify({"success": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+def get_month_name(month):
+    months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+              'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+    return months[month - 1]
+
 
 
 @activity_bp.route('/stats/range', methods=['GET'])

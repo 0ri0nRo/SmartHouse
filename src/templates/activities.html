@@ -317,230 +317,198 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📊 Activity Monitor</h1>
-            <p class="subtitle">Monitora le tue attività giornaliere da Google Calendar</p>
-        </header>
+<div class="container">
+    <header>
+        <h1>📊 Activity Monitor</h1>
+        <p class="subtitle">Monitora le tue attività giornaliere da Google Calendar</p>
+    </header>
 
-        <div class="controls">
-            <input type="date" id="dateInput" />
-            <button class="btn btn-primary" onclick="loadDailyStats()">Carica Statistiche</button>
-            <button class="btn btn-secondary" onclick="syncEvents()">🔄 Sincronizza</button>
-            <button class="btn btn-secondary" onclick="loadWeekly()">Settimana</button>
-            <button class="btn btn-secondary" onclick="loadMonthly()">Mese</button>
-            <span class="sync-info" id="syncInfo"></span>
-        </div>
-
-        <div id="message"></div>
-
-        <div id="loading" class="loading" style="display: none;">
-            Caricamento in corso...
-        </div>
-
-        <div id="statsContainer" class="stats-grid"></div>
+    <div class="controls">
+        <input type="date" id="dateInput" />
+        <button class="btn btn-primary" onclick="loadDailyStats()">Carica Statistiche</button>
+        <button class="btn btn-secondary" onclick="syncEvents()">🔄 Sincronizza</button>
+        <button class="btn btn-secondary" onclick="loadWeekly()">Settimana</button>
+        <button class="btn btn-secondary" onclick="loadMonthly()">Mese</button>
+        <span class="sync-info" id="syncInfo"></span>
     </div>
 
-    <script>
-        // Imposta la data di oggi come default
-        document.getElementById('dateInput').valueAsDate = new Date();
+    <div id="message"></div>
+    <div id="loading" class="loading" style="display: none;">Caricamento in corso...</div>
+    <div id="statsContainer" class="stats-grid"></div>
+</div>
 
-        async function loadDailyStats() {
-            const date = document.getElementById('dateInput').value;
-            if (!date) {
-                showMessage('Seleziona una data', 'error');
-                return;
-            }
+<script>
+document.getElementById('dateInput').valueAsDate = new Date();
 
-            showLoading(true);
-            try {
-                const response = await fetch(`/api/activity/stats/daily?date=${date}`);
-                const data = await response.json();
+async function fetchData(url) {
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        showMessage('Errore di connessione: ' + err.message, 'error');
+        return null;
+    }
+}
 
-                if (data.success) {
-                    displayDailyStats(data);
-                    showMessage(`Statistiche caricate per ${date}`, 'success');
-                } else {
-                    showMessage('Errore: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Errore di connessione: ' + error.message, 'error');
-            }
-            showLoading(false);
+async function loadDailyStats() {
+    const date = document.getElementById('dateInput').value;
+    if (!date) return showMessage('Seleziona una data', 'error');
+
+    showLoading(true);
+    const data = await fetchData(`/api/activity/stats/daily?date=${date}`);
+    if (data?.success) {
+        displayStats(data, formatDate(data.date));
+        showMessage(`Statistiche caricate per ${date}`, 'success');
+    } else if (data) {
+        showMessage('Errore: ' + data.error, 'error');
+    }
+    showLoading(false);
+}
+
+async function loadWeekly() {
+    showLoading(true);
+    const today = new Date();
+    const year = today.getFullYear();
+    const week = getWeekNumber(today);
+
+    const data = await fetchData(`/api/activity/stats/weekly?year=${year}&week=${week}`);
+    if (data?.success) {
+        displayStats(data, `Settimana ${week}`);
+        showMessage('Statistiche settimanali caricate', 'success');
+    } else if (data) {
+        showMessage('Errore: ' + data.error, 'error');
+    }
+    showLoading(false);
+}
+
+async function loadMonthly() {
+    showLoading(true);
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+
+    const data = await fetchData(`/api/activity/stats/monthly?year=${year}&month=${month}`);
+    if (data?.success) {
+        displayStats(data, `${getMonthName(month)} ${year}`);
+        showMessage('Statistiche mensili caricate', 'success');
+    } else if (data) {
+        showMessage('Errore: ' + data.error, 'error');
+    }
+    showLoading(false);
+}
+
+async function syncEvents() {
+    showLoading(true);
+    showMessage('Sincronizzazione in corso...', 'success');
+
+    try {
+        const response = await fetch('/api/activity/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const data = await response.json();
+
+        if (data.success) {
+            const stats = data.stats;
+            showMessage(`✓ Sincronizzazione completata: ${stats.added} aggiunti, ${stats.updated} aggiornati`, 'success');
+            document.getElementById('syncInfo').textContent = `Ultima sync: ${new Date().toLocaleTimeString()}`;
+            setTimeout(loadDailyStats, 1000);
+        } else {
+            showMessage('Errore sync: ' + data.error, 'error');
         }
+    } catch (err) {
+        showMessage('Errore di connessione: ' + err.message, 'error');
+    }
+    showLoading(false);
+}
 
-        async function syncEvents() {
-            showLoading(true);
-            showMessage('Sincronizzazione in corso...', 'success');
-            
-            try {
-                const response = await fetch('/api/activity/sync', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
+function displayStats(data, title) {
+    const container = document.getElementById('statsContainer');
+    container.innerHTML = '';
 
-                if (data.success) {
-                    const stats = data.stats;
-                    showMessage(`✓ Sincronizzazione completata: ${stats.added} aggiunti, ${stats.updated} aggiornati`, 'success');
-                    document.getElementById('syncInfo').textContent = `Ultima sync: ${new Date().toLocaleTimeString()}`;
-                    
-                    // Ricarica le statistiche
-                    setTimeout(() => loadDailyStats(), 1000);
-                } else {
-                    showMessage('Errore sync: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Errore di connessione: ' + error.message, 'error');
-            }
-            showLoading(false);
-        }
+    if (!data.stats || !data.stats.length) {
+        container.innerHTML = `<p>Nessuna statistica disponibile per questo periodo.</p>`;
+        return;
+    }
 
-        async function loadWeekly() {
-            showLoading(true);
-            const today = new Date();
-            const year = today.getFullYear();
-            const week = getWeekNumber(today);
+    // Card totale
+    const totalCard = document.createElement('div');
+    totalCard.className = 'stat-card total-card';
+    totalCard.innerHTML = `
+        <h3>Tempo Totale</h3>
+        <div class="total-value">${data.total_hours}h</div>
+        <div>${data.total_minutes} minuti tracciati</div>
+        <div style="margin-top: 10px; font-size: 0.9em;">${title}</div>
+    `;
+    container.appendChild(totalCard);
 
-            try {
-                const response = await fetch(`/api/activity/stats/weekly?year=${year}&week=${week}`);
-                const data = await response.json();
+    // Raggruppa per macrocategoria
+    const grouped = {};
+    data.stats.forEach(stat => {
+        if (!grouped[stat.macro_category]) grouped[stat.macro_category] = [];
+        grouped[stat.macro_category].push(stat);
+    });
 
-                if (data.success) {
-                    displayStats(data, 'Settimana ' + week);
-                    showMessage(`Statistiche settimanali caricate`, 'success');
-                }
-            } catch (error) {
-                showMessage('Errore: ' + error.message, 'error');
-            }
-            showLoading(false);
-        }
+    Object.entries(grouped).forEach(([macro, stats]) => {
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        const totalMacro = stats.reduce((sum, s) => sum + s.total_hours, 0);
 
-        async function loadMonthly() {
-            showLoading(true);
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-
-            try {
-                const response = await fetch(`/api/activity/stats/monthly?year=${year}&month=${month}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    displayStats(data, getMonthName(month) + ' ' + year);
-                    showMessage(`Statistiche mensili caricate`, 'success');
-                }
-            } catch (error) {
-                showMessage('Errore: ' + error.message, 'error');
-            }
-            showLoading(false);
-        }
-
-        function displayDailyStats(data) {
-            displayStats(data, formatDate(data.date));
-        }
-
-        function displayStats(data, title) {
-            const container = document.getElementById('statsContainer');
-            container.innerHTML = '';
-
-            // Card totale
-            const totalCard = document.createElement('div');
-            totalCard.className = 'stat-card total-card';
-            totalCard.innerHTML = `
-                <h3>Tempo Totale</h3>
-                <div class="total-value">${data.total_hours}h</div>
-                <div>${data.total_minutes} minuti tracciati</div>
-                <div style="margin-top: 10px; font-size: 0.9em;">${title}</div>
+        let html = `<h3>${macro} (${totalMacro.toFixed(1)}h)</h3>`;
+        stats.forEach(stat => {
+            html += `
+                <div class="category-item">
+                    <div class="category-name">
+                        <span class="category-icon">${stat.icon || ''}</span>
+                        <div class="category-label">
+                            <span class="micro-cat">${stat.micro_category || ''}</span>
+                            <span class="macro-cat">${stat.code || ''}</span>
+                        </div>
+                    </div>
+                    <div class="category-time">
+                        <div class="hours">${stat.total_hours}h</div>
+                        <div class="percentage">${(stat.percentage || 0).toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${stat.percentage || 0}%"></div>
+                </div>
             `;
-            container.appendChild(totalCard);
+        });
 
-            // Raggruppa per macrocategoria
-            const grouped = {};
-            data.stats.forEach(stat => {
-                if (!grouped[stat.macro_category]) {
-                    grouped[stat.macro_category] = [];
-                }
-                grouped[stat.macro_category].push(stat);
-            });
+        card.innerHTML = html;
+        container.appendChild(card);
+    });
+}
 
-            // Crea card per ogni macrocategoria
-            Object.entries(grouped).forEach(([macro, stats]) => {
-                const card = document.createElement('div');
-                card.className = 'stat-card';
-                
-                const totalMacro = stats.reduce((sum, s) => sum + s.total_hours, 0);
-                
-                let html = `<h3>${macro} (${totalMacro.toFixed(1)}h)</h3>`;
-                
-                stats.forEach(stat => {
-                    html += `
-                        <div class="category-item">
-                            <div class="category-name">
-                                <span class="category-icon">${stat.icon}</span>
-                                <div class="category-label">
-                                    <span class="micro-cat">${stat.micro_category}</span>
-                                    <span class="macro-cat">${stat.code}</span>
-                                </div>
-                            </div>
-                            <div class="category-time">
-                                <div class="hours">${stat.total_hours}h</div>
-                                <div class="percentage">${stat.percentage.toFixed(1)}%</div>
-                            </div>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${stat.percentage}%"></div>
-                        </div>
-                    `;
-                });
-                
-                card.innerHTML = html;
-                container.appendChild(card);
-            });
-        }
+function showMessage(text, type) {
+    const msgDiv = document.getElementById('message');
+    msgDiv.className = type;
+    msgDiv.textContent = text;
+    msgDiv.style.display = 'block';
+    setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+}
 
-        function showMessage(text, type) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.className = type;
-            msgDiv.textContent = text;
-            msgDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                msgDiv.style.display = 'none';
-            }, 5000);
-        }
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
 
-        function showLoading(show) {
-            document.getElementById('loading').style.display = show ? 'block' : 'none';
-        }
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('it-IT', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
 
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('it-IT', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-        }
+function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    return Math.ceil((((d - yearStart)/86400000)+1)/7);
+}
 
-        function getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        }
+function getMonthName(month) {
+    const months = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    return months[month-1];
+}
 
-        function getMonthName(month) {
-            const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                          'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-            return months[month - 1];
-        }
-
-        // Carica statistiche di oggi all'avvio
-        window.onload = () => {
-            loadDailyStats();
-        };
-    </script>
+window.onload = () => loadDailyStats();
+</script>
 </body>
 </html>
