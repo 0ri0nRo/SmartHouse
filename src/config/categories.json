@@ -1,0 +1,438 @@
+{
+  "categories": [
+    {
+      "code": "S.1",
+      "macro_category": "Sonno e Riposo",
+      "micro_category": "Sonno notturno",
+      "color": "#1a237e",
+      "icon": "🛏️"
+    },
+    {
+      "code": "S.2",
+      "macro_category": "Sonno e Riposo",
+      "micro_category": "Pisolino/Riposo diurno",
+      "color": "#283593",
+      "icon": "😴"
+    },
+    {
+      "code": "S.3",
+      "macro_category": "Sonno e Riposo",
+      "micro_category": "Risveglio/Preparazione mattutina",
+      "color": "#303f9f",
+      "icon": "🌅"
+    },
+    {
+      "code": "A.1",
+      "macro_category": "Alimentazione",
+      "micro_category": "Colazione",
+      "color": "#f57f17",
+      "icon": "☕"
+    },
+    {
+      "code": "A.2",
+      "macro_category": "Alimentazione",
+      "micro_category": "Pranzo",
+      "color": "#f9a825",
+      "icon": "🍽️"
+    },
+    {
+      "code": "A.3",
+      "macro_category": "Alimentazione",
+      "micro_category": "Cena",
+      "color": "#fbc02d",
+      "icon": "🍴"
+    },
+    {
+      "code": "A.4",
+      "macro_category": "Alimentazione",
+      "micro_category": "Spuntini/Snack",
+      "color": "#fdd835",
+      "icon": "🍎"
+    },
+    {
+      "code": "A.5",
+      "macro_category": "Alimentazione",
+      "micro_category": "Preparazione pasti",
+      "color": "#ffeb3b",
+      "icon": "🍳"
+    },
+    {
+      "code": "L.1",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Lavoro focus (deep work)",
+      "color": "#b71c1c",
+      "icon": "💻"
+    },
+    {
+      "code": "L.2",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Meeting e riunioni",
+      "color": "#c62828",
+      "icon": "👥"
+    },
+    {
+      "code": "L.3",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Email e comunicazioni",
+      "color": "#d32f2f",
+      "icon": "📧"
+    },
+    {
+      "code": "L.4",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Pianificazione e organizzazione",
+      "color": "#e53935",
+      "icon": "📋"
+    },
+    {
+      "code": "L.5",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Formazione professionale",
+      "color": "#f44336",
+      "icon": "📚"
+    },
+    {
+      "code": "L.6",
+      "macro_category": "Lavoro e Produttività",
+      "micro_category": "Lavoro amministrativo",
+      "color": "#ef5350",
+      "icon": "📝"
+    },
+    {
+      "code": "ST.1",
+      "macro_category": "Studio e Apprendimento",
+      "micro_category": "Studio individuale",
+      "color": "#0d47a1",
+      "icon": "📖"
+    },
+    {
+      "code": "ST.2",
+      "macro_category": "Studio e Apprendimento",
+      "micro_category": "Lezioni/Corsi",
+      "color": "#1565c0",
+      "icon": "🎓"
+    },
+    {
+      "code": "ST.3",
+      "macro_category": "Studio e Apprendimento",
+      "micro_category": "Lettura professionale",
+      "color": "#1976d2",
+      "icon": "📰"
+    },
+    {
+      "code": "ST.4",
+      "macro_category": "Studio e Apprendimento",
+      "micro_category": "Esercizi e pratica",
+      "color": "#1e88e5",
+      "icon": "✍️"
+    },
+    {
+      "code": "ST.5",
+      "macro_category": "Studio e Apprendimento",
+      "micro_category": "Ricerca e documentazione",
+      "color": "#2196f3",
+      "icon": "🔍"
+    },
+    {
+      "code": "SP.1",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Allenamento palestra",
+      "color": "#1b5e20",
+      "icon": "🏋️"
+    },
+    {
+      "code": "SP.2",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Corsa/Cardio",
+      "color": "#2e7d32",
+      "icon": "🏃"
+    },
+    {
+      "code": "SP.3",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Sport di squadra",
+      "color": "#388e3c",
+      "icon": "⚽"
+    },
+    {
+      "code": "SP.4",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Yoga/Stretching",
+      "color": "#43a047",
+      "icon": "🧘"
+    },
+    {
+      "code": "SP.5",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Attività all'aperto",
+      "color": "#4caf50",
+      "icon": "🥾"
+    },
+    {
+      "code": "SP.6",
+      "macro_category": "Sport e Benessere Fisico",
+      "micro_category": "Fisioterapia/Riabilitazione",
+      "color": "#66bb6a",
+      "icon": "🩺"
+    },
+    {
+      "code": "C.1",
+      "macro_category": "Cura Personale",
+      "micro_category": "Igiene personale (doccia, routine)",
+      "color": "#4a148c",
+      "icon": "🚿"
+    },
+    {
+      "code": "C.2",
+      "macro_category": "Cura Personale",
+      "micro_category": "Cura estetica (capelli, barba, etc.)",
+      "color": "#6a1b9a",
+      "icon": "💈"
+    },
+    {
+      "code": "C.3",
+      "macro_category": "Cura Personale",
+      "micro_category": "Meditazione/Mindfulness",
+      "color": "#7b1fa2",
+      "icon": "🧘‍♂️"
+    },
+    {
+      "code": "C.4",
+      "macro_category": "Cura Personale",
+      "micro_category": "Visite mediche",
+      "color": "#8e24aa",
+      "icon": "🏥"
+    },
+    {
+      "code": "C.5",
+      "macro_category": "Cura Personale",
+      "micro_category": "Terapia/Supporto psicologico",
+      "color": "#9c27b0",
+      "icon": "🗣️"
+    },
+    {
+      "code": "F.1",
+      "macro_category": "Casa e Faccende",
+      "micro_category": "Pulizie domestiche",
+      "color": "#bf360c",
+      "icon": "🧹"
+    },
+    {
+      "code": "F.2",
+      "macro_category": "Casa e Faccende",
+      "micro_category": "Spesa e commissioni",
+      "color": "#d84315",
+      "icon": "🛒"
+    },
+    {
+      "code": "F.3",
+      "macro_category": "Casa e Faccende",
+      "micro_category": "Manutenzione casa",
+      "color": "#e64a19",
+      "icon": "🔧"
+    },
+    {
+      "code": "F.4",
+      "macro_category": "Casa e Faccende",
+      "micro_category": "Giardinaggio",
+      "color": "#f4511e",
+      "icon": "🌱"
+    },
+    {
+      "code": "F.5",
+      "macro_category": "Casa e Faccende",
+      "micro_category": "Gestione finanziaria personale",
+      "color": "#ff5722",
+      "icon": "💰"
+    },
+    {
+      "code": "T.1",
+      "macro_category": "Trasporti e Spostamenti",
+      "micro_category": "Pendolarismo (casa-lavoro)",
+      "color": "#37474f",
+      "icon": "🚇"
+    },
+    {
+      "code": "T.2",
+      "macro_category": "Trasporti e Spostamenti",
+      "micro_category": "Guida/Automobile",
+      "color": "#455a64",
+      "icon": "🚗"
+    },
+    {
+      "code": "T.3",
+      "macro_category": "Trasporti e Spostamenti",
+      "micro_category": "Trasporti pubblici",
+      "color": "#546e7a",
+      "icon": "🚌"
+    },
+    {
+      "code": "T.4",
+      "macro_category": "Trasporti e Spostamenti",
+      "micro_category": "Viaggi lunghi",
+      "color": "#607d8b",
+      "icon": "✈️"
+    },
+    {
+      "code": "T.5",
+      "macro_category": "Trasporti e Spostamenti",
+      "micro_category": "Camminata urbana",
+      "color": "#78909c",
+      "icon": "🚶"
+    },
+    {
+      "code": "SO.1",
+      "macro_category": "Socializzazione",
+      "micro_category": "Famiglia",
+      "color": "#880e4f",
+      "icon": "👨‍👩‍👧‍👦"
+    },
+    {
+      "code": "SO.2",
+      "macro_category": "Socializzazione",
+      "micro_category": "Amici",
+      "color": "#ad1457",
+      "icon": "🤝"
+    },
+    {
+      "code": "SO.3",
+      "macro_category": "Socializzazione",
+      "micro_category": "Partner/Relazione",
+      "color": "#c2185b",
+      "icon": "💑"
+    },
+    {
+      "code": "SO.4",
+      "macro_category": "Socializzazione",
+      "micro_category": "Eventi sociali",
+      "color": "#d81b60",
+      "icon": "🎉"
+    },
+    {
+      "code": "SO.5",
+      "macro_category": "Socializzazione",
+      "micro_category": "Networking professionale",
+      "color": "#e91e63",
+      "icon": "🤵"
+    },
+    {
+      "code": "SO.6",
+      "macro_category": "Socializzazione",
+      "micro_category": "Chiamate/Videochiamate personali",
+      "color": "#ec407a",
+      "icon": "📞"
+    },
+    {
+      "code": "I.1",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "TV e streaming",
+      "color": "#01579b",
+      "icon": "📺"
+    },
+    {
+      "code": "I.2",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Cinema e teatro",
+      "color": "#0277bd",
+      "icon": "🎬"
+    },
+    {
+      "code": "I.3",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Videogiochi",
+      "color": "#0288d1",
+      "icon": "🎮"
+    },
+    {
+      "code": "I.4",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Lettura ricreativa",
+      "color": "#039be5",
+      "icon": "📚"
+    },
+    {
+      "code": "I.5",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Social media",
+      "color": "#03a9f4",
+      "icon": "📱"
+    },
+    {
+      "code": "I.6",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Musica e podcast",
+      "color": "#29b6f6",
+      "icon": "🎵"
+    },
+    {
+      "code": "I.7",
+      "macro_category": "Intrattenimento e Svago",
+      "micro_category": "Hobby creativi",
+      "color": "#4fc3f7",
+      "icon": "🎨"
+    },
+    {
+      "code": "D.1",
+      "macro_category": "Sviluppo Personale",
+      "micro_category": "Lettura personale",
+      "color": "#004d40",
+      "icon": "📕"
+    },
+    {
+      "code": "D.2",
+      "macro_category": "Sviluppo Personale",
+      "micro_category": "Scrittura/Journaling",
+      "color": "#00695c",
+      "icon": "✍️"
+    },
+    {
+      "code": "D.3",
+      "macro_category": "Sviluppo Personale",
+      "micro_category": "Progetti personali",
+      "color": "#00796b",
+      "icon": "🔨"
+    },
+    {
+      "code": "D.4",
+      "macro_category": "Sviluppo Personale",
+      "micro_category": "Volontariato",
+      "color": "#00897b",
+      "icon": "❤️"
+    },
+    {
+      "code": "D.5",
+      "macro_category": "Sviluppo Personale",
+      "micro_category": "Attività spirituali/Religiose",
+      "color": "#009688",
+      "icon": "🙏"
+    },
+    {
+      "code": "N.1",
+      "macro_category": "Tempo Non Categorizzato",
+      "micro_category": "Tempo libero non specificato",
+      "color": "#757575",
+      "icon": "⏱️"
+    },
+    {
+      "code": "N.2",
+      "macro_category": "Tempo Non Categorizzato",
+      "micro_category": "Transizioni tra attività",
+      "color": "#9e9e9e",
+      "icon": "🔄"
+    },
+    {
+      "code": "N.3",
+      "macro_category": "Tempo Non Categorizzato",
+      "micro_category": "Attesa/Code",
+      "color": "#bdbdbd",
+      "icon": "⏳"
+    },
+    {
+      "code": "N.4",
+      "macro_category": "Tempo Non Categorizzato",
+      "micro_category": "Da classificare",
+      "color": "#e0e0e0",
+      "icon": "❓"
+    }
+  ]
+}

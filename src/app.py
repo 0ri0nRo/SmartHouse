@@ -28,6 +28,9 @@ from api import register_blueprints
 # Import the new Pico logs service and blueprint
 from services.pico_log_service import PicoLogService
 from api.pico_logs_routes import init_pico_logs_service, pico_logs_bp
+# Aggiungi all'inizio del file, con gli altri import
+from api.activity_routes import activity_bp
+
 
 
 def create_app():
@@ -94,6 +97,9 @@ def create_app():
     
     # Register the new Pico logs blueprint
     app.register_blueprint(pico_logs_bp)
+
+    # Dopo aver creato l'app Flask, registra il blueprint
+    app.register_blueprint(activity_bp)
 
     @app.route('/favicon.ico')
     def favicon():
