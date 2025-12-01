@@ -1,20 +1,33 @@
 #!/bin/sh
 
-# Variabili
-BACKUP_DIR="/backup"      # Montato nel container, percorso assoluto
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="$BACKUP_DIR/backup_${TIMESTAMP}.sql"
+BACKUP_DIR="/backup"
+BACKUP_FILE="$BACKUP_DIR/backup.sql"
+BACKUP_FILE_GZ="$BACKUP_FILE.gz"
 
-# Crea la directory di backup se non esiste
+# Create the backup directory if it does not exist
 mkdir -p "$BACKUP_DIR"
 
-# Cancella tutto il contenuto della directory di backup
-rm -f "$BACKUP_DIR"/*
+# Delete backups older than 7 days
+find "$BACKUP_DIR" -type f -name "backup_*.sql*" -mtime +7 -exec rm {} \;
 
-# Esegui il backup escludendo la tabella "network_devices"
-PGPASSWORD=1234 pg_dump -h db -U postgres --exclude-table=network_devices sensor_data > "$BACKUP_FILE"
+# Perform the backup, excluding the "network_devices" table
+PGPASSWORD=$DB_PASSWORD pg_dump -h $DB_HOST -U $DB_USER --exclude-table=network_devices $DB_DATABASE > "$BACKUP_FILE"
 
-# Rimuovi i backup più vecchi di 7 giorni
-find "$BACKUP_DIR" -type f -name "*.sql" -mtime +7 -exec rm {} \;
+# Check if the backup was successful
+if [ $? -eq 0 ]; then
+    # Compress the backup
+    gzip -c "$BACKUP_FILE" > "$BACKUP_FILE_GZ"
+    
+    # Optional: delete the original uncompressed SQL file
+    rm "$BACKUP_FILE"
 
-echo "Backup completato. File salvato in: $BACKUP_FILE"
+    # Log message
+    echo "Backup completed and successfully compressed. File saved at: $BACKUP_FILE_GZ"
+
+    # Print only the path of the compressed backup for the API
+    echo "$BACKUP_FILE_GZ"
+    exit 0
+else
+    echo "Error during backup!"
+    exit 1
+fi

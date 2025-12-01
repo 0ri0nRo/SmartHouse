@@ -4,6 +4,8 @@ from datetime import datetime
 from psycopg2 import Error
 from datetime import datetime, timedelta
 import logging
+from contextlib import contextmanager
+
 
 # Configura il logging per debug migliore
 logging.basicConfig(level=logging.INFO)
@@ -621,3 +623,29 @@ class PostgresHandler:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+    
+    def execute_query(self, query, params=None, fetch=False):
+        with self.connection.cursor() as cur:
+            cur.execute(query, params or ())
+            if fetch:
+                return cur.fetchall()
+            else:
+                self.connection.commit()
+                return []
+
+
+    @contextmanager
+    def get_connection(self):
+        """Context manager per la connessione al DB"""
+        conn = None
+        try:
+            conn = psycopg2.connect(**self.db_config)
+            yield conn  # qui yield
+            conn.commit()
+        except Exception:
+            if conn:
+                conn.rollback()
+            raise
+        finally:
+            if conn:
+                conn.close()

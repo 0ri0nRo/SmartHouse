@@ -70,11 +70,16 @@ def api_run_backup():
             return jsonify({'error': 'Backup script not found.'}), 404
 
         result = subprocess.run([backup_script_path], capture_output=True, text=True)
-        logger.info(f"Backup stdout: {result.stdout}")
-        logger.info(f"Backup stderr: {result.stderr}")
+        if result.stdout.strip():
+            logger.info(f"Backup stdout: {result.stdout.strip()}")
+
+        if result.stderr.strip():
+            logger.error(f"Backup stderr: {result.stderr.strip()}")
+
 
         if result.returncode == 0:
-            invia_backup_email(email_sender)
+            backup_file_path = result.stdout.strip().split("\n")[-1]
+            invia_backup_email(email_sender, backup_file_path)
             return jsonify({'message': 'Backup completed', 'output': result.stdout}), 200
 
         return jsonify({'error': 'Backup error', 'output': result.stderr}), 500
