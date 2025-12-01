@@ -96,7 +96,7 @@ def create_app():
     register_blueprints(app)
     
     # Register the new Pico logs blueprint
-    app.register_blueprint(pico_logs_bp)
+    #app.register_blueprint(pico_logs_bp)
 
     # Dopo aver creato l'app Flask, registra il blueprint
     app.register_blueprint(activity_bp)

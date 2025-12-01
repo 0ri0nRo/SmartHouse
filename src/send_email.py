@@ -96,8 +96,7 @@ def invia_allarme_email(email_sender):
     email_sender.invia_email(to_email, subject, body)
 
 
-def invia_backup_email(email_sender):
-    """Invia un'email con tutti i file di backup `.sql`."""
+def invia_backup_email(email_sender, backup_path):
     to_email = os.getenv('TO_EMAIL')
     subject = f'Backup Database - {email_sender.get_current_timestamp()}'
     body = """
@@ -109,46 +108,28 @@ def invia_backup_email(email_sender):
             Alexandru Home Assistant & Automated Alarms</p>
         </body></html>
     """
-    backup_folder = '/backup'
-    
-    # Cerca tutti i file .sql nella cartella di backup
-    backup_files = [f for f in os.listdir(backup_folder) if f.endswith('.sql')]
-    if not backup_files:
-        print('No file .sql find.')
-        return
-
-    # Crea l'email
     msg = MIMEMultipart()
     msg['From'] = email_sender.username
     msg['To'] = to_email
     msg['Subject'] = subject
+
     msg.attach(MIMEText(body, 'html'))
 
-    # Aggiunge ogni file .sql come allegato
-    for backup_file in backup_files:
-        backup_path = os.path.join(backup_folder, backup_file)
-        try:
-            with open(backup_path, 'rb') as file:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(file.read())
-                encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename={backup_file}')
-                msg.attach(part)
-        except Exception as e:
-            print(f'Error on file to attach {backup_file}: {e}')
-            continue
+    with open(backup_path, 'rb') as f:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header(
+            'Content-Disposition',
+            f'attachment; filename={os.path.basename(backup_path)}'
+        )
+        msg.attach(part)
 
-    # Invia l'email
-    try:
-        server = smtplib.SMTP(email_sender.smtp_server, email_sender.smtp_port)
-        server.starttls()
-        server.login(email_sender.username, email_sender.password)
-        server.sendmail(email_sender.username, to_email, msg.as_string())
-        print('Email send!')
-    except Exception as e:
-        print(f'Errore on sending email: {e}')
-    finally:
-        server.quit()
+    server = smtplib.SMTP(email_sender.smtp_server, email_sender.smtp_port)
+    server.starttls()
+    server.login(email_sender.username, email_sender.password)
+    server.sendmail(email_sender.username, to_email, msg.as_string())
+    server.quit()
 
 
 smtp_server = os.getenv('SMTP_SERVER')
