@@ -13,13 +13,13 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #faf3f0 0%, #f5e6e8 100%);
             min-height: 100vh;
         }
 
         /* Header Section */
         .header {
-            background: linear-gradient(135deg, #CDE7BE,#D3E298 0% 100%);
+            background: linear-gradient(135deg, #9d7e8c, #d4b5c8 100%);
             color: white;
             padding: 48px 24px;
             text-align: center;
@@ -47,11 +47,12 @@
 
         /* Section Card */
         .section-card {
-            background: white;
+            background: #ffffff;
             border-radius: 16px;
             padding: 32px;
             margin-bottom: 24px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 16px rgba(224, 221, 207, 0.25);
+            border: 1px solid rgba(224, 221, 207, 0.3);
         }
 
         .section-header {
@@ -64,7 +65,7 @@
         .section-icon {
             width: 24px;
             height: 24px;
-            stroke: #667eea;
+            stroke: #9d7e8c;
         }
 
         .section-title {
@@ -74,8 +75,8 @@
         }
 
         .section-badge {
-            background: #e0e7ff;
-            color: #667eea;
+            background: #d4b5c8;
+            color: #9d7e8c;
             padding: 4px 12px;
             border-radius: 12px;
             font-size: 0.75rem;
@@ -87,7 +88,7 @@
 
         .section-subtitle {
             font-size: 0.95rem;
-            color: #718096;
+            color: #9d8b88;
             margin-bottom: 24px;
         }
 
@@ -100,7 +101,7 @@
         }
 
         .power-display {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2D232E, #E0DDCF 100%);
             border-radius: 16px;
             padding: 48px;
             display: flex;
@@ -109,6 +110,15 @@
             justify-content: center;
             gap: 24px;
             min-height: 300px;
+            transition: background 0.5s ease;
+        }
+
+        .power-display.on {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .power-display.off {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
         .power-circle {
@@ -153,12 +163,13 @@
 
         /* Timer Section */
         .timer-container {
-            background: #f9fafb;
+            background: linear-gradient(135deg, #fff5f7 0%, #fef3f5 100%);
             border-radius: 16px;
             padding: 32px;
             display: flex;
             flex-direction: column;
             gap: 24px;
+            border: 1px solid rgba(251, 207, 232, 0.3);
         }
 
         .timer-display {
@@ -167,7 +178,7 @@
 
         .timer-label {
             font-size: 0.85rem;
-            color: #718096;
+            color: #9d8b88;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 12px;
@@ -176,14 +187,14 @@
         .timer-time {
             font-size: 4rem;
             font-weight: 700;
-            color: #667eea;
+            color: #9d7e8c;
             font-variant-numeric: tabular-nums;
             line-height: 1;
         }
 
         .timer-status {
             font-size: 0.95rem;
-            color: #718096;
+            color: #9d8b88;
             margin-top: 8px;
         }
 
@@ -195,7 +206,7 @@
 
         .input-field {
             background: white;
-            border: 2px solid #e5e7eb;
+            border: 2px solid #f3d4d8;
             border-radius: 12px;
             padding: 14px;
             font-size: 1rem;
@@ -206,8 +217,8 @@
 
         .input-field:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #d4a5b0;
+            box-shadow: 0 0 0 3px rgba(212, 165, 176, 0.15);
         }
 
         .btn {
@@ -255,11 +266,11 @@
         .schedule-count {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #667eea;
+            color: #9d7e8c;
         }
 
         .btn-add {
-            background: #667eea;
+            background: linear-gradient(135deg, #9d7e8c, #b89aaa);
             color: white;
             padding: 12px 24px;
             border: none;
@@ -274,9 +285,9 @@
         }
 
         .btn-add:hover {
-            background: #5568d3;
+            background: linear-gradient(135deg, #8a6d7b, #a68797);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(157, 126, 140, 0.3);
         }
 
         .schedule-grid {
@@ -286,16 +297,16 @@
         }
 
         .schedule-item {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #fff5f7 0%, #fef3f5 100%);
+            border: 1px solid rgba(251, 207, 232, 0.4);
             border-radius: 12px;
             padding: 20px;
             transition: all 0.3s;
         }
 
         .schedule-item:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-color: #f9c5d5;
+            box-shadow: 0 4px 12px rgba(251, 207, 232, 0.3);
         }
 
         .schedule-time {
@@ -310,7 +321,7 @@
 
         .schedule-days {
             font-size: 0.9rem;
-            color: #718096;
+            color: #9d8b88;
             margin-bottom: 16px;
         }
 
@@ -336,7 +347,7 @@
         .empty-state {
             text-align: center;
             padding: 64px 24px;
-            color: #cbd5e1;
+            color: #d4a5b0;
         }
 
         .empty-state-icon {
@@ -347,7 +358,7 @@
         .empty-state-text {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #94a3b8;
+            color: #c99aaa;
         }
 
         /* Modal */
@@ -400,7 +411,7 @@
         .form-input {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid #f3d4d8;
             border-radius: 10px;
             font-size: 1rem;
             transition: all 0.3s;
@@ -408,13 +419,13 @@
 
         .form-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #d4a5b0;
+            box-shadow: 0 0 0 3px rgba(212, 165, 176, 0.15);
         }
 
         .btn-primary {
             width: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #9d7e8c, #b89aaa);
             color: white;
             padding: 14px;
             border: none;
@@ -428,15 +439,15 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 20px rgba(157, 126, 140, 0.3);
         }
 
         .btn-secondary {
             width: 100%;
-            background: #f3f4f6;
-            color: #6b7280;
+            background: linear-gradient(135deg, #fff5f7 0%, #fef3f5 100%);
+            color: #9d8b88;
             padding: 14px;
-            border: none;
+            border: 1px solid #f3d4d8;
             border-radius: 12px;
             font-size: 1rem;
             font-weight: 700;
@@ -446,7 +457,8 @@
         }
 
         .btn-secondary:hover {
-            background: #e5e7eb;
+            background: linear-gradient(135deg, #fef3f5 0%, #fde9ed 100%);
+            border-color: #d4a5b0;
         }
 
         /* Notification */
@@ -526,7 +538,7 @@
 
             <div class="power-control-grid">
                 <!-- Power Display -->
-                <div class="power-display">
+                <div class="power-display off">
                     <div class="power-circle" id="powerCircle" onclick="togglePower()">
                         <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -666,13 +678,18 @@
         function updatePowerButton() {
             const circle = document.getElementById('powerCircle');
             const status = document.getElementById('powerStatus');
+            const display = document.querySelector('.power-display');
             
             if (isOn) {
                 circle.classList.add('active');
                 status.textContent = 'ON';
+                display.classList.remove('off');
+                display.classList.add('on');
             } else {
                 circle.classList.remove('active');
                 status.textContent = 'OFF';
+                display.classList.remove('on');
+                display.classList.add('off');
             }
         }
 
