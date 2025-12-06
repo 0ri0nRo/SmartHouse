@@ -8,6 +8,7 @@ from .security_routes import security_bp
 from .system_routes import system_bp
 from .expenses_routes import expense_bp
 from .receipt_routes import receipt_bp
+from .shelly_routes import shelly_bp
 
 def register_blueprints(app):
     """Registra tutti i blueprint delle API nell'app Flask"""
@@ -22,6 +23,7 @@ def register_blueprints(app):
     app.register_blueprint(system_bp)
     app.register_blueprint(expense_bp)
     app.register_blueprint(receipt_bp)
+    app.register_blueprint(shelly_bp)
     
     # Log dei blueprint registrati
     import logging
