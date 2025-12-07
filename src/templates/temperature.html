@@ -863,36 +863,6 @@
                 </div>
             </div>
 
-            <!-- Heating Schedules Section -->
-            <div class="chart-card slide-up">
-                <div class="chart-header">
-                    <h3 class="chart-title">
-                        <i data-lucide="calendar-clock"></i>
-                        Heating Schedules
-                        <span class="badge" id="scheduleCountBadge">0 Active</span>
-                    </h3>
-                    <p class="chart-description">Automated heating schedules for your daily routine</p>
-                </div>
-
-                <div class="schedule-header">
-                    <div class="schedule-count-display">
-                        <div class="schedule-count-number" id="scheduleCount">0</div>
-                        <div class="schedule-count-label">Schedules</div>
-                    </div>
-                    <button class="btn-add" onclick="showScheduleModal()">
-                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                        Add Schedule
-                    </button>
-                </div>
-
-                <div class="schedule-grid" id="scheduleList">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📅</div>
-                        <div class="empty-state-text">No schedules configured</div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Today's Temperature Chart -->
             <div class="chart-card slide-up">
                 <div class="chart-header">
@@ -1245,7 +1215,7 @@
         }
 
         // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 100);
+        setInterval(syncBoilerStatus, 1000);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
