@@ -288,3 +288,29 @@ def api_thermostat_off():
         return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({"status": "success", "message": "Thermostat disabled, caldaia spenta"}), 200
+
+
+# GET stato caldaia
+@sensor_bp.route('/api/boiler/status', methods=['GET'])
+@handle_db_error
+def get_boiler_status():
+    """Legge lo stato corrente della caldaia dal DB"""
+    status = sensor_service.get_boiler_status()  # Metodo che leggeremo dal service
+    return jsonify({"is_on": status}), 200
+
+
+# POST aggiorna stato caldaia
+@sensor_bp.route('/api/boiler/set', methods=['POST'])
+@handle_db_error
+def set_boiler_status():
+    """Aggiorna lo stato della caldaia"""
+    data = request.get_json()
+    if not data or 'is_on' not in data:
+        return jsonify({"error": "Missing is_on value"}), 400
+    
+    is_on = bool(data['is_on'])
+    success = sensor_service.set_boiler_status(is_on)
+    if not success:
+        return jsonify({"error": "Database error"}), 500
+
+    return jsonify({"status": "success", "is_on": is_on}), 200

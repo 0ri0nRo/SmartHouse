@@ -249,4 +249,20 @@ class SensorService(BaseService):
             logger.error(f"Errore get_thermostat_enabled: {e}")
             return False
 
+        # Legge stato caldaia
+    def get_boiler_status(self):
+        row = self.db.execute_query("SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;")
+        return row['is_on'] if row else False
+
+    # Aggiorna stato caldaia
+    def set_boiler_status(self, is_on: bool):
+        try:
+            self.db.execute_query(
+                "INSERT INTO boiler_status (is_on, updated_at) VALUES (%s, NOW())",
+                (is_on,)
+            )
+            return True
+        except Exception as e:
+            print("DB error set_boiler_status:", e)
+            return False
 
