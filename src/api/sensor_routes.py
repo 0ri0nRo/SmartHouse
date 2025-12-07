@@ -4,6 +4,7 @@ from models.database import handle_db_error
 from services.sensor_service import SensorService
 from config.settings import get_config
 from client.PostgresClient import PostgresHandler
+import requests
 
 sensor_bp = Blueprint('sensor', __name__)
 config = get_config()
@@ -250,3 +251,40 @@ def api_set_target_temperature():
 def api_get_target_temperature():
     value = sensor_service.get_target_temperature()  # usa il metodo del service
     return jsonify({'target_temperature': value}), 200
+
+SHELLY_IP = "192.168.178.165" 
+
+@sensor_bp.route('/api/thermostat/on', methods=['POST'])
+@handle_db_error
+def api_thermostat_on():
+    # Aggiorna lo stato in DB
+    success = sensor_service.set_thermostat_enabled(True)
+    if not success:
+        return jsonify({'error': 'Database error setting thermostat ON.'}), 500
+    
+    # Accende il relay Shelly
+    try:
+        r = requests.get(f"http://{SHELLY_IP}/relay/0?turn=on", timeout=3)
+        if r.status_code != 200:
+            return jsonify({"status": "error", "message": "Errore Shelly"}), 500
+    except requests.RequestException as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({"status": "success", "message": "Thermostat enabled, caldaia accesa"}), 200
+
+
+@sensor_bp.route('/api/thermostat/off', methods=['POST'])
+@handle_db_error
+def api_thermostat_off():
+    success = sensor_service.set_thermostat_enabled(False)
+    if not success:
+        return jsonify({'error': 'Database error setting thermostat OFF.'}), 500
+
+    try:
+        r = requests.get(f"http://{SHELLY_IP}/relay/0?turn=off", timeout=3)
+        if r.status_code != 200:
+            return jsonify({"status": "error", "message": "Errore Shelly"}), 500
+    except requests.RequestException as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+    return jsonify({"status": "success", "message": "Thermostat disabled, caldaia spenta"}), 200

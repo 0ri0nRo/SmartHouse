@@ -222,3 +222,31 @@ class SensorService(BaseService):
             logger.error(f"Errore get_target_temperature: {e}")
             return None
 
+    def set_thermostat_enabled(self, enabled: bool):
+        """Aggiorna lo stato del termostato nel DB"""
+        try:
+            query = """
+            INSERT INTO thermostat_status (enabled, updated_at)
+            VALUES (%s, NOW())
+            ON CONFLICT (id) DO UPDATE
+            SET enabled = EXCLUDED.enabled,
+                updated_at = NOW();
+            """
+            return self.db.execute_query(query, (enabled,), fetch=False) is not None
+        except Exception as e:
+            logger.error(f"Errore set_thermostat_enabled: {e}")
+            return False
+
+    def get_thermostat_enabled(self):
+        """Recupera lo stato corrente del termostato"""
+        try:
+            query = "SELECT enabled FROM thermostat_status ORDER BY updated_at DESC LIMIT 1;"
+            rows = self.db.execute_query(query, fetch=True)
+            if rows:
+                return rows[0][0]
+            return False
+        except Exception as e:
+            logger.error(f"Errore get_thermostat_enabled: {e}")
+            return False
+
+

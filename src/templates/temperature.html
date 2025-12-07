@@ -1129,27 +1129,34 @@
 
         async function togglePower() {
             try {
-                const newState = !isOn;
-                const command = newState ? 'on' : 'off';
-                const url = `http://${SHELLY_IP}/relay/0?turn=${command}`;
-                
-                // Usa mode: 'no-cors' per evitare errori CORS
-                // Nota: non possiamo verificare la risposta, ma il comando viene inviato
-                await fetch(url, { mode: 'no-cors' });
-                
-                // Assumiamo successo e aggiorniamo lo stato
-                isOn = newState;
-                updatePowerButton();
-                showNotification(isOn ? 'Boiler turned ON ✓' : 'Boiler turned OFF ✓');
-                
-                // Salva lo stato in localStorage
-                localStorage.setItem('boilerPowerState', isOn);
-                
-            } catch (error) {
-                showNotification('Connection error. Check if Shelly is online at ' + SHELLY_IP, 'error');
-                console.error('Shelly connection error:', error);
-            }
+        const newState = !isOn;
+        const endpoint = newState ? '/api/thermostat/on' : '/api/thermostat/off';
+
+        // Chiamata al backend sul Raspberry Pi
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to toggle boiler via backend');
         }
+
+        // Aggiorna stato locale e UI
+        isOn = newState;
+        updatePowerButton();
+        showNotification(isOn ? 'Boiler turned ON ✓' : 'Boiler turned OFF ✓');
+
+        // Salva lo stato in localStorage
+        localStorage.setItem('boilerPowerState', isOn);
+
+    } catch (error) {
+        showNotification('Failed to toggle boiler: ' + error.message, 'error');
+        console.error('Toggle power error:', error);
+    }
+}
+
         
         // Funzione per verificare lo stato attuale dello Shelly
         async function checkShellyStatus() {
@@ -1332,52 +1339,61 @@ function updateTemperatureDisplay() {
 
 
         async function toggleThermostat() {
-            thermostatEnabled = !thermostatEnabled;
+    thermostatEnabled = !thermostatEnabled;
 
-            const button = document.getElementById('thermostatToggle');
-            const badge = document.getElementById('thermostatBadge');
-            const status = document.getElementById('thermostatStatus');
+    const button = document.getElementById('thermostatToggle');
+    const badge = document.getElementById('thermostatBadge');
+    const status = document.getElementById('thermostatStatus');
 
-            if (thermostatEnabled) {
-                button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
-                button.style.background = 'linear-gradient(135deg, var(--danger-color), #dc2626)';
-                badge.textContent = 'Active';
-                badge.style.background = 'var(--secondary-light)';
-                badge.style.color = 'var(--secondary-color)';
-                status.textContent = 'Thermostat active - monitoring temperature';
-                status.style.color = 'var(--secondary-color)';
+    if (thermostatEnabled) {
+        button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
+        button.style.background = 'linear-gradient(135deg, var(--danger-color), #dc2626)';
+        badge.textContent = 'Active';
+        badge.style.background = 'var(--secondary-light)';
+        badge.style.color = 'var(--secondary-color)';
+        status.textContent = 'Thermostat active - monitoring temperature';
+        status.style.color = 'var(--secondary-color)';
 
-                // Avvia il controllo automatico
-                startThermostatControl();
+        startThermostatControl();
 
-                // 🔥 Invia la temperatura target al backend
-                try {
-                    await sendTargetTemperatureToServer(targetTemperature);
-                    console.log('Target temperature sent to server:', targetTemperature);
-                } catch (error) {
-                    console.error('Failed to send target temperature:', error);
-                }
-
-                showNotification('Thermostat enabled - automatic heating control active');
-
-            } else {
-                button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Enable Thermostat';
-                button.style.background = 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))';
-                badge.textContent = 'Disabled';
-                badge.style.background = 'var(--primary-light)';
-                badge.style.color = 'var(--primary-color)';
-                status.textContent = 'Thermostat disabled';
-                status.style.color = 'var(--text-secondary)';
-
-                // Ferma il controllo automatico
-                stopThermostatControl();
-                showNotification('Thermostat disabled');
-            }
-
-            // Salva lo stato in locale
-            localStorage.setItem('thermostatEnabled', thermostatEnabled);
-            lucide.createIcons();
+        // 🔥 Invia il comando al backend per accendere la caldaia
+        try {
+            const response = await fetch('/api/thermostat/on', { method: 'POST' });
+            const data = await response.json();
+            console.log('Thermostat ON response:', data);
+        } catch (error) {
+            console.error('Failed to turn on thermostat:', error);
         }
+
+        showNotification('Thermostat enabled - automatic heating control active');
+
+    } else {
+        button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Enable Thermostat';
+        button.style.background = 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))';
+        badge.textContent = 'Disabled';
+        badge.style.background = 'var(--primary-light)';
+        badge.style.color = 'var(--primary-color)';
+        status.textContent = 'Thermostat disabled';
+        status.style.color = 'var(--text-secondary)';
+
+        stopThermostatControl();
+
+        // 🔥 Invia il comando al backend per spegnere la caldaia
+        try {
+            const response = await fetch('/api/thermostat/off', { method: 'POST' });
+            const data = await response.json();
+            console.log('Thermostat OFF response:', data);
+        } catch (error) {
+            console.error('Failed to turn off thermostat:', error);
+        }
+
+        showNotification('Thermostat disabled');
+    }
+
+    localStorage.setItem('thermostatEnabled', thermostatEnabled);
+    lucide.createIcons();
+}
+
 
         async function thermostatLogic() {
             if (!thermostatEnabled) return;
