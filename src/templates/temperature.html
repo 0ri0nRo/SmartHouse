@@ -4,13 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <title>Temperature Analytics Dashboard</title>
-    <!-- Include Chart.js from CDN -->
+    <title>Temperature & Boiler Control Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
         :root {
@@ -95,7 +91,7 @@
         .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 1rem;
+            padding: 0 1rem 2rem;
             display: grid;
             gap: 2rem;
             grid-template-columns: 1fr;
@@ -134,6 +130,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            flex-wrap: wrap;
         }
 
         .chart-description {
@@ -180,7 +177,8 @@
         }
 
         .controls select, 
-        .controls input[type="datetime-local"] {
+        .controls input[type="datetime-local"],
+        .controls input[type="number"] {
             padding: 0.75rem 1rem;
             font-size: 0.875rem;
             border: 1px solid var(--border-color);
@@ -257,6 +255,28 @@
             transform: none;
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, var(--secondary-color), #059669);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color), #dc2626);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
         .chart-container {
             position: relative;
             width: 100%;
@@ -289,6 +309,7 @@
             border-radius: 9999px;
             background: var(--primary-light);
             color: var(--primary-color);
+            margin-left: auto;
         }
 
         .error-message {
@@ -302,16 +323,397 @@
             text-align: center;
         }
 
-        /* Responsive Design */
+        .boiler-control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        .power-display {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            min-height: 250px;
+            transition: background 0.5s ease;
+        }
+
+        .power-display.on {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #059669 100%);
+        }
+
+        .power-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .power-circle:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .power-circle.active {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
+        }
+
+        .power-icon {
+            width: 50px;
+            height: 50px;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        .power-status {
+            color: white;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .timer-container {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .timer-display {
+            text-align: center;
+        }
+
+        .timer-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .timer-time {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .timer-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .timer-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .input-field {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .schedule-count-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .schedule-count-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .schedule-count-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .schedule-item {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            transition: all 0.3s;
+        }
+
+        .schedule-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .schedule-time {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .schedule-days {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .btn-delete {
+            background: var(--danger-light);
+            border: 1px solid var(--border-color);
+            color: var(--danger-color);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .btn-delete:hover {
+            background: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary-color);
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 2000;
+            border-left: 4px solid var(--secondary-color);
+            max-width: 400px;
+        }
+
+        .notification.show {
+            display: flex;
+            animation: slideIn 0.3s;
+        }
+
+        .notification.error {
+            border-left-color: var(--danger-color);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media (max-width: 1024px) {
             .controls {
                 grid-template-columns: 1fr 1fr;
+            }
+            
+            .boiler-control-grid {
+                grid-template-columns: 1fr;
             }
         }
 
         @media (max-width: 768px) {
             .dashboard-container {
-                padding: 0 0.75rem;
+                padding: 0 0.75rem 1.5rem;
                 gap: 1.5rem;
             }
 
@@ -325,6 +727,14 @@
             }
 
             .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .timer-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .schedule-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -343,34 +753,92 @@
                 padding: 0.75rem;
             }
         }
-
-        .slide-up {
-            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
     </style>
 </head>
 
 <body>
     <div class="page-header">
         <div class="dashboard-container">
-            <h1 class="page-title">Temperature Analytics Dashboard</h1>
-            <p class="page-subtitle">Real-time temperature monitoring and historical data visualization</p>
+            <h1 class="page-title">Temperature & Boiler Control Dashboard</h1>
+            <p class="page-subtitle">Integrated heating control and temperature monitoring system</p>
         </div>
     </div>
 
     <div class="dashboard-container">
         <div class="chart-section">
+            <!-- Boiler Control Section -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="zap"></i>
+                        Boiler Power Control
+                        <span class="badge">Real-time</span>
+                    </h3>
+                    <p class="chart-description">Control your boiler and set automatic timers</p>
+                </div>
+
+                <div class="boiler-control-grid">
+                    <div class="power-display">
+                        <div class="power-circle" id="powerCircle" onclick="togglePower()">
+                            <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <div class="power-status" id="powerStatus">OFF</div>
+                    </div>
+
+                    <div class="timer-container">
+                        <div class="timer-display">
+                            <div class="timer-label">Auto Shutdown Timer</div>
+                            <div class="timer-time" id="timerDisplay">00:00</div>
+                            <div class="timer-status" id="timerStatus">Ready to start</div>
+                        </div>
+
+                        <div class="timer-controls">
+                            <input type="number" class="input-field" id="timerMinutes" placeholder="Minutes" min="1" max="1440" value="30">
+                            <button class="btn btn-success" onclick="startTimer()">
+                                <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                                Start
+                            </button>
+                            <button class="btn btn-danger" onclick="stopTimer()">
+                                <i data-lucide="square" style="width: 16px; height: 16px;"></i>
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heating Schedules Section -->
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="calendar-clock"></i>
+                        Heating Schedules
+                        <span class="badge" id="scheduleCountBadge">0 Active</span>
+                    </h3>
+                    <p class="chart-description">Automated heating schedules for your daily routine</p>
+                </div>
+
+                <div class="schedule-header">
+                    <div class="schedule-count-display">
+                        <div class="schedule-count-number" id="scheduleCount">0</div>
+                        <div class="schedule-count-label">Schedules</div>
+                    </div>
+                    <button class="btn-add" onclick="showScheduleModal()">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                        Add Schedule
+                    </button>
+                </div>
+
+                <div class="schedule-grid" id="scheduleList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">No schedules configured</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Today's Temperature Chart -->
             <div class="chart-card slide-up">
                 <div class="chart-header">
@@ -536,14 +1004,248 @@
         </div>
     </div>
 
-    <script>
-        lucide.createIcons();
+    <!-- Schedule Modal -->
+    <div class="modal" id="scheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">New Schedule</div>
+            
+            <div class="form-group">
+                <label class="form-label">Turn On Time</label>
+                <input type="time" class="form-input" id="scheduleOnTime" value="07:00">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Turn Off Time</label>
+                <input type="time" class="form-input" id="scheduleOffTime" value="09:00">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Days (comma separated)</label>
+                <input type="text" class="form-input" id="scheduleDays" placeholder="Mon,Tue,Wed,Thu,Fri" value="Mon,Tue,Wed,Thu,Fri">
+            </div>
+            
+            <button class="btn-primary" onclick="addSchedule()">Create Schedule</button>
+            <button class="btn-secondary" onclick="hideScheduleModal()">Cancel</button>
+        </div>
+    </div>
 
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <span id="notificationText"></span>
+    </div>
+
+    <script>
+        const SHELLY_IP = '192.168.33.1';
+        
+        let isOn = false;
+        let schedules = [];
+        let timerInterval = null;
+        let timerEndTime = null;
         let dailyTemperatureChart = null;
         let monthlyAverageTemperatureChart = null;
         let todayTemperatureChart = null;
         let temperatureChart = null;
 
+        // Boiler Control Functions
+        function loadBoilerData() {
+            const saved = localStorage.getItem('boilerSchedules');
+            if (saved) {
+                schedules = JSON.parse(saved);
+            }
+            renderSchedules();
+            checkSchedules();
+        }
+
+        function saveBoilerData() {
+            localStorage.setItem('boilerSchedules', JSON.stringify(schedules));
+        }
+
+        function showNotification(message, type = 'success') {
+            const notif = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            text.textContent = message;
+            notif.className = `notification show ${type}`;
+            setTimeout(() => notif.classList.remove('show'), 3000);
+        }
+
+        async function togglePower() {
+            try {
+                const newState = !isOn;
+                const url = `http://${SHELLY_IP}/rpc/Switch.Set?id=0&on=${newState}`;
+                
+                const response = await fetch(url);
+                
+                if (response.ok) {
+                    isOn = newState;
+                    updatePowerButton();
+                    showNotification(isOn ? 'Boiler turned ON' : 'Boiler turned OFF');
+                } else {
+                    throw new Error('Communication error');
+                }
+            } catch (error) {
+                showNotification('Connection error. Check if Shelly is online.', 'error');
+                console.error(error);
+            }
+        }
+
+        function updatePowerButton() {
+            const circle = document.getElementById('powerCircle');
+            const status = document.getElementById('powerStatus');
+            const display = document.querySelector('.power-display');
+            
+            if (isOn) {
+                circle.classList.add('active');
+                status.textContent = 'ON';
+                display.classList.add('on');
+            } else {
+                circle.classList.remove('active');
+                status.textContent = 'OFF';
+                display.classList.remove('on');
+            }
+        }
+
+        function showScheduleModal() {
+            document.getElementById('scheduleModal').classList.add('show');
+        }
+
+        function hideScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('show');
+        }
+
+        function addSchedule() {
+            const onTime = document.getElementById('scheduleOnTime').value;
+            const offTime = document.getElementById('scheduleOffTime').value;
+            const days = document.getElementById('scheduleDays').value;
+
+            if (!onTime || !offTime || !days) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            schedules.push({
+                id: Date.now(),
+                onTime: onTime,
+                offTime: offTime,
+                days: days,
+                enabled: true
+            });
+
+            saveBoilerData();
+            renderSchedules();
+            hideScheduleModal();
+            showNotification('Schedule added successfully');
+        }
+
+        function renderSchedules() {
+            const container = document.getElementById('scheduleList');
+            const count = document.getElementById('scheduleCount');
+            const badge = document.getElementById('scheduleCountBadge');
+            
+            count.textContent = schedules.length;
+            badge.textContent = `${schedules.length} Active`;
+
+            if (schedules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">No schedules configured</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = schedules.map(s => `
+                <div class="schedule-item">
+                    <div class="schedule-time">
+                        <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                        ${s.onTime} → ${s.offTime}
+                    </div>
+                    <div class="schedule-days">${s.days}</div>
+                    <button class="btn-delete" onclick="deleteSchedule(${s.id})">Delete Schedule</button>
+                </div>
+            `).join('');
+            
+            lucide.createIcons();
+        }
+
+        function deleteSchedule(id) {
+            schedules = schedules.filter(s => s.id !== id);
+            saveBoilerData();
+            renderSchedules();
+            showNotification('Schedule deleted');
+        }
+
+        function checkSchedules() {
+            setInterval(() => {
+                const now = new Date();
+                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const currentDay = days[now.getDay()];
+
+                schedules.forEach(schedule => {
+                    if (schedule.enabled && schedule.days.includes(currentDay)) {
+                        if (currentTime === schedule.onTime && !isOn) {
+                            togglePower();
+                        } else if (currentTime === schedule.offTime && isOn) {
+                            togglePower();
+                        }
+                    }
+                });
+            }, 60000);
+        }
+
+        function startTimer() {
+            const minutes = parseInt(document.getElementById('timerMinutes').value);
+            
+            if (!minutes || minutes < 1) {
+                showNotification('Please enter valid minutes', 'error');
+                return;
+            }
+
+            timerEndTime = Date.now() + (minutes * 60 * 1000);
+            
+            if (!isOn) {
+                togglePower();
+            }
+
+            updateTimerDisplay();
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+            
+            showNotification(`Timer started: ${minutes} minutes`);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerEndTime = null;
+            document.getElementById('timerDisplay').textContent = '00:00';
+            document.getElementById('timerStatus').textContent = 'Ready to start';
+            showNotification('Timer stopped');
+        }
+
+        function updateTimerDisplay() {
+            if (!timerEndTime) return;
+
+            const remaining = timerEndTime - Date.now();
+            
+            if (remaining <= 0) {
+                stopTimer();
+                if (isOn) {
+                    togglePower();
+                }
+                showNotification('Timer complete - Boiler turned off');
+                return;
+            }
+
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            
+            document.getElementById('timerDisplay').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('timerStatus').textContent = 'Timer active - Auto shutdown enabled';
+        }
+
+        // Temperature Chart Functions
         function showSpinner(spinnerId) {
             document.getElementById(spinnerId).style.display = 'block';
         }
@@ -1136,6 +1838,8 @@
             try {
                 await initializeYearSelector();
                 await initializeMonthSelector();
+                loadBoilerData();
+                updatePowerButton();
                 
                 setTimeout(() => {
                     updateCharts();
