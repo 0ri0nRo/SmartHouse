@@ -19,6 +19,10 @@ class PostgresHandler:
         self.cursor = None
         self.connect_to_db()
         self.create_table_if_not_exists()
+    
+    def _connect(self):
+        return psycopg2.connect(**self.db_config)
+
 
     def _ensure_connection(self):
         """Verifica e ripristina la connessione se necessario."""
@@ -649,3 +653,45 @@ class PostgresHandler:
         finally:
             if conn:
                 conn.close()
+    
+    def set_target_temperature(self, value):
+        query = """
+        INSERT INTO target_temperature (value, updated_at)
+        VALUES (%s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET value = EXCLUDED.value,
+            updated_at = NOW();
+        """
+        conn = None
+        cur = None
+        try:
+            conn = self._connect()
+            cur = conn.cursor()
+            cur.execute(query, (value,))
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Errore set_target_temperature: {e}")
+            return False
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+
+    def get_target_temperature(self):
+        query = "SELECT value FROM target_temperature ORDER BY updated_at DESC LIMIT 1;"
+        conn = None
+        cur = None
+        try:
+            conn = self._connect()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            cur.execute(query)
+            row = cur.fetchone()
+            if row:
+                return float(row['value'])
+            return None
+        except Exception as e:
+            logger.error(f"Errore get_target_temperature: {e}")
+            return None
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()

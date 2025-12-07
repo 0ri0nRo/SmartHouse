@@ -2,10 +2,21 @@ import psycopg2
 import psycopg2.extras
 from datetime import datetime
 from models.database import BaseService
+import logging
+from client.PostgresClient import PostgresHandler
+from config.settings import get_config
+
+config = get_config()  # senza argomenti
+db_config = config['DB_CONFIG']  # estrai la sezione DB_CONFIG
+
+logger = logging.getLogger(__name__)
 
 class SensorService(BaseService):
     """Service to manage temperature and humidity sensor data"""
-    
+    def __init__(self, db_config):
+        self.db_config = db_config
+        self.db = PostgresHandler(db_config)
+
     def get_hourly_today(self):
         """Gets hourly data for today"""
         query = """
@@ -195,3 +206,19 @@ class SensorService(BaseService):
         finally:
             if cur: cur.close()
             if conn: conn.close()
+
+
+    def set_target_temperature(self, value):
+        try:
+            return self.db.set_target_temperature(value)
+        except Exception as e:
+            logger.error(f"Errore set_target_temperature: {e}")
+            return False
+        
+    def get_target_temperature(self):
+        try:
+            return self.db.get_target_temperature()
+        except Exception as e:
+            logger.error(f"Errore get_target_temperature: {e}")
+            return None
+

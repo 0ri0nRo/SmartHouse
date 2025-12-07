@@ -3,6 +3,7 @@ from datetime import datetime
 from models.database import handle_db_error
 from services.sensor_service import SensorService
 from config.settings import get_config
+from client.PostgresClient import PostgresHandler
 
 sensor_bp = Blueprint('sensor', __name__)
 config = get_config()
@@ -216,3 +217,36 @@ def api_monthly_avg_humidity_by_year(year):
     if year < 1900 or year > datetime.now().year:
         return jsonify({'error': 'Invalid year.'}), 400
     return jsonify(sensor_service.get_monthly_average_humidity(year))
+
+
+@sensor_bp.route('/api/target_temperature', methods=['POST'])
+@handle_db_error
+def api_set_target_temperature():
+    """API to set and overwrite target temperature."""
+    data = request.get_json()
+
+    if not data or 'target_temperature' not in data:
+        return jsonify({'error': 'Missing target_temperature in request body.'}), 400
+
+    try:
+        target = float(data['target_temperature'])
+    except ValueError:
+        return jsonify({'error': 'target_temperature must be a number.'}), 400
+
+    success = sensor_service.set_target_temperature(target)
+
+    if not success:
+        return jsonify({'error': 'Database error saving target temperature.'}), 500
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Target temperature updated.',
+        'target_temperature': target
+    }), 200
+
+# GET target temperature
+@sensor_bp.route('/api/target_temperature', methods=['GET'])
+@handle_db_error
+def api_get_target_temperature():
+    value = sensor_service.get_target_temperature()  # usa il metodo del service
+    return jsonify({'target_temperature': value}), 200
