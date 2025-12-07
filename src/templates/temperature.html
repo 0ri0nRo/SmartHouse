@@ -1128,34 +1128,13 @@
             setTimeout(() => notif.classList.remove('show'), 3000);
         }
 
-        async function loadBoilerStatus() {
-            try {
-                const response = await fetch('/api/boiler/status');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch boiler status');
-                }
-                const data = await response.json();
-                isOn = data.is_on;
-                await updatePowerButton();
-                console.log('Boiler status loaded from DB:', isOn ? 'ON' : 'OFF');
-            } catch (error) {
-                console.error("Failed to load boiler status:", error);
-                // Prova a usare il valore dal localStorage come fallback
-                const savedState = localStorage.getItem('boilerPowerState');
-                if (savedState !== null) {
-                    isOn = savedState === 'true';
-                    await updatePowerButton();
-                    console.log('Using cached boiler status:', isOn ? 'ON' : 'OFF');
-                }
-            }
-        }
 
         async function togglePower() {
             try {
                 const newState = !isOn;
                 const endpoint = newState ? '/api/thermostat/on' : '/api/thermostat/off';
 
-                // Chiama l'API backend che gestisce Shelly + DB
+                // 1. Chiama l'API backend che gestisce Shelly + DB del termostato
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -1168,9 +1147,22 @@
                 const data = await response.json();
                 console.log('Boiler toggled:', data);
 
-                // Aggiorna stato locale e UI
+                // 2. Aggiorna anche lo stato della caldaia nel DB tramite /api/boiler/set
+                const boilerResponse = await fetch('/api/boiler/set', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_on: newState })
+                });
+
+                if (!boilerResponse.ok) {
+                    console.warn('Failed to update boiler status in DB');
+                }
+
+                const boilerData = await boilerResponse.json();
+                console.log('Boiler status updated in DB:', boilerData);
+
+                // 3. Aggiorna stato locale e UI
                 isOn = newState;
-                localStorage.setItem('boilerPowerState', isOn);
                 await updatePowerButton();
                 
                 showNotification(isOn ? 'Boiler turned ON ✓' : 'Boiler turned OFF ✓');
@@ -1197,25 +1189,63 @@
             }
         }
 
-        // Funzione per sincronizzare lo stato della caldaia dal DB ogni 30 secondi
         async function syncBoilerStatus() {
             try {
-                const response = await fetch('/api/boiler/status');
-                if (!response.ok) return;
+                const response = await fetch('/api/boiler/status', {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
                 
+                if (!response.ok) return;
+
                 const data = await response.json();
+
+                // Aggiorna solo se lo stato è cambiato
                 if (data.is_on !== isOn) {
-                    console.log('Boiler status changed externally:', data.is_on);
+                    console.log('🔄 Boiler status synced - changed to:', data.is_on ? 'ON' : 'OFF');
                     isOn = data.is_on;
                     await updatePowerButton();
+
+                    // fallback: salva solo se vuoi, ma non usarlo come fonte di verità
+                    localStorage.setItem('boilerPowerState', isOn);
+
+                    // opzionale: notifica cambio stato
+                    showNotification(
+                        isOn ? 'Boiler turned ON (synced)' : 'Boiler turned OFF (synced)',
+                        'success'
+                    );
                 }
             } catch (error) {
                 console.log('Status sync failed:', error);
             }
         }
+        // 🔥 Carica lo stato iniziale al caricamento della pagina
+        async function loadInitialBoilerStatus() {
+            try {
+                const response = await fetch('/api/boiler/status', {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) return;
 
-        // Sincronizza lo stato ogni 30 secondi
-        setInterval(syncBoilerStatus, 30000);
+                const data = await response.json();
+                isOn = data.is_on;
+                await updatePowerButton();
+                console.log('✅ Initial boiler status loaded:', isOn ? 'ON' : 'OFF');
+            } catch (error) {
+                console.error('❌ Failed to load initial boiler status:', error);
+            }
+        }
+
+        // Sincronizza lo stato ogni 5 secondi
+        setInterval(syncBoilerStatus, 100);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
@@ -2106,8 +2136,8 @@
                 await initializeMonthSelector();
                 loadBoilerData();
                 
-                // Carica lo stato della caldaia dal database
-                await loadBoilerStatus();
+                // 🔥 CARICA SUBITO LO STATO DELLA CALDAIA AL REFRESH
+                console.log('🔄 Loading initial boiler status...');
                 
                 // Carica le impostazioni del termostato salvate
                 const savedTarget = localStorage.getItem('targetTemperature');
@@ -2120,8 +2150,12 @@
                 
                 const savedThermostatState = localStorage.getItem('thermostatEnabled');
                 if (savedThermostatState === 'true') {
-                    toggleThermostat();
+                    thermostatEnabled = true;
+                    document.getElementById('thermostatToggle').innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
+                    document.getElementById('thermostatBadge').textContent = 'Active';
+                    startThermostatControl();
                 }
+
                 
                 // Inizia a monitorare la temperatura
                 fetchCurrentTemperature();
@@ -2133,11 +2167,11 @@
 
                 lucide.createIcons();
                 
-                console.log('Dashboard initialized successfully');
-                console.log('Shelly device at:', SHELLY_IP);
-                console.log('Temperature sensor at:', SENSOR_API);
+                console.log('✅ Dashboard initialized successfully');
+                console.log('📍 Shelly device at:', SHELLY_IP);
+                console.log('🌡️ Temperature sensor at:', SENSOR_API);
             } catch (error) {
-                console.error('Error initializing dashboard:', error);
+                console.error('❌ Error initializing dashboard:', error);
                 showError('Failed to initialize dashboard. Please refresh the page.');
             }
         })();

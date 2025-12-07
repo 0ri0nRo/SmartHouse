@@ -290,27 +290,46 @@ def api_thermostat_off():
     return jsonify({"status": "success", "message": "Thermostat disabled, caldaia spenta"}), 200
 
 
-# GET stato caldaia
 @sensor_bp.route('/api/boiler/status', methods=['GET'])
 @handle_db_error
-def get_boiler_status():
-    """Legge lo stato corrente della caldaia dal DB"""
-    status = sensor_service.get_boiler_status()  # Metodo che leggeremo dal service
-    return jsonify({"is_on": status}), 200
+def get_boiler_status_route():
+    status = sensor_service.get_boiler_status()
+    # Assicuriamoci che sia un booleano corretto per JSON
+    return jsonify({"is_on": bool(status)}), 200
 
 
-# POST aggiorna stato caldaia
+
 @sensor_bp.route('/api/boiler/set', methods=['POST'])
 @handle_db_error
-def set_boiler_status():
-    """Aggiorna lo stato della caldaia"""
+def set_boiler_status_route():
     data = request.get_json()
     if not data or 'is_on' not in data:
         return jsonify({"error": "Missing is_on value"}), 400
-    
+
     is_on = bool(data['is_on'])
     success = sensor_service.set_boiler_status(is_on)
+
     if not success:
         return jsonify({"error": "Database error"}), 500
 
     return jsonify({"status": "success", "is_on": is_on}), 200
+
+@sensor_bp.route('/api/boiler/debug', methods=['GET'])
+def debug_boiler_status():
+    try:
+        # Test query diretta
+        row = sensor_service.db.execute_query(
+            "SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;"
+        )
+        
+        return jsonify({
+            "row": str(row),
+            "row_type": str(type(row)),
+            "has_data": bool(row),
+            "row_length": len(row) if row else 0,
+            "first_element": str(row[0]) if row and len(row) > 0 else None,
+            "value": str(row[0][0]) if row and len(row) > 0 else None,
+            "value_type": str(type(row[0][0])) if row and len(row) > 0 else None
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -249,20 +249,40 @@ class SensorService(BaseService):
             logger.error(f"Errore get_thermostat_enabled: {e}")
             return False
 
-        # Legge stato caldaia
-    def get_boiler_status(self):
-        row = self.db.execute_query("SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;")
-        return row['is_on'] if row else False
-
-    # Aggiorna stato caldaia
-    def set_boiler_status(self, is_on: bool):
+    def get_boiler_status(self) -> bool:
         try:
-            self.db.execute_query(
-                "INSERT INTO boiler_status (is_on, updated_at) VALUES (%s, NOW())",
-                (is_on,)
+            row = self.db.execute_query(
+                "SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;",
+                fetch=True  # 🔥 AGGIUNGI QUESTO
             )
-            return True
+            if row and len(row) > 0:
+                return bool(row[0][0])
+            return False
         except Exception as e:
-            print("DB error set_boiler_status:", e)
+            print(f"❌ DB error get_boiler_status: {e}")
             return False
 
+
+    def set_boiler_status(self, is_on: bool) -> bool:
+        try:
+            row = self.db.execute_query(
+                "SELECT id FROM boiler_status ORDER BY id DESC LIMIT 1;",
+                fetch=True  # 🔥 AGGIUNGI QUESTO
+            )
+            
+            if row and len(row) > 0:
+                last_id = row[0][0]
+                self.db.execute_query(
+                    "UPDATE boiler_status SET is_on = %s, updated_at = NOW() WHERE id = %s;",
+                    (is_on, last_id)
+                    # fetch=False è già il default per UPDATE
+                )
+            else:
+                self.db.execute_query(
+                    "INSERT INTO boiler_status (is_on, updated_at) VALUES (%s, NOW());",
+                    (is_on,)
+                )
+            return True
+        except Exception as e:
+            print(f"❌ DB error set_boiler_status: {e}")
+            return False
