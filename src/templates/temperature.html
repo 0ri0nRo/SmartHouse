@@ -1077,18 +1077,6 @@
 
         // ========== BOILER CONTROL FUNCTIONS ==========
         
-        function loadBoilerData() {
-            const saved = localStorage.getItem('boilerSchedules');
-            if (saved) {
-                schedules = JSON.parse(saved);
-            }
-            renderSchedules();
-            checkSchedules();
-        }
-
-        function saveBoilerData() {
-            localStorage.setItem('boilerSchedules', JSON.stringify(schedules));
-        }
 
         function showNotification(message, type = 'success') {
             const notif = document.getElementById('notification');
@@ -1215,7 +1203,7 @@
         }
 
         // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 1000);
+        setInterval(syncBoilerStatus, 5000);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
@@ -1394,7 +1382,6 @@
         function startThermostatControl() {
             thermostatLogic();
             thermostatCheckInterval = setInterval(thermostatLogic, 30000);
-            setInterval(fetchCurrentTemperature, 10000);
         }
 
         function stopThermostatControl() {
@@ -1432,9 +1419,6 @@
                 enabled: true
             });
 
-            saveBoilerData();
-            renderSchedules();
-            hideScheduleModal();
             showNotification('Schedule added successfully');
         }
 
@@ -1468,32 +1452,6 @@
             `).join('');
             
             lucide.createIcons();
-        }
-
-        function deleteSchedule(id) {
-            schedules = schedules.filter(s => s.id !== id);
-            saveBoilerData();
-            renderSchedules();
-            showNotification('Schedule deleted');
-        }
-
-        function checkSchedules() {
-            setInterval(() => {
-                const now = new Date();
-                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const currentDay = days[now.getDay()];
-
-                schedules.forEach(schedule => {
-                    if (schedule.enabled && schedule.days.includes(currentDay)) {
-                        if (currentTime === schedule.onTime && !isOn) {
-                            togglePower();
-                        } else if (currentTime === schedule.offTime && isOn) {
-                            togglePower();
-                        }
-                    }
-                });
-            }, 60000);
         }
 
         // ========== CHART FUNCTIONS ==========
@@ -2097,61 +2055,45 @@
                 timeout = setTimeout(later, wait);
             };
         }
-
+        setInterval(fetchCurrentTemperature, 10000);
         // ========== INITIALIZATION ==========
 
-        (async function initializeDashboard() {
+        document.addEventListener("DOMContentLoaded", async () => {
             try {
                 await initializeYearSelector();
                 await initializeMonthSelector();
-                loadBoilerData();
-                
-                // 🔥 CARICA SUBITO LO STATO DELLA CALDAIA AL REFRESH
-                console.log('🔄 Loading initial boiler status...');
-                
-                // Carica le impostazioni del termostato salvate
-                const savedTarget = localStorage.getItem('targetTemperature');
-                if (savedTarget) {
-                    targetTemperature = parseFloat(savedTarget);
-                    document.getElementById('targetTempDisplay').textContent = `${targetTemperature.toFixed(1)}°C`;
-                } else {
-                    await loadTargetTemperature();
-                }
-                
-                const savedThermostatState = localStorage.getItem('thermostatEnabled');
-                if (savedThermostatState === 'true') {
-                    thermostatEnabled = true;
-                    document.getElementById('thermostatToggle').innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
-                    document.getElementById('thermostatBadge').textContent = 'Active';
-                    startThermostatControl();
-                }
+                await fetchCurrentTemperature() 
+                await updatePowerButton();
 
-                
-                // Inizia a monitorare la temperatura
-                fetchCurrentTemperature();
-                setInterval(fetchCurrentTemperature, 10000);
-                
-                setTimeout(() => {
-                    updateCharts();
-                }, 300);
+                await updateCharts();     // niente timeout, stabile
 
                 lucide.createIcons();
-                
-                console.log('✅ Dashboard initialized successfully');
-                console.log('📍 Shelly device at:', SHELLY_IP);
-                console.log('🌡️ Temperature sensor at:', SENSOR_API);
+
+                console.log("Dashboard initialized successfully");
             } catch (error) {
-                console.error('❌ Error initializing dashboard:', error);
-                showError('Failed to initialize dashboard. Please refresh the page.');
+                console.error("Error initializing dashboard:", error);
+                showError("Failed to initialize dashboard. Please refresh the page.");
             }
-        })();
+        });
+
 
         window.addEventListener('resize', debounce(() => {
             [dailyTemperatureChart, monthlyAverageTemperatureChart, todayTemperatureChart, temperatureChart]
                 .filter(chart => chart)
                 .forEach(chart => chart.resize());
         }, 250));
+
+         function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
     </script>
 </body>
-
 </html>
