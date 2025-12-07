@@ -655,27 +655,16 @@ class PostgresHandler:
                 conn.close()
     
     def set_target_temperature(self, value):
-        query = """
-        INSERT INTO target_temperature (value, updated_at)
-        VALUES (%s, NOW())
-        ON CONFLICT (id) DO UPDATE
-        SET value = EXCLUDED.value,
-            updated_at = NOW();
-        """
-        conn = None
-        cur = None
+        query = "UPDATE target_temperature SET value=%s, updated_at=NOW() WHERE id=1;"
         try:
-            conn = self._connect()
-            cur = conn.cursor()
-            cur.execute(query, (value,))
-            conn.commit()
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (value,))
             return True
         except Exception as e:
             logger.error(f"Errore set_target_temperature: {e}")
             return False
-        finally:
-            if cur: cur.close()
-            if conn: conn.close()
+
 
     def get_target_temperature(self):
         query = "SELECT value FROM target_temperature ORDER BY updated_at DESC LIMIT 1;"
