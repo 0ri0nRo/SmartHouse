@@ -289,6 +289,23 @@ def api_thermostat_off():
 
     return jsonify({"status": "success", "message": "Thermostat disabled, caldaia spenta"}), 200
 
+@sensor_bp.route('/api/thermostat/status', methods=['GET'])
+@handle_db_error
+def api_thermostat_status():
+    try:
+        r = requests.get(f"http://{SHELLY_IP}/relay/0", timeout=3)
+
+        if r.status_code != 200:
+            return jsonify({"error": "Errore Shelly"}), 500
+
+        data = r.json()
+
+        # Shelly restituisce: {"ison": true/false}
+        return jsonify({"ison": data.get("ison")}), 200
+
+    except requests.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @sensor_bp.route('/api/boiler/status', methods=['GET'])
 @handle_db_error

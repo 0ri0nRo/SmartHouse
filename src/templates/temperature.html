@@ -1145,39 +1145,91 @@
             }
         }
 
-        async function syncBoilerStatus() {
-            try {
-                const response = await fetch('/api/boiler/status', {
-                    cache: 'no-cache',
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) return;
+async function syncBoilerStatus() {
+    try {
+        // 1️⃣ Leggi lo stato dal database
+        const dbResponse = await fetch('/api/boiler/status', {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
 
-                const data = await response.json();
+        if (!dbResponse.ok) {
+            console.warn("⚠️ DB status request failed");
+            return;
+        }
 
-                // Aggiorna solo se lo stato è cambiato
-                if (data.is_on !== isOn) {
-                    console.log('🔄 Boiler status synced - changed to:', data.is_on ? 'ON' : 'OFF');
-                    isOn = data.is_on;
-                    await updatePowerButton();
+        const dbData = await dbResponse.json();
+        const dbIsOn = dbData.is_on;
 
-                    // fallback: salva solo se vuoi, ma non usarlo come fonte di verità
-                    localStorage.setItem('boilerPowerState', isOn);
 
-                    // opzionale: notifica cambio stato
-                    showNotification(
-                        isOn ? 'Boiler turned ON (synced)' : 'Boiler turned OFF (synced)',
-                        'success'
-                    );
-                }
-            } catch (error) {
-                console.log('Status sync failed:', error);
+        // 2️⃣ Leggi lo stato da Shelly
+        const shellyResponse = await fetch('/api/thermostat/status', {
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+
+        if (!shellyResponse.ok) {
+            console.warn('⚠️ Shelly API not reachable, using DB status');
+            if (dbIsOn !== isOn) {
+                isOn = dbIsOn;
+                await updatePowerButton();
+            }
+            return;
+        }
+
+        const shellyData = await shellyResponse.json();
+
+        // Verifica che Shelly abbia restituito "ison"
+        const shellyIsOn = shellyData.ison;
+
+        if (shellyIsOn === undefined) {
+            console.warn("⚠️ Shelly returned no 'ison' field. Aborting sync.");
+            return;
+        }
+
+
+        // 3️⃣ Se c’è discrepanza → Shelly decide la verità
+        if (shellyIsOn !== dbIsOn) {
+            console.warn('⚠️ Discrepancy detected! DB:', dbIsOn, 'Shelly:', shellyIsOn);
+            console.log('🔄 Updating DB using Shelly value...');
+
+            const updateResponse = await fetch('/api/boiler/set', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_on: shellyIsOn })
+            });
+
+            if (updateResponse.ok) {
+                console.log('✅ DB updated to:', shellyIsOn ? 'ON' : 'OFF');
+            } else {
+                console.error('❌ Failed to update DB');
             }
         }
+
+
+        // 4️⃣ Aggiorna UI solo se cambia davvero
+        if (shellyIsOn !== isOn) {
+            console.log('🔄 Boiler changed:', shellyIsOn ? 'ON' : 'OFF');
+            isOn = shellyIsOn;
+            await updatePowerButton();
+
+            showNotification(
+                isOn ? 'Boiler turned ON (synced)' : 'Boiler turned OFF (synced)',
+                'success'
+            );
+        }
+
+    } catch (error) {
+        console.error('❌ Sync failed:', error);
+    }
+}
+
         // 🔥 Carica lo stato iniziale al caricamento della pagina
         async function loadInitialBoilerStatus() {
             try {
@@ -1201,7 +1253,7 @@
         }
 
         // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 5000);
+        setInterval(syncBoilerStatus, 2000);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
