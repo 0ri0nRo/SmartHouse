@@ -1145,9 +1145,9 @@
             }
         }
 
-async function syncBoilerStatus() {
-    try {
-        // 1️⃣ Leggi lo stato dal database
+    async function syncBoilerStatus() {
+        try {
+        // Leggi lo stato dal database
         const dbResponse = await fetch('/api/boiler/status', {
             cache: 'no-cache',
             headers: {
@@ -1157,7 +1157,7 @@ async function syncBoilerStatus() {
         });
 
         if (!dbResponse.ok) {
-            console.warn("⚠️ DB status request failed");
+            console.warn("DB status request failed");
             return;
         }
 
@@ -1165,7 +1165,7 @@ async function syncBoilerStatus() {
         const dbIsOn = dbData.is_on;
 
 
-        // 2️⃣ Leggi lo stato da Shelly
+        //Leggi lo stato da Shelly
         const shellyResponse = await fetch('/api/thermostat/status', {
             cache: 'no-cache',
             headers: {
@@ -1175,7 +1175,7 @@ async function syncBoilerStatus() {
         });
 
         if (!shellyResponse.ok) {
-            console.warn('⚠️ Shelly API not reachable, using DB status');
+            console.warn('Shelly API not reachable, using DB status');
             if (dbIsOn !== isOn) {
                 isOn = dbIsOn;
                 await updatePowerButton();
@@ -1189,15 +1189,15 @@ async function syncBoilerStatus() {
         const shellyIsOn = shellyData.ison;
 
         if (shellyIsOn === undefined) {
-            console.warn("⚠️ Shelly returned no 'ison' field. Aborting sync.");
+            console.warn("Shelly returned no 'ison' field. Aborting sync.");
             return;
         }
 
 
-        // 3️⃣ Se c’è discrepanza → Shelly decide la verità
+        // Se c’è discrepanza → Shelly decide la verità
         if (shellyIsOn !== dbIsOn) {
-            console.warn('⚠️ Discrepancy detected! DB:', dbIsOn, 'Shelly:', shellyIsOn);
-            console.log('🔄 Updating DB using Shelly value...');
+            console.warn('Discrepancy detected! DB:', dbIsOn, 'Shelly:', shellyIsOn);
+            console.log('Updating DB using Shelly value...');
 
             const updateResponse = await fetch('/api/boiler/set', {
                 method: 'POST',
@@ -1206,14 +1206,14 @@ async function syncBoilerStatus() {
             });
 
             if (updateResponse.ok) {
-                console.log('✅ DB updated to:', shellyIsOn ? 'ON' : 'OFF');
+                console.log('DB updated to:', shellyIsOn ? 'ON' : 'OFF');
             } else {
-                console.error('❌ Failed to update DB');
+                console.error('Failed to update DB');
             }
         }
 
 
-        // 4️⃣ Aggiorna UI solo se cambia davvero
+        // Aggiorna UI solo se cambia davvero
         if (shellyIsOn !== isOn) {
             console.log('🔄 Boiler changed:', shellyIsOn ? 'ON' : 'OFF');
             isOn = shellyIsOn;
@@ -1226,11 +1226,11 @@ async function syncBoilerStatus() {
         }
 
     } catch (error) {
-        console.error('❌ Sync failed:', error);
+        console.error('Sync failed:', error);
     }
 }
 
-        // 🔥 Carica lo stato iniziale al caricamento della pagina
+        //Carica lo stato iniziale al caricamento della pagina
         async function loadInitialBoilerStatus() {
             try {
                 const response = await fetch('/api/boiler/status', {
@@ -1246,9 +1246,9 @@ async function syncBoilerStatus() {
                 const data = await response.json();
                 isOn = data.is_on;
                 await updatePowerButton();
-                console.log('✅ Initial boiler status loaded:', isOn ? 'ON' : 'OFF');
+                console.log('Initial boiler status loaded:', isOn ? 'ON' : 'OFF');
             } catch (error) {
-                console.error('❌ Failed to load initial boiler status:', error);
+                console.error('Failed to load initial boiler status:', error);
             }
         }
 
