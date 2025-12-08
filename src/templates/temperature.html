@@ -1253,7 +1253,7 @@
         }
 
         // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 2000);
+        setInterval(syncBoilerStatus, 5000);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
@@ -2106,11 +2106,13 @@
             };
         }
         setInterval(fetchCurrentTemperature, 10000);
+
         // ========== INITIALIZATION ==========
 
         document.addEventListener("DOMContentLoaded", async () => {
             try {
                 await initializeYearSelector();
+                await syncBoilerStatus()
                 await initializeMonthSelector();
                 await fetchCurrentTemperature() 
                 await updatePowerButton();
