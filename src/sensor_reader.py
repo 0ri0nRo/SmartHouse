@@ -57,7 +57,7 @@ class SensorReader:
                 temperature, humidity, distance = line.split(",")
 
                 # Converte i valori in float per una comparazione accurata
-                temperature = float(temperature) - 2  # Sottrai 2 gradi per compensare il calore residuo della ciabatta e allineare la lettura al termostato della caldaia
+                temperature = float(temperature) - 1.7  # Sottrai 1.7 gradi per compensare il calore residuo della ciabatta e allineare la lettura al termostato della caldaia
                 humidity = float(humidity)
                 distance = int(distance)
                 #print("Eseguo script di backup")
