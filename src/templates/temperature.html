@@ -861,6 +861,29 @@
                 </div>
             </div>
 
+            <!-- Weekly Scheduler Section -->
+            <div class="chart-card slide-up">
+                <div class="schedule-header">
+                    <div class="schedule-count-display">
+                        <div>
+                            <div class="schedule-count-number" id="scheduleCount">0</div>
+                            <div class="schedule-count-label">Schedules</div>
+                        </div>
+                        <span class="badge" id="scheduleCountBadge">0 Active</span>
+                    </div>
+                    <button class="btn-add" onclick="showScheduleModal()">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                        New Schedule
+                    </button>
+                </div>
+                <div class="schedule-grid" id="scheduleList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">No schedules configured</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Today's Temperature Chart -->
             <div class="chart-card slide-up">
                 <div class="chart-header">
@@ -1026,31 +1049,67 @@
         </div>
     </div>
 
-    <!-- Schedule Modal -->
-    <div class="modal" id="scheduleModal">
-        <div class="modal-content">
-            <div class="modal-header">New Schedule</div>
-            
-            <div class="form-group">
-                <label class="form-label">Turn On Time</label>
-                <input type="time" class="form-input" id="scheduleOnTime" value="07:00">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Turn Off Time</label>
-                <input type="time" class="form-input" id="scheduleOffTime" value="09:00">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Days (comma separated)</label>
-                <input type="text" class="form-input" id="scheduleDays" placeholder="Mon,Tue,Wed,Thu,Fri" value="Mon,Tue,Wed,Thu,Fri">
-            </div>
-            
-            <button class="btn-primary" onclick="addSchedule()">Create Schedule</button>
-            <button class="btn-secondary" onclick="hideScheduleModal()">Cancel</button>
-        </div>
-    </div>
+<!-- Weekly Scheduler Section -->
+            <div class="chart-card slide-up">
+                <div class="schedule-header">
+                    <div>
+                        <h3 class="chart-title" style="margin-bottom: 0.5rem;">
+                            <i data-lucide="calendar-clock"></i>
+                            Weekly Scheduler
+                        </h3>
+                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">
+                            Automate your heating with custom schedules
+                        </p>
+                    </div>
+                    <button class="btn-add" onclick="showScheduleModal()">
+                        <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+                        New Schedule
+                    </button>
+                </div>
+                
+                <div style="padding: 1rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+                    <div class="schedule-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-color);">
+                                <i data-lucide="calendar-check" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value" id="scheduleCount">0</div>
+                                <div class="stat-label">Active Schedules</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: var(--secondary-light); color: var(--secondary-color);">
+                                <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value" id="nextScheduleTime">--:--</div>
+                                <div class="stat-label">Next Activation</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon" style="background: var(--accent-light); color: var(--accent-color);">
+                                <i data-lucide="zap" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value" id="weeklyRuntime">0h</div>
+                                <div class="stat-label">Weekly Runtime</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+                <div class="schedule-grid" id="scheduleList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">No schedules configured yet</div>
+                        <button class="btn-add" onclick="showScheduleModal()" style="margin-top: 1rem;">
+                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                            Create Your First Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
     <!-- Notification -->
     <div class="notification" id="notification">
         <span id="notificationText"></span>
@@ -1194,7 +1253,7 @@
         }
 
 
-        // Se c’è discrepanza → Shelly decide la verità
+        // Se c'è discrepanza → Shelly decide la verità
         if (shellyIsOn !== dbIsOn) {
             console.warn('Discrepancy detected! DB:', dbIsOn, 'Shelly:', shellyIsOn);
             console.log('Updating DB using Shelly value...');
@@ -1253,7 +1312,7 @@
         }
 
         // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 5000);
+        setInterval(syncBoilerStatus, 10000);
 
         // ========== THERMOSTAT FUNCTIONS ==========
         
@@ -1441,69 +1500,200 @@
             }
         }
 
-        // ========== SCHEDULE FUNCTIONS ==========
+        // ========== SCHEDULE FUNCTIONS (FIXED) ==========
 
-        function showScheduleModal() {
-            document.getElementById('scheduleModal').classList.add('show');
-        }
-
-        function hideScheduleModal() {
-            document.getElementById('scheduleModal').classList.remove('show');
-        }
-
-        function addSchedule() {
-            const onTime = document.getElementById('scheduleOnTime').value;
-            const offTime = document.getElementById('scheduleOffTime').value;
-            const days = document.getElementById('scheduleDays').value;
-
-            if (!onTime || !offTime || !days) {
-                showNotification('Please fill all fields', 'error');
-                return;
-            }
-
-            schedules.push({
-                id: Date.now(),
-                onTime: onTime,
-                offTime: offTime,
-                days: days,
-                enabled: true
-            });
-
-            showNotification('Schedule added successfully');
-        }
-
-        function renderSchedules() {
-            const container = document.getElementById('scheduleList');
-            const count = document.getElementById('scheduleCount');
-            const badge = document.getElementById('scheduleCountBadge');
+    async function loadSchedules() {
+        try {
+            const response = await fetch('/api/shelly/schedules');
+            if (!response.ok) throw new Error('Failed to load schedules');
             
-            count.textContent = schedules.length;
-            badge.textContent = `${schedules.length} Active`;
+            const data = await response.json();
+            // Shelly Gen3 restituisce: { id: 1, result: { jobs: [...] } }
+            schedules = (data.result && data.result.jobs) || data.jobs || [];
+            console.log('Loaded schedules:', schedules);
+            renderSchedules();
+        } catch (error) {
+            console.error('Error loading schedules:', error);
+            showNotification('Failed to load schedules', 'error');
+        }
+    }
 
-            if (schedules.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📅</div>
-                        <div class="empty-state-text">No schedules configured</div>
-                    </div>
-                `;
-                return;
-            }
+function showScheduleModal() {
+    document.getElementById('scheduleModal').classList.add('show');
+}
 
-            container.innerHTML = schedules.map(s => `
-                <div class="schedule-item">
-                    <div class="schedule-time">
-                        <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
-                        ${s.onTime} → ${s.offTime}
-                    </div>
-                    <div class="schedule-days">${s.days}</div>
-                    <button class="btn-delete" onclick="deleteSchedule(${s.id})">Delete Schedule</button>
+function hideScheduleModal() {
+    document.getElementById('scheduleModal').classList.remove('show');
+}
+
+async function addSchedule() {
+    const onTime = document.getElementById('scheduleOnTime').value;
+    const offTime = document.getElementById('scheduleOffTime').value;
+    const daysInput = document.getElementById('scheduleDays').value;
+
+    if (!onTime || !offTime || !daysInput) {
+        showNotification('Please fill all fields', 'error');
+        return;
+    }
+
+    // Converti i giorni della settimana in formato Shelly (0-6, dove 0=Domenica)
+    const dayMap = {
+        'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+    };
+    
+    const selectedDays = daysInput.split(',').map(d => d.trim());
+    const timespecDays = selectedDays.map(day => dayMap[day]).filter(d => d !== undefined);
+
+    if (timespecDays.length === 0) {
+        showNotification('Invalid days format. Use: Mon,Tue,Wed,Thu,Fri,Sat,Sun', 'error');
+        return;
+    }
+
+    // Crea due job: uno per accendere e uno per spegnere
+    const [onHour, onMinute] = onTime.split(':').map(Number);
+    const [offHour, offMinute] = offTime.split(':').map(Number);
+
+    try {
+        // Job per ACCENDERE (is_on: true)
+        const onJobResponse = await fetch('/api/shelly/schedule/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timespec: `0 ${onMinute} ${onHour} * * ${timespecDays.join(',')}`,
+                is_on: true
+            })
+        });
+
+        if (!onJobResponse.ok) throw new Error('Failed to create ON schedule');
+
+        // Job per SPEGNERE (is_on: false)
+        const offJobResponse = await fetch('/api/shelly/schedule/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timespec: `0 ${offMinute} ${offHour} * * ${timespecDays.join(',')}`,
+                is_on: false
+            })
+        });
+
+        if (!offJobResponse.ok) throw new Error('Failed to create OFF schedule');
+
+        showNotification('Schedule created successfully');
+        hideScheduleModal();
+        await loadSchedules();
+
+    } catch (error) {
+        console.error('Error creating schedule:', error);
+        showNotification('Failed to create schedule', 'error');
+    }
+}
+
+async function deleteSchedule(scheduleId) {
+    if (!confirm('Are you sure you want to delete this schedule?')) return;
+
+    try {
+        const response = await fetch('/api/shelly/schedule/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: scheduleId })
+        });
+
+        if (!response.ok) throw new Error('Failed to delete schedule');
+
+        showNotification('Schedule deleted successfully');
+        await loadSchedules();
+
+    } catch (error) {
+        console.error('Error deleting schedule:', error);
+        showNotification('Failed to delete schedule', 'error');
+    }
+}
+
+function renderSchedules() {
+    const container = document.getElementById('scheduleList');
+    const count = document.getElementById('scheduleCount');
+    const badge = document.getElementById('scheduleCountBadge');
+    
+    count.textContent = schedules.length;
+    badge.textContent = `${schedules.length} Active`;
+
+    if (schedules.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📅</div>
+                <div class="empty-state-text">No schedules configured</div>
+            </div>
+        `;
+        return;
+    }
+
+    // Raggruppa gli schedule ON/OFF per giorni
+    const scheduleGroups = {};
+    schedules.forEach(job => {
+        if (!job.enable) return;
+        
+        const parts = job.timespec.split(' ');
+        if (parts.length < 6) return;
+        
+        const minute = parts[1];
+        const hour = parts[2];
+        const days = parts[5];
+        
+        const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+        const key = days;
+        
+        if (!scheduleGroups[key]) {
+            scheduleGroups[key] = { days: days, schedules: [] };
+        }
+        
+        const isOn = job.calls && job.calls[0] && job.calls[0].params && job.calls[0].params.on;
+        scheduleGroups[key].schedules.push({ 
+            time, 
+            id: job.id, 
+            isOn: isOn 
+        });
+    });
+
+    // Converti i numeri dei giorni in nomi
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    container.innerHTML = Object.entries(scheduleGroups).map(([key, group]) => {
+        const daysNums = key.split(',').map(Number);
+        const daysStr = daysNums.map(n => dayNames[n]).join(', ');
+        
+        // Separa ON e OFF
+        const onSchedules = group.schedules.filter(s => s.isOn);
+        const offSchedules = group.schedules.filter(s => !s.isOn);
+        
+        return `
+            <div class="schedule-item">
+                <div class="schedule-time">
+                    <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                    ${onSchedules.length > 0 ? onSchedules.map(s => s.time).join(', ') : '--:--'} 
+                    → 
+                    ${offSchedules.length > 0 ? offSchedules.map(s => s.time).join(', ') : '--:--'}
                 </div>
-            `).join('');
-            
-            lucide.createIcons();
-        }
+                <div class="schedule-days"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    ${onSchedules.map(s => `
+                        <button class="btn-delete" onclick="deleteSchedule(${s.id})">
+                            🟢 Delete ON (${s.time})
+                        </button>
+                    `).join('')}
+                    ${offSchedules.map(s => `
+                        <button class="btn-delete" onclick="deleteSchedule(${s.id})">
+                            🔴 Delete OFF (${s.time})
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    lucide.createIcons();
+}
 
+       
         // ========== CHART FUNCTIONS ==========
 
         function showSpinner(spinnerId) {
@@ -2105,6 +2295,7 @@
                 timeout = setTimeout(later, wait);
             };
         }
+        
         setInterval(fetchCurrentTemperature, 10000);
 
         // ========== INITIALIZATION ==========
@@ -2112,12 +2303,13 @@
         document.addEventListener("DOMContentLoaded", async () => {
             try {
                 await initializeYearSelector();
-                await syncBoilerStatus()
+                await syncBoilerStatus();
                 await initializeMonthSelector();
-                await fetchCurrentTemperature() 
+                await fetchCurrentTemperature();
                 await updatePowerButton();
+                await loadSchedules();
 
-                await updateCharts();     // niente timeout, stabile
+                await updateCharts();
 
                 lucide.createIcons();
 
@@ -2128,24 +2320,11 @@
             }
         });
 
-
         window.addEventListener('resize', debounce(() => {
             [dailyTemperatureChart, monthlyAverageTemperatureChart, todayTemperatureChart, temperatureChart]
                 .filter(chart => chart)
                 .forEach(chart => chart.resize());
         }, 250));
-
-         function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
     </script>
 </body>
 </html>

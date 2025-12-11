@@ -350,3 +350,67 @@ def debug_boiler_status():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+### -------------------------------
+###  SHELLY SCHEDULE API (GEN3) - FIXED
+### -------------------------------
+
+def shelly_rpc(method, params=None):
+    """Helper per chiamate RPC a Shelly Gen3"""
+    try:
+        payload = {"id": 1, "method": method}
+        if params:
+            payload["params"] = params
+
+        r = requests.post(f"http://{SHELLY_IP}/rpc", json=payload, timeout=3)
+        return r.json()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@sensor_bp.route('/api/shelly/schedules', methods=['GET'])
+def api_shelly_schedules():
+    """Ottiene tutti gli scheduler configurati sullo Shelly"""
+    return jsonify(shelly_rpc("Schedule.List"))
+
+
+@sensor_bp.route('/api/shelly/schedule/create', methods=['POST'])
+def api_shelly_schedule_create():
+    """Crea un nuovo schedule sullo Shelly"""
+    data = request.json
+    timespec = data.get('timespec')
+    is_on = data.get('is_on', True)
+
+    if not timespec:
+        return jsonify({'error': 'Missing timespec parameter'}), 400
+
+    result = shelly_rpc("Schedule.Create", {
+        "enable": True,
+        "timespec": timespec,
+        "calls": [{
+            "method": "Switch.Set",
+            "params": {"id": 0, "on": is_on}
+        }]
+    })
+
+    if "error" in result:
+        return jsonify(result), 500
+
+    return jsonify(result), 200
+
+
+@sensor_bp.route('/api/shelly/schedule/delete', methods=['POST'])
+def api_shelly_schedule_delete():
+    """Elimina uno schedule dallo Shelly"""
+    data = request.json
+    schedule_id = data.get("id")
+
+    if schedule_id is None:
+        return jsonify({'error': 'Missing id parameter'}), 400
+
+    result = shelly_rpc("Schedule.Delete", {"id": schedule_id})
+
+    if "error" in result:
+        return jsonify(result), 500
+
+    return jsonify(result), 200
