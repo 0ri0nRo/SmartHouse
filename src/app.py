@@ -56,7 +56,8 @@ def create_app():
     logger.info("Starting Flask application...")
 
     # Create Flask app instance
-    app = Flask(__name__)
+    # At the top of create_app()
+    app = Flask(__name__, static_folder='static', static_url_path='/static')
 
     # Load configuration
     config = get_config()
@@ -83,6 +84,20 @@ def create_app():
         async_mode='threading'
     )
 
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve the favicon from the static directory."""
+        try:
+            return send_from_directory(
+                os.path.join(app.root_path, 'static'), 
+                'favicon.ico',
+                mimetype='image/vnd.microsoft.icon'
+            )
+        except Exception as e:
+            app.logger.warning(f"Favicon not found: {str(e)}")
+            return '', 404
+
+
     # Initialize Pico logs service
     try:
         pico_log_service = PicoLogService(config['DB_CONFIG'], socketio)
@@ -100,11 +115,6 @@ def create_app():
 
     # Dopo aver creato l'app Flask, registra il blueprint
     app.register_blueprint(activity_bp)
-
-    # Serve favicon
-    @app.route('/favicon.ico')
-    def favicon():
-        return send_from_directory(app.static_folder, 'favicon.ico')
 
     
     # Add a health check endpoint
