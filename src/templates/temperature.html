@@ -1049,67 +1049,6 @@
         </div>
     </div>
 
-<!-- Weekly Scheduler Section -->
-            <div class="chart-card slide-up">
-                <div class="schedule-header">
-                    <div>
-                        <h3 class="chart-title" style="margin-bottom: 0.5rem;">
-                            <i data-lucide="calendar-clock"></i>
-                            Weekly Scheduler
-                        </h3>
-                        <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">
-                            Automate your heating with custom schedules
-                        </p>
-                    </div>
-                    <button class="btn-add" onclick="showScheduleModal()">
-                        <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
-                        New Schedule
-                    </button>
-                </div>
-                
-                <div style="padding: 1rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-                    <div class="schedule-stats">
-                        <div class="stat-item">
-                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-color);">
-                                <i data-lucide="calendar-check" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div>
-                                <div class="stat-value" id="scheduleCount">0</div>
-                                <div class="stat-label">Active Schedules</div>
-                            </div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon" style="background: var(--secondary-light); color: var(--secondary-color);">
-                                <i data-lucide="clock" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div>
-                                <div class="stat-value" id="nextScheduleTime">--:--</div>
-                                <div class="stat-label">Next Activation</div>
-                            </div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon" style="background: var(--accent-light); color: var(--accent-color);">
-                                <i data-lucide="zap" style="width: 20px; height: 20px;"></i>
-                            </div>
-                            <div>
-                                <div class="stat-value" id="weeklyRuntime">0h</div>
-                                <div class="stat-label">Weekly Runtime</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="schedule-grid" id="scheduleList">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📅</div>
-                        <div class="empty-state-text">No schedules configured yet</div>
-                        <button class="btn-add" onclick="showScheduleModal()" style="margin-top: 1rem;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                            Create Your First Schedule
-                        </button>
-                    </div>
-                </div>
-            </div>
     <!-- Notification -->
     <div class="notification" id="notification">
         <span id="notificationText"></span>
