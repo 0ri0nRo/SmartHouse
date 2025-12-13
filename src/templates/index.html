@@ -1113,38 +1113,6 @@
                 </div>
             </article>
 
-            <!-- Enhanced Saldo Card with Visibility Toggle -->
-            <article class="card saldo" id="saldoCard" tabindex="0">
-                <div class="saldo-header">
-                    <h2 class="card-title">Saldo</h2>
-                    <div class="saldo-controls">
-                        <button class="visibility-toggle" id="saldoVisibilityToggle" tabindex="0" aria-label="Toggle balance visibility">
-                            <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="m1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            <svg id="eyeOffIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display: none;">
-                                <path d="m1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <path d="m21 9-9 9"/>
-                                <path d="m21 9-9-9"/>
-                            </svg>
-                        </button>
-                        <div class="card-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <line x1="12" x2="12" y1="2" y2="22"/>
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="card-value" id="saldoValue">•••• €</div>
-                    <div class="card-meta">
-                        <span>Balance</span>
-                        <span class="status-dot online"></span>
-                    </div>
-                </div>
-            </article>
             <!-- Activity Monitor Card -->
 <article class="card activity-monitor" id="activityCard" tabindex="0">
     <div class="card-header">
@@ -1240,62 +1208,6 @@
             setInterval(updateDateTime, 1000);
         }
 
-        // Saldo visibility management
-        let saldoVisible = false;
-        let actualSaldoValue = null;
-        
-        function toggleSaldoVisibility() {
-            const saldoValueElement = document.getElementById("saldoValue");
-            const eyeIcon = document.getElementById("eyeIcon");
-            const eyeOffIcon = document.getElementById("eyeOffIcon");
-            const saldoToggle = document.getElementById("saldoVisibilityToggle");
-            
-            if (saldoVisible) {
-                // Hide saldo
-                saldoValueElement.textContent = "•••• €";
-                saldoValueElement.classList.add("saldo-value-hidden");
-                eyeIcon.style.display = "block";
-                eyeOffIcon.style.display = "none";
-                saldoVisible = false;
-                
-                // Save preference
-                localStorage.setItem('saldoVisible', 'false');
-            } else {
-                // Show saldo
-                if (actualSaldoValue !== null) {
-                    saldoValueElement.textContent = actualSaldoValue;
-                }
-                saldoValueElement.classList.remove("saldo-value-hidden");
-                eyeIcon.style.display = "none";
-                eyeOffIcon.style.display = "block";
-                saldoVisible = true;
-                
-                // Save preference
-                localStorage.setItem('saldoVisible', 'true');
-            }
-            
-            // Add haptic feedback
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
-            }
-        }
-
-        function loadSaldoVisibilityPreference() {
-            const savedPreference = localStorage.getItem('saldoVisible');
-            saldoVisible = savedPreference === 'true';
-            
-            const eyeIcon = document.getElementById("eyeIcon");
-            const eyeOffIcon = document.getElementById("eyeOffIcon");
-            
-            if (saldoVisible) {
-                eyeIcon.style.display = "none";
-                eyeOffIcon.style.display = "block";
-            } else {
-                eyeIcon.style.display = "block";
-                eyeOffIcon.style.display = "none";
-            }
-        }
-
         // Enhanced theme management
         const themeToggle = document.getElementById('themeToggle');
         const body = document.body;
@@ -1335,19 +1247,6 @@
             }
         });
 
-        // Saldo visibility toggle event listeners
-        document.getElementById("saldoVisibilityToggle").addEventListener("click", (e) => {
-            e.stopPropagation(); // Prevent card navigation
-            toggleSaldoVisibility();
-        });
-
-        document.getElementById("saldoVisibilityToggle").addEventListener("keydown", (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleSaldoVisibility();
-            }
-        });
 
         // Card navigation functions
         document.getElementById("temperatureCard").addEventListener("click", () => {
@@ -1399,51 +1298,6 @@
             } catch (error) {
                 console.error('Error fetching data:', error);
                 return null;
-            }
-        }
-
-        // Enhanced fetchSaldoValue with visibility control
-        async function fetchSaldoValue() {
-            const saldoElement = document.getElementById("saldoValue");
-            const saldoCard = document.getElementById("saldoCard");
-            
-            saldoCard.classList.add('loading');
-
-            try {
-                const response = await fetch('/api/p49');
-                const data = await response.json();
-
-                let newSaldoValue = null;
-
-                if (data.cached_value !== undefined && data.cached_value !== null) {
-                    newSaldoValue = `${parseFloat(data.cached_value).toFixed(2)} €`;
-                }
-
-                if (data.P48_value !== undefined && data.P49_value !== null) {
-                    newSaldoValue = `${parseFloat(data.P49_value).toFixed(2)} €`;
-                }
-
-                if (newSaldoValue) {
-                    actualSaldoValue = newSaldoValue;
-                    
-                    // Only show the value if visibility is enabled
-                    if (saldoVisible) {
-                        saldoElement.textContent = actualSaldoValue;
-                    } else {
-                        saldoElement.textContent = "•••• €";
-                    }
-                }
-
-            } catch (error) {
-                console.error("Errore nel recuperare il saldo da P49:", error);
-                actualSaldoValue = "-- €";
-                if (saldoVisible) {
-                    saldoElement.textContent = actualSaldoValue;
-                } else {
-                    saldoElement.textContent = "•••• €";
-                }
-            } finally {
-                saldoCard.classList.remove('loading');
             }
         }
 
@@ -1648,7 +1502,6 @@
         // Enhanced initialization
         function initialize() {
             loadTheme();
-            loadSaldoVisibilityPreference();
             startDateTimeUpdates(); // Start date and time updates
             addCardInteractions();
             
@@ -1657,7 +1510,6 @@
             
             // Staggered data loading for better UX
             setTimeout(() => updateUI(), 100);
-            setTimeout(() => fetchSaldoValue(), 200);
             setTimeout(() => fetchLastAlarmStatus(), 300);
             setTimeout(() => fetchAirQuality(), 400);
         }
@@ -1665,7 +1517,6 @@
         // Auto-refresh data every 5 minutes
         setInterval(() => {
             updateUI();
-            fetchSaldoValue();
             fetchAirQuality();
         }, 5 * 60 * 1000);
 
@@ -1689,7 +1540,6 @@
             if (!document.hidden) {
                 // Refresh data when tab becomes visible
                 updateUI();
-                fetchSaldoValue();
                 fetchAirQuality();
             }
         });
@@ -1698,7 +1548,6 @@
         window.addEventListener('online', () => {
             console.log('Network connection restored');
             updateUI();
-            fetchSaldoValue();
             fetchAirQuality();
         });
 
