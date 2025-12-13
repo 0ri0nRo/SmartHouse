@@ -101,10 +101,10 @@ def create_app():
     # Dopo aver creato l'app Flask, registra il blueprint
     app.register_blueprint(activity_bp)
 
+    # Serve favicon
     @app.route('/favicon.ico')
     def favicon():
-        """Serve favicon from static directory."""
-        return send_from_directory('static', 'favicon.ico')
+        return send_from_directory(app.static_folder, 'favicon.ico')
 
     
     # Add a health check endpoint
