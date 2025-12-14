@@ -130,6 +130,16 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            line-height: 1.5;
+            min-height: 2rem;
+        }
+        
+        .chart-title i {
+            flex-shrink: 0;
+        }
+        
+        .chart-title .badge {
+            flex-shrink: 0;
         }
 
         .chart-description {
@@ -302,13 +312,20 @@
         .badge {
             display: inline-flex;
             align-items: center;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.75rem;
-            font-weight: 500;
+            justify-content: center;
+            padding: 0.35rem 0.85rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            line-height: 1.2;
             border-radius: 9999px;
             background: var(--primary-light);
             color: var(--primary-color);
             margin-left: auto;
+            white-space: nowrap;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.1);
         }
 
         .error-message {
@@ -421,6 +438,26 @@
             font-size: 0.7rem;
             color: var(--text-secondary);
             margin-top: 0.35rem;
+            line-height: 1.4;
+        }
+        
+        /* Status badge improvements */
+        .badge.status-active {
+            background: var(--secondary-light);
+            color: var(--secondary-color);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .badge.status-disabled {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .badge.status-manual {
+            background: var(--accent-light);
+            color: var(--accent-color);
+            border-color: rgba(245, 158, 11, 0.2);
         }
 
         .timer-controls {
@@ -780,7 +817,7 @@
 <body>
     <div class="page-header">
         <div class="dashboard-container">
-            <h1 class="page-title">🌡️ Temperature Dashboard</h1>
+            <h1 class="page-title">Temperature Dashboard</h1>
             <p class="page-subtitle">Integrated heating control and temperature monitoring system</p>
         </div>
     </div>
@@ -1434,25 +1471,39 @@
             if (thermostatEnabled) {
                 button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
                 button.style.background = 'linear-gradient(135deg, var(--danger-color), #dc2626)';
+                
                 badge.textContent = 'Active';
+                badge.className = 'badge status-active';
                 badge.style.background = 'var(--secondary-light)';
                 badge.style.color = 'var(--secondary-color)';
+                badge.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+                
                 status.textContent = 'Thermostat active - monitoring temperature';
                 status.style.color = 'var(--secondary-color)';
-                mainBadge.textContent = 'Auto Mode';
+                
+                mainBadge.textContent = 'Auto';
+                mainBadge.className = 'badge status-active';
                 mainBadge.style.background = 'var(--secondary-light)';
                 mainBadge.style.color = 'var(--secondary-color)';
+                mainBadge.style.borderColor = 'rgba(16, 185, 129, 0.2)';
             } else {
                 button.innerHTML = '<i data-lucide="thermometer" style="width: 16px; height: 16px;"></i> Enable Thermostat';
                 button.style.background = 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))';
+                
                 badge.textContent = 'Disabled';
-                badge.style.background = 'var(--primary-light)';
-                badge.style.color = 'var(--primary-color)';
+                badge.className = 'badge status-disabled';
+                badge.style.background = 'var(--bg-tertiary)';
+                badge.style.color = 'var(--text-secondary)';
+                badge.style.borderColor = 'rgba(0, 0, 0, 0.05)';
+                
                 status.textContent = 'Thermostat disabled';
                 status.style.color = 'var(--text-secondary)';
-                mainBadge.textContent = 'Manual Mode';
-                mainBadge.style.background = 'var(--primary-light)';
-                mainBadge.style.color = 'var(--primary-color)';
+                
+                mainBadge.textContent = 'Manual';
+                mainBadge.className = 'badge status-manual';
+                mainBadge.style.background = 'var(--accent-light)';
+                mainBadge.style.color = 'var(--accent-color)';
+                mainBadge.style.borderColor = 'rgba(245, 158, 11, 0.2)';
             }
 
             lucide.createIcons();
