@@ -5,7 +5,7 @@ from config.settings import get_config
 
 
 class ThermostatDaemon:
-    def __init__(self, check_interval=60, sync_interval=300):
+    def __init__(self, check_interval=30, sync_interval=300):
         self.check_interval = check_interval
         self.sync_interval = sync_interval
 

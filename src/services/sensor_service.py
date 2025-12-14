@@ -18,7 +18,7 @@ class SensorService(BaseService):
         self.db_config = db_config
         self.db = PostgresHandler(db_config)
         self.SHELLY_IP = "192.168.178.165"
-        self.TEMPERATURE_HYSTERESIS = 0.5  # Isteresi di 0.5°C per evitare oscillazioni
+        self.TEMPERATURE_HYSTERESIS = 0.3  # Isteresi di 0.3°C per evitare oscillazioni
 
 
     def get_hourly_today(self):
