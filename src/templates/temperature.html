@@ -780,7 +780,7 @@
 <body>
     <div class="page-header">
         <div class="dashboard-container">
-            <h1 class="page-title">Temperature Dashboard</h1>
+            <h1 class="page-title">🌡️ Temperature Dashboard</h1>
             <p class="page-subtitle">Integrated heating control and temperature monitoring system</p>
         </div>
     </div>
@@ -793,23 +793,25 @@
                     <h3 class="chart-title">
                         <i data-lucide="zap"></i>
                         Boiler Control & Thermostat
-                        <span class="badge">Real-time</span>
+                        <span class="badge" id="mainBadge">Real-time</span>
                     </h3>
-                    <p class="chart-description">Manual and automatic temperature control</p>
+                    <p class="chart-description">Manual and automatic temperature control with intelligent thermostat</p>
                 </div>
 
                 <div style="padding: 1rem;">
-                    <!-- Layout Verticale per Mobile -->
                     <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
                         
                         <!-- Power Display -->
                         <div class="power-display" id="powerDisplay" style="min-height: 150px;">
-                            <div class="power-circle" id="powerCircle" onclick="togglePower()">
+                            <div class="power-circle" id="powerCircle" onclick="manualBoilerToggle()">
                                 <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                             </div>
                             <div class="power-status" id="powerStatus">OFF</div>
+                            <div style="font-size: 0.7rem; color: white; opacity: 0.9; text-align: center;">
+                                Click to toggle manually
+                            </div>
                         </div>
 
                         <!-- Thermostat Control -->
@@ -825,17 +827,17 @@
                                 <!-- Target Temperature -->
                                 <div style="text-align: center; background: var(--primary-light); border-radius: var(--radius-md); padding: 0.75rem;">
                                     <div class="timer-label" style="color: var(--primary-color);">Target</div>
-                                    <div id="targetTempDisplay" style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin: 0.25rem 0;">20°C</div>
+                                    <div id="targetTempDisplay" style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin: 0.25rem 0;">20.0°C</div>
                                 </div>
                             </div>
                             
                             <!-- Adjust Temperature Buttons -->
                             <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <button class="btn" onclick="adjustTargetTemp(-0.5)" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); font-size: 1.25rem; padding: 0.75rem;">
+                                <button class="btn" onclick="adjustTargetTemp(-0.5)" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); padding: 0.75rem;">
                                     <i data-lucide="minus" style="width: 16px; height: 16px;"></i>
                                     -0.5°C
                                 </button>
-                                <button class="btn" onclick="adjustTargetTemp(0.5)" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); font-size: 1.25rem; padding: 0.75rem;">
+                                <button class="btn" onclick="adjustTargetTemp(0.5)" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary); padding: 0.75rem;">
                                     <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                                     +0.5°C
                                 </button>
@@ -843,9 +845,9 @@
                             
                             <!-- Status -->
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
-                                <div>
+                                <div style="flex: 1;">
                                     <div class="timer-status" id="thermostatStatus" style="font-size: 0.7rem; margin: 0;">Thermostat disabled</div>
-                                    <div class="timer-status" id="tempStatus" style="font-size: 0.65rem; margin: 0; opacity: 0.7;">Waiting...</div>
+                                    <div class="timer-status" id="tempStatus" style="font-size: 0.65rem; margin: 0; opacity: 0.7;">Waiting for data...</div>
                                 </div>
                                 <span class="badge" id="thermostatBadge">Disabled</span>
                             </div>
@@ -854,6 +856,12 @@
                             <button id="thermostatToggle" class="btn btn-primary" onclick="toggleThermostat()" style="width: 100%; padding: 0.75rem;">
                                 <i data-lucide="thermometer" style="width: 16px; height: 16px;"></i>
                                 Enable Thermostat
+                            </button>
+
+                            <!-- Sync Button -->
+                            <button id="syncButton" class="btn" onclick="forceSyncWithShelly()" style="width: 100%; padding: 0.5rem; background: var(--bg-tertiary); color: var(--text-primary); font-size: 0.75rem;">
+                                <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                                Sync with Shelly
                             </button>
                         </div>
 
@@ -1049,31 +1057,59 @@
         </div>
     </div>
 
+    <!-- Schedule Modal -->
+    <div class="modal" id="scheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">Create New Schedule</div>
+            <div class="form-group">
+                <label class="form-label">Turn On Time (HH:MM)</label>
+                <input type="time" id="scheduleOnTime" class="form-input" value="07:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Turn Off Time (HH:MM)</label>
+                <input type="time" id="scheduleOffTime" class="form-input" value="22:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Days (e.g., Mon,Tue,Wed,Thu,Fri)</label>
+                <input type="text" id="scheduleDays" class="form-input" placeholder="Mon,Tue,Wed,Thu,Fri">
+            </div>
+            <button class="btn btn-primary" onclick="addSchedule()">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                Create Schedule
+            </button>
+            <button class="btn-secondary" onclick="hideScheduleModal()">Cancel</button>
+        </div>
+    </div>
+
     <!-- Notification -->
     <div class="notification" id="notification">
         <span id="notificationText"></span>
     </div>
 
     <script>
-        const SHELLY_IP = '192.168.178.165';
-        const SENSOR_API = 'https://192.168.178.101:4443/api_sensors';
+        // =============================================================================
+        // CONFIGURATION
+        // =============================================================================
+        const API_BASE = window.location.origin;
+        const SENSOR_API = `${API_BASE}/api_sensors`;
         
+        // State variables
         let isOn = false;
         let schedules = [];
+        let currentTemperature = null;
+        let targetTemperature = 20.0;
+        let thermostatEnabled = false;
+        
+        // Charts
         let dailyTemperatureChart = null;
         let monthlyAverageTemperatureChart = null;
         let todayTemperatureChart = null;
         let temperatureChart = null;
-        
-        // Thermostat variables
-        let currentTemperature = null;
-        let targetTemperature = 20;
-        let thermostatEnabled = false;
-        let thermostatCheckInterval = null;
 
-        // ========== BOILER CONTROL FUNCTIONS ==========
+        // =============================================================================
+        // UTILITY FUNCTIONS
+        // =============================================================================
         
-
         function showNotification(message, type = 'success') {
             const notif = document.getElementById('notification');
             const text = document.getElementById('notificationText');
@@ -1081,559 +1117,6 @@
             notif.className = `notification show ${type}`;
             setTimeout(() => notif.classList.remove('show'), 3000);
         }
-
-
-        async function togglePower() {
-            try {
-                const newState = !isOn;
-                const endpoint = newState ? '/api/thermostat/on' : '/api/thermostat/off';
-
-                // 1. Chiama l'API backend che gestisce Shelly + DB del termostato
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to toggle boiler');
-                }
-
-                const data = await response.json();
-                console.log('Boiler toggled:', data);
-
-                // 2. Aggiorna anche lo stato della caldaia nel DB tramite /api/boiler/set
-                const boilerResponse = await fetch('/api/boiler/set', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ is_on: newState })
-                });
-
-                if (!boilerResponse.ok) {
-                    console.warn('Failed to update boiler status in DB');
-                }
-
-                const boilerData = await boilerResponse.json();
-                console.log('Boiler status updated in DB:', boilerData);
-
-                // 3. Aggiorna stato locale e UI
-                isOn = newState;
-                await updatePowerButton();
-                
-                showNotification(isOn ? 'Boiler turned ON ✓' : 'Boiler turned OFF ✓');
-
-            } catch (error) {
-                showNotification('Error updating boiler status', 'error');
-                console.error('togglePower error:', error);
-            }
-        }
-
-        async function updatePowerButton() {
-            const powerDisplay = document.getElementById('powerDisplay');
-            const powerStatus = document.getElementById('powerStatus');
-            const powerCircle = document.getElementById('powerCircle');
-
-            if (isOn) {
-                powerDisplay.classList.add('on');
-                powerCircle.classList.add('active');
-                powerStatus.textContent = 'ON';
-            } else {
-                powerDisplay.classList.remove('on');
-                powerCircle.classList.remove('active');
-                powerStatus.textContent = 'OFF';
-            }
-        }
-
-    async function syncBoilerStatus() {
-        try {
-        // Leggi lo stato dal database
-        const dbResponse = await fetch('/api/boiler/status', {
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-
-        if (!dbResponse.ok) {
-            console.warn("DB status request failed");
-            return;
-        }
-
-        const dbData = await dbResponse.json();
-        const dbIsOn = dbData.is_on;
-
-
-        //Leggi lo stato da Shelly
-        const shellyResponse = await fetch('/api/thermostat/status', {
-            cache: 'no-cache',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-
-        if (!shellyResponse.ok) {
-            console.warn('Shelly API not reachable, using DB status');
-            if (dbIsOn !== isOn) {
-                isOn = dbIsOn;
-                await updatePowerButton();
-            }
-            return;
-        }
-
-        const shellyData = await shellyResponse.json();
-
-        // Verifica che Shelly abbia restituito "ison"
-        const shellyIsOn = shellyData.ison;
-
-        if (shellyIsOn === undefined) {
-            console.warn("Shelly returned no 'ison' field. Aborting sync.");
-            return;
-        }
-
-
-        // Se c'è discrepanza → Shelly decide la verità
-        if (shellyIsOn !== dbIsOn) {
-            console.warn('Discrepancy detected! DB:', dbIsOn, 'Shelly:', shellyIsOn);
-            console.log('Updating DB using Shelly value...');
-
-            const updateResponse = await fetch('/api/boiler/set', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_on: shellyIsOn })
-            });
-
-            if (updateResponse.ok) {
-                console.log('DB updated to:', shellyIsOn ? 'ON' : 'OFF');
-            } else {
-                console.error('Failed to update DB');
-            }
-        }
-
-
-        // Aggiorna UI solo se cambia davvero
-        if (shellyIsOn !== isOn) {
-            console.log('🔄 Boiler changed:', shellyIsOn ? 'ON' : 'OFF');
-            isOn = shellyIsOn;
-            await updatePowerButton();
-
-            showNotification(
-                isOn ? 'Boiler turned ON (synced)' : 'Boiler turned OFF (synced)',
-                'success'
-            );
-        }
-
-    } catch (error) {
-        console.error('Sync failed:', error);
-    }
-}
-
-        //Carica lo stato iniziale al caricamento della pagina
-        async function loadInitialBoilerStatus() {
-            try {
-                const response = await fetch('/api/boiler/status', {
-                    cache: 'no-cache',
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
-                });
-                
-                if (!response.ok) return;
-
-                const data = await response.json();
-                isOn = data.is_on;
-                await updatePowerButton();
-                console.log('Initial boiler status loaded:', isOn ? 'ON' : 'OFF');
-            } catch (error) {
-                console.error('Failed to load initial boiler status:', error);
-            }
-        }
-
-        // Sincronizza lo stato ogni 5 secondi
-        setInterval(syncBoilerStatus, 10000);
-
-        // ========== THERMOSTAT FUNCTIONS ==========
-        
-        async function fetchCurrentTemperature() {
-            try {
-                const response = await fetch(SENSOR_API, { 
-                    method: 'GET',
-                    cache: 'no-cache'
-                });
-                
-                const data = await response.json();
-                currentTemperature = parseFloat(data.temperature.current);
-                updateTemperatureDisplay();
-
-            } catch (error) {
-                console.error('Error fetching current temperature:', error);
-            }
-        }
-
-        function updateTemperatureDisplay() {
-            const display = document.getElementById('currentTempDisplay');
-            const status = document.getElementById('tempStatus');
-
-            if (currentTemperature !== null) {
-                display.textContent = `${currentTemperature.toFixed(1)}°C`;
-
-                if (thermostatEnabled) {
-                    const diff = targetTemperature - currentTemperature;
-
-                    if (diff > 0.5) {
-                        status.textContent = `Heating needed (+${diff.toFixed(1)}°C)`;
-                        status.style.color = 'var(--danger-color)';
-                        
-                        if (!isOn) {
-                            togglePower();
-                        }
-
-                    } else if (diff < -0.5) {
-                        status.textContent = `Temperature above target (${diff.toFixed(1)}°C)`;
-                        status.style.color = 'var(--secondary-color)';
-
-                        if (isOn) {
-                            togglePower();
-                        }
-
-                    } else {
-                        status.textContent = 'Target temperature reached';
-                        status.style.color = 'var(--secondary-color)';
-
-                        if (isOn) {
-                            togglePower();
-                        }
-                    }
-                } else {
-                    status.textContent = 'Sensor connected';
-                    status.style.color = 'var(--text-secondary)';
-                }
-            }
-        }
-
-        async function loadTargetTemperature() {
-            try {
-                const response = await fetch('/api/target_temperature');
-                if (!response.ok) return;
-
-                const data = await response.json();
-                if (data.target_temperature !== null) {
-                    targetTemperature = parseFloat(data.target_temperature);
-                    document.getElementById('targetTempDisplay').textContent =
-                        `${targetTemperature.toFixed(1)}°C`;
-                }
-            } catch (error) {
-                console.error('Error loading target temperature:', error);
-            }
-        }
-
-        async function sendTargetTemperatureToServer(value) {
-            try {
-                const response = await fetch('https://192.168.178.101:4443/api/target_temperature', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target_temperature: value })
-                });
-
-                const data = await response.json();
-                console.log("Server response:", data);
-
-                if (!response.ok) {
-                    console.error("Error sending target temperature:", data.error);
-                }
-            } catch (error) {
-                console.error("Network error:", error);
-            }
-        }
-
-        function adjustTargetTemp(change) {
-            targetTemperature += change;
-            targetTemperature = Math.max(15, Math.min(30, targetTemperature));
-            document.getElementById('targetTempDisplay').textContent = `${targetTemperature.toFixed(1)}°C`;
-            localStorage.setItem('targetTemperature', targetTemperature);
-            sendTargetTemperatureToServer(targetTemperature);
-            updateTemperatureDisplay();
-        }
-
-        async function toggleThermostat() {
-            thermostatEnabled = !thermostatEnabled;
-
-            const button = document.getElementById('thermostatToggle');
-            const badge = document.getElementById('thermostatBadge');
-            const status = document.getElementById('thermostatStatus');
-
-            if (thermostatEnabled) {
-                button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
-                button.style.background = 'linear-gradient(135deg, var(--danger-color), #dc2626)';
-                badge.textContent = 'Active';
-                badge.style.background = 'var(--secondary-light)';
-                badge.style.color = 'var(--secondary-color)';
-                status.textContent = 'Thermostat active - monitoring temperature';
-                status.style.color = 'var(--secondary-color)';
-
-                startThermostatControl();
-
-                try {
-                    const response = await fetch('/api/thermostat/on', { method: 'POST' });
-                    const data = await response.json();
-                    console.log('Thermostat ON response:', data);
-                } catch (error) {
-                    console.error('Failed to turn on thermostat:', error);
-                }
-
-                showNotification('Thermostat enabled - automatic heating control active');
-
-            } else {
-                button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Enable Thermostat';
-                button.style.background = 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))';
-                badge.textContent = 'Disabled';
-                badge.style.background = 'var(--primary-light)';
-                badge.style.color = 'var(--primary-color)';
-                status.textContent = 'Thermostat disabled';
-                status.style.color = 'var(--text-secondary)';
-
-                stopThermostatControl();
-
-                try {
-                    const response = await fetch('/api/thermostat/off', { method: 'POST' });
-                    const data = await response.json();
-                    console.log('Thermostat OFF response:', data);
-                } catch (error) {
-                    console.error('Failed to turn off thermostat:', error);
-                }
-
-                showNotification('Thermostat disabled');
-            }
-
-            localStorage.setItem('thermostatEnabled', thermostatEnabled);
-            lucide.createIcons();
-        }
-
-        async function thermostatLogic() {
-            if (!thermostatEnabled) return;
-            
-            await fetchCurrentTemperature();
-            if (currentTemperature === null) return;
-            
-            const diff = targetTemperature - currentTemperature;
-            
-            if (diff > 0.5 && !isOn) {
-                await togglePower();
-                showNotification(`Heating activated: ${currentTemperature.toFixed(1)}°C → ${targetTemperature.toFixed(1)}°C`);
-            } else if (diff < -0.2 && isOn) {
-                await togglePower();
-                showNotification(`Target reached: ${currentTemperature.toFixed(1)}°C (target: ${targetTemperature.toFixed(1)}°C)`);
-            }
-        }
-
-        function startThermostatControl() {
-            thermostatLogic();
-            thermostatCheckInterval = setInterval(thermostatLogic, 30000);
-        }
-
-        function stopThermostatControl() {
-            if (thermostatCheckInterval) {
-                clearInterval(thermostatCheckInterval);
-                thermostatCheckInterval = null;
-            }
-        }
-
-        // ========== SCHEDULE FUNCTIONS (FIXED) ==========
-
-    async function loadSchedules() {
-        try {
-            const response = await fetch('/api/shelly/schedules');
-            if (!response.ok) throw new Error('Failed to load schedules');
-            
-            const data = await response.json();
-            // Shelly Gen3 restituisce: { id: 1, result: { jobs: [...] } }
-            schedules = (data.result && data.result.jobs) || data.jobs || [];
-            console.log('Loaded schedules:', schedules);
-            renderSchedules();
-        } catch (error) {
-            console.error('Error loading schedules:', error);
-            showNotification('Failed to load schedules', 'error');
-        }
-    }
-
-function showScheduleModal() {
-    document.getElementById('scheduleModal').classList.add('show');
-}
-
-function hideScheduleModal() {
-    document.getElementById('scheduleModal').classList.remove('show');
-}
-
-async function addSchedule() {
-    const onTime = document.getElementById('scheduleOnTime').value;
-    const offTime = document.getElementById('scheduleOffTime').value;
-    const daysInput = document.getElementById('scheduleDays').value;
-
-    if (!onTime || !offTime || !daysInput) {
-        showNotification('Please fill all fields', 'error');
-        return;
-    }
-
-    // Converti i giorni della settimana in formato Shelly (0-6, dove 0=Domenica)
-    const dayMap = {
-        'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
-    };
-    
-    const selectedDays = daysInput.split(',').map(d => d.trim());
-    const timespecDays = selectedDays.map(day => dayMap[day]).filter(d => d !== undefined);
-
-    if (timespecDays.length === 0) {
-        showNotification('Invalid days format. Use: Mon,Tue,Wed,Thu,Fri,Sat,Sun', 'error');
-        return;
-    }
-
-    // Crea due job: uno per accendere e uno per spegnere
-    const [onHour, onMinute] = onTime.split(':').map(Number);
-    const [offHour, offMinute] = offTime.split(':').map(Number);
-
-    try {
-        // Job per ACCENDERE (is_on: true)
-        const onJobResponse = await fetch('/api/shelly/schedule/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                timespec: `0 ${onMinute} ${onHour} * * ${timespecDays.join(',')}`,
-                is_on: true
-            })
-        });
-
-        if (!onJobResponse.ok) throw new Error('Failed to create ON schedule');
-
-        // Job per SPEGNERE (is_on: false)
-        const offJobResponse = await fetch('/api/shelly/schedule/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                timespec: `0 ${offMinute} ${offHour} * * ${timespecDays.join(',')}`,
-                is_on: false
-            })
-        });
-
-        if (!offJobResponse.ok) throw new Error('Failed to create OFF schedule');
-
-        showNotification('Schedule created successfully');
-        hideScheduleModal();
-        await loadSchedules();
-
-    } catch (error) {
-        console.error('Error creating schedule:', error);
-        showNotification('Failed to create schedule', 'error');
-    }
-}
-
-async function deleteSchedule(scheduleId) {
-    if (!confirm('Are you sure you want to delete this schedule?')) return;
-
-    try {
-        const response = await fetch('/api/shelly/schedule/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: scheduleId })
-        });
-
-        if (!response.ok) throw new Error('Failed to delete schedule');
-
-        showNotification('Schedule deleted successfully');
-        await loadSchedules();
-
-    } catch (error) {
-        console.error('Error deleting schedule:', error);
-        showNotification('Failed to delete schedule', 'error');
-    }
-}
-
-function renderSchedules() {
-    const container = document.getElementById('scheduleList');
-    const count = document.getElementById('scheduleCount');
-    const badge = document.getElementById('scheduleCountBadge');
-    
-    count.textContent = schedules.length;
-    badge.textContent = `${schedules.length} Active`;
-
-    if (schedules.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon">📅</div>
-                <div class="empty-state-text">No schedules configured</div>
-            </div>
-        `;
-        return;
-    }
-
-    // Raggruppa gli schedule ON/OFF per giorni
-    const scheduleGroups = {};
-    schedules.forEach(job => {
-        if (!job.enable) return;
-        
-        const parts = job.timespec.split(' ');
-        if (parts.length < 6) return;
-        
-        const minute = parts[1];
-        const hour = parts[2];
-        const days = parts[5];
-        
-        const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
-        const key = days;
-        
-        if (!scheduleGroups[key]) {
-            scheduleGroups[key] = { days: days, schedules: [] };
-        }
-        
-        const isOn = job.calls && job.calls[0] && job.calls[0].params && job.calls[0].params.on;
-        scheduleGroups[key].schedules.push({ 
-            time, 
-            id: job.id, 
-            isOn: isOn 
-        });
-    });
-
-    // Converti i numeri dei giorni in nomi
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
-    container.innerHTML = Object.entries(scheduleGroups).map(([key, group]) => {
-        const daysNums = key.split(',').map(Number);
-        const daysStr = daysNums.map(n => dayNames[n]).join(', ');
-        
-        // Separa ON e OFF
-        const onSchedules = group.schedules.filter(s => s.isOn);
-        const offSchedules = group.schedules.filter(s => !s.isOn);
-        
-        return `
-            <div class="schedule-item">
-                <div class="schedule-time">
-                    <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
-                    ${onSchedules.length > 0 ? onSchedules.map(s => s.time).join(', ') : '--:--'} 
-                    → 
-                    ${offSchedules.length > 0 ? offSchedules.map(s => s.time).join(', ') : '--:--'}
-                </div>
-                <div class="schedule-days"></div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    ${onSchedules.map(s => `
-                        <button class="btn-delete" onclick="deleteSchedule(${s.id})">
-                            🟢 Delete ON (${s.time})
-                        </button>
-                    `).join('')}
-                    ${offSchedules.map(s => `
-                        <button class="btn-delete" onclick="deleteSchedule(${s.id})">
-                            🔴 Delete OFF (${s.time})
-                        </button>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    lucide.createIcons();
-}
-
-       
-        // ========== CHART FUNCTIONS ==========
 
         function showSpinner(spinnerId) {
             document.getElementById(spinnerId).style.display = 'block';
@@ -1653,10 +1136,532 @@ function renderSchedules() {
             document.getElementById('errorMessage').style.display = 'none';
         }
 
+        // =============================================================================
+        // BOILER CONTROL FUNCTIONS
+        // =============================================================================
+
+        async function manualBoilerToggle() {
+            if (thermostatEnabled) {
+                if (!confirm('Thermostat is currently active. Toggling manually will disable the thermostat. Continue?')) {
+                    return;
+                }
+            }
+
+            try {
+                const newState = !isOn;
+                
+                // Disabilita il termostato se era attivo
+                if (thermostatEnabled) {
+                    await fetch(`${API_BASE}/api/thermostat/off`, { method: 'POST' });
+                    thermostatEnabled = false;
+                    updateThermostatUI();
+                }
+
+                // Toggle manuale caldaia
+                const response = await fetch(`${API_BASE}/api/boiler/manual`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ turn_on: newState })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to toggle boiler');
+                }
+
+                const data = await response.json();
+                console.log('Manual toggle response:', data);
+
+                // Aggiorna stato locale
+                isOn = newState;
+                updatePowerButton();
+                
+                showNotification(
+                    isOn ? 'Boiler turned ON manually ✓' : 'Boiler turned OFF manually ✓'
+                );
+
+            } catch (error) {
+                showNotification('Error toggling boiler', 'error');
+                console.error('manualBoilerToggle error:', error);
+            }
+        }
+
+        async function updatePowerButton() {
+            const powerDisplay = document.getElementById('powerDisplay');
+            const powerStatus = document.getElementById('powerStatus');
+            const powerCircle = document.getElementById('powerCircle');
+
+            if (isOn) {
+                powerDisplay.classList.add('on');
+                powerCircle.classList.add('active');
+                powerStatus.textContent = 'ON';
+            } else {
+                powerDisplay.classList.remove('on');
+                powerCircle.classList.remove('active');
+                powerStatus.textContent = 'OFF';
+            }
+        }
+
+        async function loadInitialBoilerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/boiler/status`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) return;
+
+                const data = await response.json();
+                isOn = data.is_on;
+                await updatePowerButton();
+                console.log('✓ Initial boiler status loaded:', isOn ? 'ON' : 'OFF');
+            } catch (error) {
+                console.error('Failed to load initial boiler status:', error);
+            }
+        }
+
+        async function syncBoilerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/thermostat/sync`, {
+                    method: 'POST',
+                    cache: 'no-cache'
+                });
+
+                if (!response.ok) {
+                    console.warn('Sync request failed');
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Sync completed:', data);
+
+                // Ricarica stato dopo sync
+                await loadInitialBoilerStatus();
+
+            } catch (error) {
+                console.error('Sync failed:', error);
+            }
+        }
+
+        async function forceSyncWithShelly() {
+            const button = document.getElementById('syncButton');
+            const originalHTML = button.innerHTML;
+            
+            button.disabled = true;
+            button.innerHTML = '<i data-lucide="loader-2" style="width: 14px; height: 14px; animation: spin 1s linear infinite;"></i> Syncing...';
+            
+            try {
+                await syncBoilerStatus();
+                showNotification('Synchronized with Shelly successfully', 'success');
+            } catch (error) {
+                showNotification('Sync failed', 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                lucide.createIcons();
+            }
+        }
+
+        // Sync automatico ogni 30 secondi
+        setInterval(syncBoilerStatus, 30000);
+
+        // =============================================================================
+        // THERMOSTAT FUNCTIONS
+        // =============================================================================
+        
+        async function fetchCurrentTemperature() {
+            try {
+                const response = await fetch(SENSOR_API, { 
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                const data = await response.json();
+                currentTemperature = parseFloat(data.temperature.current);
+                updateTemperatureDisplay();
+
+            } catch (error) {
+                console.error('Error fetching current temperature:', error);
+            }
+        }
+
+        async function loadTargetTemperature() {
+            try {
+                const response = await fetch(`${API_BASE}/api/target_temperature`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                if (data.target_temperature !== null && data.target_temperature !== undefined) {
+                    targetTemperature = parseFloat(data.target_temperature);
+                    document.getElementById('targetTempDisplay').textContent =
+                        `${targetTemperature.toFixed(1)}°C`;
+                    console.log('✓ Target temperature loaded:', targetTemperature);
+                }
+            } catch (error) {
+                console.error('Error loading target temperature:', error);
+            }
+        }
+
+        async function loadThermostatStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/thermostat/status/full`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                
+                thermostatEnabled = data.thermostat_enabled || false;
+                
+                if (data.current_temperature !== null) {
+                    currentTemperature = data.current_temperature;
+                }
+                
+                if (data.target_temperature !== null) {
+                    targetTemperature = data.target_temperature;
+                }
+                
+                if (data.boiler_on !== null) {
+                    isOn = data.boiler_on;
+                }
+
+                updateThermostatUI();
+                updateTemperatureDisplay();
+                updatePowerButton();
+                
+                console.log('✓ Thermostat status loaded:', data);
+            } catch (error) {
+                console.error('Error loading thermostat status:', error);
+            }
+        }
+
+        function updateTemperatureDisplay() {
+            const display = document.getElementById('currentTempDisplay');
+            const status = document.getElementById('tempStatus');
+
+            if (currentTemperature !== null) {
+                display.textContent = `${currentTemperature.toFixed(1)}°C`;
+
+                if (thermostatEnabled) {
+                    const diff = targetTemperature - currentTemperature;
+
+                    if (diff > 0.3) {
+                        status.textContent = `Heating needed (+${diff.toFixed(1)}°C)`;
+                        status.style.color = 'var(--danger-color)';
+                    } else if (diff < -0.3) {
+                        status.textContent = `Temperature above target (${diff.toFixed(1)}°C)`;
+                        status.style.color = 'var(--secondary-color)';
+                    } else {
+                        status.textContent = 'Target temperature reached';
+                        status.style.color = 'var(--secondary-color)';
+                    }
+                } else {
+                    status.textContent = 'Sensor connected';
+                    status.style.color = 'var(--text-secondary)';
+                }
+            } else {
+                display.textContent = '--°C';
+                status.textContent = 'Waiting for sensor data...';
+                status.style.color = 'var(--text-secondary)';
+            }
+        }
+
+        async function adjustTargetTemp(change) {
+            targetTemperature += change;
+            targetTemperature = Math.max(15, Math.min(30, targetTemperature));
+            
+            document.getElementById('targetTempDisplay').textContent = `${targetTemperature.toFixed(1)}°C`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/target_temperature`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_temperature: targetTemperature })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update target temperature');
+                }
+
+                const data = await response.json();
+                console.log("Target temperature updated:", data);
+                
+                updateTemperatureDisplay();
+                
+            } catch (error) {
+                console.error("Error updating target temperature:", error);
+                showNotification('Error updating target temperature', 'error');
+            }
+        }
+
+        async function toggleThermostat() {
+            const newState = !thermostatEnabled;
+
+            try {
+                const endpoint = newState ? '/api/thermostat/on' : '/api/thermostat/off';
+                const response = await fetch(`${API_BASE}${endpoint}`, { 
+                    method: 'POST' 
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to toggle thermostat');
+                }
+
+                const data = await response.json();
+                console.log('Thermostat toggle response:', data);
+
+                thermostatEnabled = newState;
+                updateThermostatUI();
+
+                showNotification(
+                    thermostatEnabled 
+                        ? 'Thermostat enabled - automatic control active' 
+                        : 'Thermostat disabled'
+                );
+
+            } catch (error) {
+                console.error('Failed to toggle thermostat:', error);
+                showNotification('Error toggling thermostat', 'error');
+            }
+        }
+
+        function updateThermostatUI() {
+            const button = document.getElementById('thermostatToggle');
+            const badge = document.getElementById('thermostatBadge');
+            const status = document.getElementById('thermostatStatus');
+            const mainBadge = document.getElementById('mainBadge');
+
+            if (thermostatEnabled) {
+                button.innerHTML = '<i data-lucide="power" style="width: 16px; height: 16px;"></i> Disable Thermostat';
+                button.style.background = 'linear-gradient(135deg, var(--danger-color), #dc2626)';
+                badge.textContent = 'Active';
+                badge.style.background = 'var(--secondary-light)';
+                badge.style.color = 'var(--secondary-color)';
+                status.textContent = 'Thermostat active - monitoring temperature';
+                status.style.color = 'var(--secondary-color)';
+                mainBadge.textContent = 'Auto Mode';
+                mainBadge.style.background = 'var(--secondary-light)';
+                mainBadge.style.color = 'var(--secondary-color)';
+            } else {
+                button.innerHTML = '<i data-lucide="thermometer" style="width: 16px; height: 16px;"></i> Enable Thermostat';
+                button.style.background = 'linear-gradient(135deg, var(--primary-color), var(--primary-hover))';
+                badge.textContent = 'Disabled';
+                badge.style.background = 'var(--primary-light)';
+                badge.style.color = 'var(--primary-color)';
+                status.textContent = 'Thermostat disabled';
+                status.style.color = 'var(--text-secondary)';
+                mainBadge.textContent = 'Manual Mode';
+                mainBadge.style.background = 'var(--primary-light)';
+                mainBadge.style.color = 'var(--primary-color)';
+            }
+
+            lucide.createIcons();
+        }
+
+        // Aggiorna temperatura ogni 10 secondi
+        setInterval(fetchCurrentTemperature, 10000);
+        
+        // Aggiorna stato termostato ogni 15 secondi
+        setInterval(loadThermostatStatus, 15000);
+
+        // =============================================================================
+        // SCHEDULE FUNCTIONS
+        // =============================================================================
+
+        async function loadSchedules() {
+            try {
+                const response = await fetch(`${API_BASE}/api/shelly/schedules`);
+                if (!response.ok) throw new Error('Failed to load schedules');
+                
+                const data = await response.json();
+                schedules = (data.result && data.result.jobs) || data.jobs || [];
+                console.log('✓ Loaded schedules:', schedules.length);
+                renderSchedules();
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+                showNotification('Failed to load schedules', 'error');
+            }
+        }
+
+        function showScheduleModal() {
+            document.getElementById('scheduleModal').classList.add('show');
+            lucide.createIcons();
+        }
+
+        function hideScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('show');
+        }
+
+        async function addSchedule() {
+            const onTime = document.getElementById('scheduleOnTime').value;
+            const offTime = document.getElementById('scheduleOffTime').value;
+            const daysInput = document.getElementById('scheduleDays').value;
+
+            if (!onTime || !offTime || !daysInput) {
+                showNotification('Please fill all fields', 'error');
+                return;
+            }
+
+            const dayMap = {
+                'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+            };
+            
+            const selectedDays = daysInput.split(',').map(d => d.trim());
+            const timespecDays = selectedDays.map(day => dayMap[day]).filter(d => d !== undefined);
+
+            if (timespecDays.length === 0) {
+                showNotification('Invalid days format. Use: Mon,Tue,Wed,Thu,Fri,Sat,Sun', 'error');
+                return;
+            }
+
+            const [onHour, onMinute] = onTime.split(':').map(Number);
+            const [offHour, offMinute] = offTime.split(':').map(Number);
+
+            try {
+                // Job per ACCENDERE
+                const onJobResponse = await fetch(`${API_BASE}/api/shelly/schedule/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        timespec: `0 ${onMinute} ${onHour} * * ${timespecDays.join(',')}`,
+                        is_on: true
+                    })
+                });
+
+                if (!onJobResponse.ok) throw new Error('Failed to create ON schedule');
+
+                // Job per SPEGNERE
+                const offJobResponse = await fetch(`${API_BASE}/api/shelly/schedule/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        timespec: `0 ${offMinute} ${offHour} * * ${timespecDays.join(',')}`,
+                        is_on: false
+                    })
+                });
+
+                if (!offJobResponse.ok) throw new Error('Failed to create OFF schedule');
+
+                showNotification('Schedule created successfully');
+                hideScheduleModal();
+                await loadSchedules();
+
+            } catch (error) {
+                console.error('Error creating schedule:', error);
+                showNotification('Failed to create schedule', 'error');
+            }
+        }
+
+        async function deleteSchedule(scheduleId) {
+            if (!confirm('Are you sure you want to delete this schedule?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/shelly/schedule/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: scheduleId })
+                });
+
+                if (!response.ok) throw new Error('Failed to delete schedule');
+
+                showNotification('Schedule deleted successfully');
+                await loadSchedules();
+
+            } catch (error) {
+                console.error('Error deleting schedule:', error);
+                showNotification('Failed to delete schedule', 'error');
+            }
+        }
+
+        function renderSchedules() {
+            const container = document.getElementById('scheduleList');
+            const count = document.getElementById('scheduleCount');
+            const badge = document.getElementById('scheduleCountBadge');
+            
+            count.textContent = schedules.length;
+            badge.textContent = `${schedules.length} Active`;
+
+            if (schedules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">No schedules configured</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const scheduleGroups = {};
+            schedules.forEach(job => {
+                if (!job.enable) return;
+                
+                const parts = job.timespec.split(' ');
+                if (parts.length < 6) return;
+                
+                const minute = parts[1];
+                const hour = parts[2];
+                const days = parts[5];
+                
+                const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+                const key = days;
+                
+                if (!scheduleGroups[key]) {
+                    scheduleGroups[key] = { days: days, schedules: [] };
+                }
+                
+                const isOn = job.calls && job.calls[0] && job.calls[0].params && job.calls[0].params.on;
+                scheduleGroups[key].schedules.push({ 
+                    time, 
+                    id: job.id, 
+                    isOn: isOn 
+                });
+            });
+
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            container.innerHTML = Object.entries(scheduleGroups).map(([key, group]) => {
+                const daysNums = key.split(',').map(Number);
+                const daysStr = daysNums.map(n => dayNames[n]).join(', ');
+                
+                const onSchedules = group.schedules.filter(s => s.isOn);
+                const offSchedules = group.schedules.filter(s => !s.isOn);
+                
+                return `
+                    <div class="schedule-item">
+                        <div class="schedule-time">
+                            <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                            ${onSchedules.length > 0 ? onSchedules.map(s => s.time).join(', ') : '--:--'} 
+                            → 
+                            ${offSchedules.length > 0 ? offSchedules.map(s => s.time).join(', ') : '--:--'}
+                        </div>
+                        <div class="schedule-days">${daysStr}</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            ${onSchedules.map(s => `
+                                <button class="btn-delete" onclick="deleteSchedule(${s.id})">
+                                    🟢 Delete ON
+                                </button>
+                            `).join('')}
+                            ${offSchedules.map(s => `
+                                <button class="btn-delete" onclick="deleteSchedule(${s.id})">
+                                    🔴 Delete OFF
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+        }
+
+        // =============================================================================
+        // CHART FUNCTIONS
+        // =============================================================================
+
         async function fetchDailyTemperatureData(month, year) {
             try {
                 showSpinner('dailySpinner');
-                const response = await fetch(`/api/monthly_average_temperature/${month}/${year}`);
+                const response = await fetch(`${API_BASE}/api/monthly_average_temperature/${month}/${year}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
@@ -1670,7 +1675,7 @@ function renderSchedules() {
         async function fetchMonthlyAverageTemperatureData(year) {
             try {
                 showSpinner('monthlySpinner');
-                const response = await fetch(`/api/monthly_average_temperature/${year}`);
+                const response = await fetch(`${API_BASE}/api/monthly_average_temperature/${year}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
@@ -1684,7 +1689,7 @@ function renderSchedules() {
         async function fetchTodayTemperatureData() {
             try {
                 showSpinner('todaySpinner');
-                const response = await fetch(`/api/today_temperature`);
+                const response = await fetch(`${API_BASE}/api/today_temperature`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
@@ -1699,7 +1704,7 @@ function renderSchedules() {
             try {
                 showSpinner('rangeSpinner');
                 hideError();
-                const response = await fetch(`/api/temperature_average/${startDate}/${endDate}`);
+                const response = await fetch(`${API_BASE}/api/temperature_average/${startDate}/${endDate}`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             } catch (error) {
@@ -2178,6 +2183,10 @@ function renderSchedules() {
             }
         }
 
+        // =============================================================================
+        // EVENT LISTENERS
+        // =============================================================================
+
         document.getElementById('updateChartsButton').addEventListener('click', updateCharts);
 
         document.getElementById('compareCheckbox').addEventListener('change', function() {
@@ -2223,6 +2232,13 @@ function renderSchedules() {
             }
         });
 
+        // Close modal quando si clicca fuori
+        document.getElementById('scheduleModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideScheduleModal();
+            }
+        });
+
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -2234,36 +2250,44 @@ function renderSchedules() {
                 timeout = setTimeout(later, wait);
             };
         }
-        
-        setInterval(fetchCurrentTemperature, 10000);
-
-        // ========== INITIALIZATION ==========
-
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                await initializeYearSelector();
-                await syncBoilerStatus();
-                await initializeMonthSelector();
-                await fetchCurrentTemperature();
-                await updatePowerButton();
-                await loadSchedules();
-
-                await updateCharts();
-
-                lucide.createIcons();
-
-                console.log("Dashboard initialized successfully");
-            } catch (error) {
-                console.error("Error initializing dashboard:", error);
-                showError("Failed to initialize dashboard. Please refresh the page.");
-            }
-        });
 
         window.addEventListener('resize', debounce(() => {
             [dailyTemperatureChart, monthlyAverageTemperatureChart, todayTemperatureChart, temperatureChart]
                 .filter(chart => chart)
                 .forEach(chart => chart.resize());
         }, 250));
+
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                console.log('🚀 Initializing dashboard...');
+                
+                // Initialize selectors
+                await initializeYearSelector();
+                await initializeMonthSelector();
+                
+                // Load initial states
+                await loadInitialBoilerStatus();
+                await loadTargetTemperature();
+                await loadThermostatStatus();
+                await fetchCurrentTemperature();
+                await loadSchedules();
+
+                // Render charts
+                await updateCharts();
+
+                // Initialize icons
+                lucide.createIcons();
+
+                console.log('✅ Dashboard initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing dashboard:', error);
+                showError("Failed to initialize dashboard. Please refresh the page.");
+            }
+        });
     </script>
 </body>
 </html>

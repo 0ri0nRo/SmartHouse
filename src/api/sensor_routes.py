@@ -414,3 +414,92 @@ def api_shelly_schedule_delete():
         return jsonify(result), 500
 
     return jsonify(result), 200
+
+@sensor_bp.route('/api/thermostat/status/full', methods=['GET'])
+@handle_db_error
+def api_thermostat_status_full():
+    """API per ottenere lo stato completo del termostato."""
+    status = sensor_service.get_thermostat_status_full()
+    if status is None:
+        return jsonify({'error': 'Error retrieving thermostat status'}), 500
+    return jsonify(status), 200
+
+
+@sensor_bp.route('/api/thermostat/control', methods=['POST'])
+@handle_db_error
+def api_thermostat_manual_control():
+    """
+    API per eseguire manualmente un ciclo di controllo del termostato.
+    Utile per testing o per forzare un controllo immediato.
+    """
+    result = sensor_service.thermostat_control_logic()
+    return jsonify(result), 200
+
+
+@sensor_bp.route('/api/thermostat/sync', methods=['POST'])
+@handle_db_error
+def api_thermostat_sync():
+    """API per sincronizzare manualmente lo stato con Shelly."""
+    success = sensor_service.sync_boiler_with_shelly()
+    
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Synchronization completed'
+        }), 200
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Synchronization failed'
+        }), 500
+
+
+@sensor_bp.route('/api/thermostat/log', methods=['GET'])
+@handle_db_error
+def api_thermostat_log():
+    """API per ottenere il log delle azioni del termostato."""
+    limit = request.args.get('limit', 50, type=int)
+    log_entries = sensor_service.db.get_thermostat_log(limit)
+    return jsonify(log_entries), 200
+
+
+@sensor_bp.route('/api/boiler/manual', methods=['POST'])
+@handle_db_error
+def api_boiler_manual_control():
+    """
+    API per controllo manuale della caldaia (bypass del termostato).
+    ATTENZIONE: Questa operazione ignora il termostato!
+    """
+    data = request.get_json()
+    
+    if not data or 'turn_on' not in data:
+        return jsonify({'error': 'Missing turn_on parameter'}), 400
+    
+    turn_on = bool(data['turn_on'])
+    
+    # Disabilita il termostato per evitare conflitti
+    sensor_service.set_thermostat_enabled(False)
+    
+    # Controlla fisicamente lo Shelly
+    shelly_success = sensor_service.control_shelly_relay(turn_on)
+    
+    if not shelly_success:
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to control Shelly relay'
+        }), 500
+    
+    # Aggiorna stato nel DB
+    sensor_service.set_boiler_status(turn_on)
+    
+    # Log dell'azione manuale
+    sensor_service.db.log_thermostat_action(
+        action="MANUAL_CONTROL",
+        boiler_status=turn_on
+    )
+    
+    return jsonify({
+        'status': 'success',
+        'message': f'Boiler turned {"on" if turn_on else "off"} manually',
+        'thermostat_disabled': True
+    }), 200

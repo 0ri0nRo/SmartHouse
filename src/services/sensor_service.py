@@ -1,10 +1,11 @@
 import psycopg2
 import psycopg2.extras
-from datetime import datetime
+from datetime import datetime, timedelta
 from models.database import BaseService
 import logging
 from client.PostgresClient import PostgresHandler
 from config.settings import get_config
+import requests
 
 config = get_config()  # senza argomenti
 db_config = config['DB_CONFIG']  # estrai la sezione DB_CONFIG
@@ -16,6 +17,9 @@ class SensorService(BaseService):
     def __init__(self, db_config):
         self.db_config = db_config
         self.db = PostgresHandler(db_config)
+        self.SHELLY_IP = "192.168.178.165"
+        self.TEMPERATURE_HYSTERESIS = 0.5  # Isteresi di 0.5°C per evitare oscillazioni
+
 
     def get_hourly_today(self):
         """Gets hourly data for today"""
@@ -286,3 +290,266 @@ class SensorService(BaseService):
         except Exception as e:
             print(f"❌ DB error set_boiler_status: {e}")
             return False
+    
+
+    def get_target_temperature(self):
+        """Ottiene la temperatura target dal database."""
+        return self.db.get_target_temperature()
+
+
+    def set_target_temperature(self, value):
+        """Imposta la temperatura target nel database."""
+        success = self.db.set_target_temperature(value)
+        if success:
+            self.db.log_thermostat_action(
+                action="TARGET_TEMP_CHANGED",
+                target_temp=value
+            )
+        return success
+
+
+    def get_thermostat_enabled(self):
+        """Verifica se il termostato è abilitato."""
+        return self.db.get_thermostat_status()
+
+
+    def set_thermostat_enabled(self, enabled):
+        """Abilita o disabilita il termostato."""
+        success = self.db.set_thermostat_status(enabled)
+        if success:
+            self.db.log_thermostat_action(
+                action="THERMOSTAT_ENABLED" if enabled else "THERMOSTAT_DISABLED"
+            )
+        return success
+
+
+    def get_boiler_status(self):
+        """Ottiene lo stato corrente della caldaia."""
+        return self.db.get_boiler_status()
+
+
+    def set_boiler_status(self, is_on):
+        """Imposta lo stato della caldaia."""
+        return self.db.set_boiler_status(is_on)
+
+
+    def control_shelly_relay(self, turn_on):
+        """Controlla il relay Shelly (accende/spegne la caldaia fisicamente)."""
+        try:
+            action = "on" if turn_on else "off"
+            url = f"http://{self.SHELLY_IP}/relay/0?turn={action}"
+            response = requests.get(url, timeout=3)
+            
+            if response.status_code == 200:
+                return True
+            else:
+                logger.error(f"Errore Shelly: status code {response.status_code}")
+                return False
+                
+        except requests.RequestException as e:
+            logger.error(f"Errore comunicazione con Shelly: {e}")
+            return False
+
+
+    def get_shelly_status(self):
+        """Ottiene lo stato corrente del relay Shelly."""
+        try:
+            url = f"http://{self.SHELLY_IP}/relay/0"
+            response = requests.get(url, timeout=3)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("ison", False)
+            else:
+                return None
+                
+        except requests.RequestException as e:
+            logger.error(f"Errore lettura stato Shelly: {e}")
+            return None
+
+
+    def thermostat_control_logic(self):
+        """
+        Logica principale del termostato.
+        Confronta temperatura corrente con target e controlla la caldaia.
+        Usa isteresi per evitare oscillazioni continue.
+        """
+        try:
+            # Verifica se il termostato è abilitato
+            thermostat_enabled = self.get_thermostat_enabled()
+            if not thermostat_enabled:
+                logger.info("Termostato disabilitato, nessuna azione")
+                return {
+                    'action': 'none',
+                    'reason': 'thermostat_disabled'
+                }
+            
+            # Ottieni temperatura corrente e target
+            current_temp = self.db.get_current_temperature()
+            target_temp = self.get_target_temperature()
+            
+            if current_temp is None:
+                logger.error("Impossibile leggere la temperatura corrente")
+                return {
+                    'action': 'error',
+                    'reason': 'no_temperature_reading'
+                }
+            
+            if target_temp is None:
+                logger.error("Temperatura target non impostata")
+                return {
+                    'action': 'error',
+                    'reason': 'no_target_temperature'
+                }
+            
+            # Ottieni stato corrente della caldaia
+            current_boiler_status = self.get_boiler_status()
+            
+            # Calcola la differenza di temperatura
+            temp_diff = target_temp - current_temp
+            
+            logger.info(f"Termostato check - Corrente: {current_temp}°C, Target: {target_temp}°C, Diff: {temp_diff:.2f}°C")
+            
+            # Logica con isteresi
+            action_taken = None
+            
+            if current_boiler_status:
+                # Caldaia accesa: spegni se temperatura raggiunta (con isteresi)
+                if temp_diff <= -self.TEMPERATURE_HYSTERESIS:
+                    logger.info(f"Temperatura raggiunta ({current_temp}°C >= {target_temp}°C), spegnimento caldaia")
+                    
+                    # Spegni il relay Shelly
+                    shelly_success = self.control_shelly_relay(False)
+                    
+                    if shelly_success:
+                        # Aggiorna stato nel DB
+                        self.set_boiler_status(False)
+                        
+                        # Log dell'azione
+                        self.db.log_thermostat_action(
+                            action="BOILER_TURNED_OFF",
+                            current_temp=current_temp,
+                            target_temp=target_temp,
+                            boiler_status=False
+                        )
+                        
+                        action_taken = 'turned_off'
+                    else:
+                        logger.error("Impossibile spegnere il relay Shelly")
+                        action_taken = 'error_turning_off'
+            else:
+                # Caldaia spenta: accendi se temperatura troppo bassa (con isteresi)
+                if temp_diff >= self.TEMPERATURE_HYSTERESIS:
+                    logger.info(f"Temperatura bassa ({current_temp}°C < {target_temp}°C), accensione caldaia")
+                    
+                    # Accendi il relay Shelly
+                    shelly_success = self.control_shelly_relay(True)
+                    
+                    if shelly_success:
+                        # Aggiorna stato nel DB
+                        self.set_boiler_status(True)
+                        
+                        # Log dell'azione
+                        self.db.log_thermostat_action(
+                            action="BOILER_TURNED_ON",
+                            current_temp=current_temp,
+                            target_temp=target_temp,
+                            boiler_status=True
+                        )
+                        
+                        action_taken = 'turned_on'
+                    else:
+                        logger.error("Impossibile accendere il relay Shelly")
+                        action_taken = 'error_turning_on'
+            
+            if action_taken is None:
+                action_taken = 'no_change'
+                logger.info("Temperatura nel range di isteresi, nessuna azione necessaria")
+            
+            return {
+                'action': action_taken,
+                'current_temp': current_temp,
+                'target_temp': target_temp,
+                'temp_diff': temp_diff,
+                'boiler_status': self.get_boiler_status()
+            }
+            
+        except Exception as e:
+            logger.error(f"Errore nella logica del termostato: {e}")
+            return {
+                'action': 'error',
+                'reason': str(e)
+            }
+
+
+    def sync_boiler_with_shelly(self):
+        """
+        Sincronizza lo stato della caldaia nel DB con lo stato reale dello Shelly.
+        Usa questa funzione per risolvere eventuali discrepanze.
+        """
+        try:
+            # Leggi stato reale dallo Shelly
+            shelly_status = self.get_shelly_status()
+            
+            if shelly_status is None:
+                logger.warning("Impossibile leggere stato Shelly per sincronizzazione")
+                return False
+            
+            # Leggi stato dal DB
+            db_status = self.get_boiler_status()
+            
+            # Se c'è discrepanza, aggiorna il DB
+            if shelly_status != db_status:
+                logger.warning(f"Discrepanza rilevata! DB: {db_status}, Shelly: {shelly_status}")
+                logger.info(f"Aggiornamento DB con stato Shelly: {shelly_status}")
+                
+                self.set_boiler_status(shelly_status)
+                
+                self.db.log_thermostat_action(
+                    action="SYNC_DB_WITH_SHELLY",
+                    boiler_status=shelly_status
+                )
+                
+                return True
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Errore durante la sincronizzazione: {e}")
+            return False
+
+
+    def get_thermostat_status_full(self):
+        """Ottiene lo stato completo del termostato per il frontend."""
+        try:
+            current_temp = self.db.get_current_temperature()
+            target_temp = self.get_target_temperature()
+            thermostat_enabled = self.get_thermostat_enabled()
+            boiler_on = self.get_boiler_status()
+            
+            status = {
+                'current_temperature': current_temp,
+                'target_temperature': target_temp,
+                'thermostat_enabled': thermostat_enabled,
+                'boiler_on': boiler_on,
+                'temp_diff': None,
+                'status_text': 'Unknown'
+            }
+            
+            if current_temp is not None and target_temp is not None:
+                status['temp_diff'] = target_temp - current_temp
+                
+                if not thermostat_enabled:
+                    status['status_text'] = 'Thermostat disabled'
+                elif status['temp_diff'] > self.TEMPERATURE_HYSTERESIS:
+                    status['status_text'] = 'Heating needed'
+                elif status['temp_diff'] < -self.TEMPERATURE_HYSTERESIS:
+                    status['status_text'] = 'Temperature above target'
+                else:
+                    status['status_text'] = 'Target temperature reached'
+            
+            return status
+            
+        except Exception as e:
+            logger.error(f"Errore get_thermostat_status_full: {e}")
+            return None
