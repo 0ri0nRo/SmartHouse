@@ -19,6 +19,7 @@ class PostgresHandler:
         self.cursor = None
         self.connect_to_db()
         self.create_table_if_not_exists()
+        self.create_thermostat_tables()
     
     def _connect(self):
         return psycopg2.connect(**self.db_config)
@@ -684,3 +685,212 @@ class PostgresHandler:
         finally:
             if cur: cur.close()
             if conn: conn.close()
+    
+    def get_thermostat_status(self):
+        """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
+        query = "SELECT enabled FROM thermostat_status ORDER BY updated_at DESC LIMIT 1;"
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query)
+            row = self.cursor.fetchone()
+            if row:
+                return bool(row[0])
+            return False
+        except Exception as e:
+            logger.error(f"Errore get_thermostat_status: {e}")
+            return False
+
+
+    def set_thermostat_status(self, enabled):
+        """Imposta lo stato del termostato (abilitato/disabilitato)."""
+        query = "UPDATE thermostat_status SET enabled=%s, updated_at=NOW() WHERE id=1;"
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query, (enabled,))
+            self.connection.commit()
+            logger.info(f"Stato termostato impostato: {enabled}")
+            return True
+        except Exception as e:
+            logger.error(f"Errore set_thermostat_status: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+
+
+    def get_boiler_status(self):
+        """Ottiene lo stato corrente della caldaia (accesa/spenta)."""
+        query = "SELECT is_on FROM boiler_status ORDER BY updated_at DESC LIMIT 1;"
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query)
+            row = self.cursor.fetchone()
+            if row:
+                return bool(row[0])
+            return False
+        except Exception as e:
+            logger.error(f"Errore get_boiler_status: {e}")
+            return False
+
+
+    def set_boiler_status(self, is_on):
+        """Imposta lo stato della caldaia (accesa/spenta)."""
+        query = """
+        INSERT INTO boiler_status (is_on, updated_at) 
+        VALUES (%s, NOW())
+        ON CONFLICT (id) 
+        DO UPDATE SET is_on = EXCLUDED.is_on, updated_at = EXCLUDED.updated_at;
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query, (is_on,))
+            self.connection.commit()
+            logger.info(f"Stato caldaia impostato: {is_on}")
+            return True
+        except Exception as e:
+            logger.error(f"Errore set_boiler_status: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+
+
+    def get_current_temperature(self):
+        """Ottiene la temperatura corrente dal sensore."""
+        query = """
+        SELECT temperature_c 
+        FROM sensor_readings 
+        ORDER BY timestamp DESC 
+        LIMIT 1;
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query)
+            row = self.cursor.fetchone()
+            if row:
+                return float(row[0])
+            return None
+        except Exception as e:
+            logger.error(f"Errore get_current_temperature: {e}")
+            return None
+
+
+    def create_thermostat_tables(self):
+        """Crea le tabelle necessarie per il termostato se non esistono."""
+        try:
+            self._ensure_connection()
+            
+            # Tabella per la temperatura target
+            create_target_temp_query = """
+            CREATE TABLE IF NOT EXISTS target_temperature (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                value FLOAT NOT NULL DEFAULT 20.0,
+                updated_at TIMESTAMP DEFAULT NOW(),
+                CONSTRAINT single_row CHECK (id = 1)
+            );
+            
+            -- Inserisci valore di default se la tabella è vuota
+            INSERT INTO target_temperature (id, value, updated_at)
+            VALUES (1, 20.0, NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """
+            
+            # Tabella per lo stato del termostato
+            create_thermostat_status_query = """
+            CREATE TABLE IF NOT EXISTS thermostat_status (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                updated_at TIMESTAMP DEFAULT NOW(),
+                CONSTRAINT single_row CHECK (id = 1)
+            );
+            
+            -- Inserisci valore di default se la tabella è vuota
+            INSERT INTO thermostat_status (id, enabled, updated_at)
+            VALUES (1, FALSE, NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """
+            
+            # Tabella per lo stato della caldaia
+            create_boiler_status_query = """
+            CREATE TABLE IF NOT EXISTS boiler_status (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                is_on BOOLEAN NOT NULL DEFAULT FALSE,
+                updated_at TIMESTAMP DEFAULT NOW(),
+                CONSTRAINT single_row CHECK (id = 1)
+            );
+            
+            -- Inserisci valore di default se la tabella è vuota
+            INSERT INTO boiler_status (id, is_on, updated_at)
+            VALUES (1, FALSE, NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """
+            
+            # Tabella per il log delle azioni del termostato
+            create_thermostat_log_query = """
+            CREATE TABLE IF NOT EXISTS thermostat_log (
+                id SERIAL PRIMARY KEY,
+                action VARCHAR(50) NOT NULL,
+                current_temp FLOAT,
+                target_temp FLOAT,
+                boiler_status BOOLEAN,
+                timestamp TIMESTAMP DEFAULT NOW()
+            );
+            
+            -- Crea indice per migliorare le query
+            CREATE INDEX IF NOT EXISTS idx_thermostat_log_timestamp 
+            ON thermostat_log(timestamp DESC);
+            """
+            
+            self.cursor.execute(create_target_temp_query)
+            self.cursor.execute(create_thermostat_status_query)
+            self.cursor.execute(create_boiler_status_query)
+            self.cursor.execute(create_thermostat_log_query)
+            
+            self.connection.commit()
+            logger.info("Tabelle termostato create/verificate correttamente")
+            
+        except Exception as e:
+            logger.error(f"Errore durante la creazione delle tabelle termostato: {e}")
+            if self.connection:
+                self.connection.rollback()
+            raise
+
+
+    def log_thermostat_action(self, action, current_temp=None, target_temp=None, boiler_status=None):
+        """Registra un'azione del termostato nel log."""
+        query = """
+        INSERT INTO thermostat_log (action, current_temp, target_temp, boiler_status, timestamp)
+        VALUES (%s, %s, %s, %s, NOW())
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query, (action, current_temp, target_temp, boiler_status))
+            self.connection.commit()
+        except Exception as e:
+            logger.error(f"Errore log_thermostat_action: {e}")
+            if self.connection:
+                self.connection.rollback()
+
+
+    def get_thermostat_log(self, limit=50):
+        """Ottiene gli ultimi N record del log del termostato."""
+        query = """
+        SELECT action, current_temp, target_temp, boiler_status, timestamp
+        FROM thermostat_log
+        ORDER BY timestamp DESC
+        LIMIT %s;
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query, (limit,))
+            rows = self.cursor.fetchall()
+            
+            return [{
+                'action': row[0],
+                'current_temp': float(row[1]) if row[1] is not None else None,
+                'target_temp': float(row[2]) if row[2] is not None else None,
+                'boiler_status': bool(row[3]) if row[3] is not None else None,
+                'timestamp': row[4].isoformat() if row[4] else None
+            } for row in rows]
+            
+        except Exception as e:
+            logger.error(f"Errore get_thermostat_log: {e}")
+            return []

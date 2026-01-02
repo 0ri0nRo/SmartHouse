@@ -57,12 +57,18 @@ class GoogleSheetExpenseManager:
         ws.update(cell_range, [new_row], value_input_option="USER_ENTERED")
         print(f"Expense '{name}' added to sheet '{ws.title}' on row {first_empty_row}")
 
-    def get_summary_expenses(self, summary_sheet_name="2025 Expenses"):
+
+    def get_summary_expenses(self, year=None):
         """
-        Extracts data from the summary worksheet (e.g., '2025 Expenses') and returns a dictionary
-        with expenses per category and month, including total and average.
+        Extracts data from the summary worksheet for the specified year (default: current year)
+        and returns a dictionary with expenses per category and month, including total and average.
         Only predefined categories are considered.
         """
+        if year is None:
+            year = datetime.now().year  # Use current year if not provided
+
+        summary_sheet_name = f"{year} Expenses"
+
         valid_categories = {
             "Housing", "Leisure", "Health", "Transport", "University", "Bar", "Clothing",
             "Groceries", "Gifts", "Fees", "Bills", "Buoni pasto", "Other", "Restaurants", "Vacation"
@@ -108,7 +114,6 @@ class GoogleSheetExpenseManager:
                 continue
 
         return summary
-
 
 class SheetValueFetcher:
     CACHE_KEY = "p49_value"  # chiave per Redis

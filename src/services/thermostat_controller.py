@@ -24,7 +24,7 @@ class ThermostatController:
         self.thermostat_off_api = "http://localhost:5000/api/thermostat/off"
         
         # Temperature thresholds
-        self.temperature_tolerance = 0.5  # °C tolerance before switching
+        self.temperature_tolerance = 0.3  # °C tolerance before switching
         
     def get_current_temperature(self) -> Optional[float]:
         """Fetch current temperature from sensor API."""
@@ -34,21 +34,21 @@ class ThermostatController:
             data = response.json()
             
             current_temp = float(data['temperature']['current'])
-            print(f"📊 Current temperature: {current_temp}°C")
+            print(f"Current temperature: {current_temp}°C")
             return current_temp
             
         except Exception as e:
-            print(f"❌ Error fetching temperature: {e}")
+            print(f"Error fetching temperature: {e}")
             return None
     
     def get_target_temperature(self) -> Optional[float]:
         """Get target temperature from database."""
         try:
             target = self.sensor_service.get_target_temperature()
-            print(f"🎯 Target temperature: {target}°C")
+            print(f"Target temperature: {target}°C")
             return target
         except Exception as e:
-            print(f"❌ Error getting target temperature: {e}")
+            print(f"Error getting target temperature: {e}")
             return None
     
     def get_boiler_status(self) -> bool:
@@ -56,7 +56,7 @@ class ThermostatController:
         try:
             return self.sensor_service.get_boiler_status()
         except Exception as e:
-            print(f"❌ Error getting boiler status: {e}")
+            print(f"Error getting boiler status: {e}")
             return False
     
     def turn_boiler_on(self) -> bool:
@@ -70,14 +70,14 @@ class ThermostatController:
             success = self.sensor_service.set_boiler_status(True)
             
             if success:
-                print("✅ Boiler turned ON")
+                print("Boiler turned ON")
                 return True
             else:
-                print("⚠️ Boiler API succeeded but DB update failed")
+                print("Boiler API succeeded but DB update failed")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error turning boiler ON: {e}")
+            print(f"Error turning boiler ON: {e}")
             return False
     
     def turn_boiler_off(self) -> bool:
@@ -91,14 +91,14 @@ class ThermostatController:
             success = self.sensor_service.set_boiler_status(False)
             
             if success:
-                print("✅ Boiler turned OFF")
+                print("Boiler turned OFF")
                 return True
             else:
-                print("⚠️ Boiler API succeeded but DB update failed")
+                print("Boiler API succeeded but DB update failed")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error turning boiler OFF: {e}")
+            print(f"Error turning boiler OFF: {e}")
             return False
     
     def check_and_control(self):
@@ -111,28 +111,28 @@ class ThermostatController:
         # Get current temperature
         current_temp = self.get_current_temperature()
         if current_temp is None:
-            print("⚠️ Skipping control cycle - no temperature data")
+            print("Skipping control cycle - no temperature data")
             return
         
         # Get target temperature
         target_temp = self.get_target_temperature()
         if target_temp is None:
-            print("⚠️ Skipping control cycle - no target temperature")
+            print("Skipping control cycle - no target temperature")
             return
         
         # Get current boiler status
         is_on = self.get_boiler_status()
-        print(f"🔥 Boiler current status: {'ON' if is_on else 'OFF'}")
+        print(f"Boiler current status: {'ON' if is_on else 'OFF'}")
         
         # Calculate temperature difference
         temp_diff = target_temp - current_temp
-        print(f"📈 Temperature difference: {temp_diff:+.2f}°C")
+        print(f"Temperature difference: {temp_diff:+.2f}°C")
         
         # Control logic with hysteresis
         if temp_diff > self.temperature_tolerance:
             # Need heating: current temp is below target
             if not is_on:
-                print(f"🔥 Temperature too low ({current_temp:.1f}°C < {target_temp:.1f}°C)")
+                print(f"Temperature too low ({current_temp:.1f}°C < {target_temp:.1f}°C)")
                 print("   → Turning boiler ON")
                 self.turn_boiler_on()
             else:
