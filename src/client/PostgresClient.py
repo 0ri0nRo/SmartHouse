@@ -5,7 +5,7 @@ from psycopg2 import Error
 from datetime import datetime, timedelta
 import logging
 from contextlib import contextmanager
-
+import time
 
 # Configura il logging per debug migliore
 logging.basicConfig(level=logging.INFO)
