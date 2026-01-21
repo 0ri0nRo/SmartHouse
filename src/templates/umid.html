@@ -741,22 +741,22 @@
                                 }
                             },
                             y: {
-                                ...chartDefaults.scales.y,
-                                title: {
-                                    display: true,
-                                    text: 'Humidity (%)',
-                                    font: {
-                                        family: 'Inter',
-                                        size: 13,
-                                        weight: '500'
-                                    },
-                                    color: '#374151'
+                            ...chartDefaults.scales.y,
+                            min: 30,
+                            title: {
+                                display: true,
+                                text: 'Humidity (%)',
+                                font: {
+                                    family: 'Inter',
+                                    size: 13,
+                                    weight: '500'
                                 },
-                                ticks: {
-                                    ...chartDefaults.scales.y.ticks,
-                                    beginAtZero: true
-                                }
+                                color: '#374151'
+                            },
+                            ticks: {
+                                ...chartDefaults.scales.y.ticks
                             }
+                        }
                         },
                         plugins: {
                             ...chartDefaults.plugins,

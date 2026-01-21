@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:17
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
 
   db-init:
-    image: postgres:latest
+    image: postgres:17
     depends_on:
       - db
     volumes:
