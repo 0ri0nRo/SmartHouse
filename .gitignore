@@ -102,3 +102,5 @@ yarn.lock
 
 # Exclude uploads directory
 uploads/
+192*
+smarthouse*
