@@ -78,6 +78,8 @@ services:
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro   # <--- aggiunto
     user: "1000:1000"
     restart: unless-stopped
+    env_file:
+      - ./src/.env
 
   network_scanner:
     build:

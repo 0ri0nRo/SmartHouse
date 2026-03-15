@@ -5,7 +5,7 @@ import psutil
 import logging
 from models.database import handle_db_error
 from services.ssh_service import SSHService
-from send_email import EmailSender, invia_backup_email
+from send_email import EmailSender, send_backup_email
 from config.settings import get_config
 
 system_bp = Blueprint('system', __name__)
@@ -79,7 +79,7 @@ def api_run_backup():
 
         if result.returncode == 0:
             backup_file_path = result.stdout.strip().split("\n")[-1]
-            invia_backup_email(email_sender, backup_file_path)
+            send_backup_email(email_sender, backup_file_path)
             return jsonify({'message': 'Backup completed', 'output': result.stdout}), 200
 
         return jsonify({'error': 'Backup error', 'output': result.stderr}), 500
