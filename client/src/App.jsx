@@ -6,6 +6,7 @@ import HomePage        from './pages/HomePage'
 import TemperaturePage from './pages/TemperaturePage'
 import HumidityPage    from './pages/HumidityPage'
 import TrainPage       from './pages/TrainPage'
+import ShoppingPage    from './pages/ShoppingPage'
 
 export default function App() {
   const { theme, toggle } = useTheme()
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="temperature" element={<TemperaturePage />} />
           <Route path="humidity"    element={<HumidityPage />} />
           <Route path="train"       element={<TrainPage />} />
+          <Route path="shopping"    element={<ShoppingPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
