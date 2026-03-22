@@ -119,4 +119,4 @@ def api_ssh_exec():
 @system_bp.route('/raspi')
 def page_raspi():
     """Page to display Raspberry Pi statistics."""
-    return render_template('raspi.html')
+#     return render_template('raspi.html')

@@ -74,4 +74,4 @@ def health_check():
 @receipt_bp.route('/page', methods=['GET'])
 def receipt_page():
     """Pagina web per la gestione scontrini"""
-    return render_template('receipts.html')
+#     return render_template('receipts.html')

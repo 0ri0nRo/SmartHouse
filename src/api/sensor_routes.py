@@ -25,7 +25,7 @@ def index():
     last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
     last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
 
-    return render_template('index.html',
+#     return render_template('index.html',
                            labels=labels,
                            temperatures=temperatures,
                            last_temperature=last_temperature,
@@ -188,13 +188,13 @@ def last_temp():
 @sensor_bp.route('/temp')
 def page_temp():
     """Page to display temperature data."""
-    return render_template('temperature.html')
+#     return render_template('temperature.html')
 
 
 @sensor_bp.route('/umid')
 def page_umid():
     """Page to display humidity data."""
-    return render_template('umid.html')
+#     return render_template('umid.html')
 
 
 @sensor_bp.route('/api/monthly_average_humidity/<int:month>/<int:year>', methods=['GET'])

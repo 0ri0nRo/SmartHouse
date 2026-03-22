@@ -34,7 +34,7 @@ def get_activity_service():
 @activity_bp.route('/dashboard')
 def dashboard():
     """Pagina dashboard principale"""
-    return render_template('activities.html')
+#     return render_template('activities.html')
 
 
 # ==================== API ENDPOINTS ====================

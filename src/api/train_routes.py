@@ -25,4 +25,4 @@ def api_trains_data(destination):
 @train_bp.route('/train')
 def page_train():
     """Page to display train information."""
-    return render_template('train.html')
+#     return render_template('train.html')

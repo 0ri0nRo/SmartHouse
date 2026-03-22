@@ -95,4 +95,4 @@ def api_p49():
 @expense_bp.route('/expenses')
 def page_expenses():
     """Renders the expenses management HTML page."""
-    return render_template('expenses.html')
+#     return render_template('expenses.html')
