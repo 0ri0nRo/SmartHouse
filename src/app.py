@@ -127,6 +127,14 @@ def create_app():
 
     return app, socketio
 
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_react(path):
+        react_dir = os.path.join(app.root_path, 'static', 'react')
+        if path and os.path.exists(os.path.join(react_dir, path)):
+            return send_from_directory(react_dir, path)
+        return send_from_directory(react_dir, 'index.html')
+
 
 def main():
     """Main function to start the Flask development server with WebSocket support."""
