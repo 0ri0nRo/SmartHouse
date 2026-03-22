@@ -11,25 +11,26 @@ config = get_config()
 sensor_service = SensorService(config['DB_CONFIG'])
 
 
-@sensor_bp.route('/')
-def index():
-    """Main page showing sensor charts."""
-    data = sensor_service.get_hourly_today()
-    last_entry = sensor_service.get_latest()
-
-    labels = [f"{int(entry['hour'])}:00" for entry in data] if data else []
-    temperatures = [entry['avg_temperature'] for entry in data] if data else []
-    labels.reverse()
-    temperatures.reverse()
-
-    last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
-    last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
-
-#     return render_template('index.html',
-                           labels=labels,
-                           temperatures=temperatures,
-                           last_temperature=last_temperature,
-                           last_humidity=last_humidity)
+# @sensor_bp.route('/')
+# def index():
+#     """Main page showing sensor charts."""
+#     data = sensor_service.get_hourly_today()
+#     last_entry = sensor_service.get_latest()
+# 
+#     labels = [f"{int(entry['hour'])}:00" for entry in data] if data else []
+#     temperatures = [entry['avg_temperature'] for entry in data] if data else []
+#     labels.reverse()
+#     temperatures.reverse()
+# 
+#     last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
+#     last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
+# 
+# #     return render_template('index.html',
+# #                            labels=labels,
+# #                            temperatures=temperatures,
+# # #                            last_temperature=last_temperature,
+# #                            last_humidity=last_humidity)
+#     return ''
 
 
 @sensor_bp.route('/api_sensors')

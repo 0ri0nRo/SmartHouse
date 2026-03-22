@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   server: {
-    host: true,        // espone la porta sulla rete locale del Pi
+    host: true,
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',  // Flask
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/api_sensors': {
@@ -18,7 +19,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../src/static/react',  // build va direttamente nel volume montato
+    outDir: '../src/static/react',
     emptyOutDir: true,
   },
 })
