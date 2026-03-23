@@ -12,6 +12,8 @@ import SecurityPage    from './pages/SecurityPage'
 import RaspiPage       from './pages/RaspiPage'
 import AirQualityPage  from './pages/AirQualityPage'
 import NotFoundPage    from './pages/NotFoundPage'
+import CalendarAuthPage from './pages/CalendarAuthPage'
+import CalendarPage     from './pages/CalendarPage'
 
 export default function App() {
   const { theme, toggle } = useTheme()
@@ -31,6 +33,8 @@ export default function App() {
             <Route path="raspi"       element={<RaspiPage />} />
             <Route path="air-quality" element={<AirQualityPage />} />
             <Route path="*"           element={<NotFoundPage />} />
+            <Route path="/calendar/auth" element={<CalendarAuthPage />} />
+            <Route path="calendar"      element={<CalendarPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

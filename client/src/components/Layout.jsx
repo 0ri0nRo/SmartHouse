@@ -16,7 +16,7 @@ const NAV = [
 
   { section: 'Home' },
   { to: '/shopping',    label: 'Shopping',    icon: ShoppingCart },
-  { to: '/activities',  label: 'Activities',  icon: Activity },
+  { to: '/calendar',  label: 'Calendar',  icon: Activity },
 
   { section: 'System' },
   { to: '/security',    label: 'Security',    icon: Shield },

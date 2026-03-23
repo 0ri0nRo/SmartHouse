@@ -104,3 +104,6 @@ yarn.lock
 uploads/
 192*
 smarthouse*
+gcredential*
+gcalendar*
+*generate*

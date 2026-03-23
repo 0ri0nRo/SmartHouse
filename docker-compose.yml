@@ -75,7 +75,9 @@ services:
       - ./backup:/backup
       - ./src/static:/app/static
       - ./uploads:/app/uploads
-      - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro   # <--- aggiunto
+      - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
+      - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
+
     user: "1000:1000"
     restart: unless-stopped
     env_file:

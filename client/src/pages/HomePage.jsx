@@ -2,9 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Thermometer, Droplets, Wind, Cpu, Bell, Flame, ChevronRight, RefreshCw } from 'lucide-react'
 import { api } from '../api'
-import WeatherWidget from '../components/WeatherWidget'
-import PingWidget    from '../components/PingWidget'
+import WeatherWidget            from '../components/WeatherWidget'
+import PingWidget               from '../components/PingWidget'
+import TrainWidget              from '../components/TrainPage'
+import AirQualityExternalWidget from '../components/AirQualityExternalWidget'
+import OnThisDayWidget          from '../components/OnThisDayWidget'
 import { useNotifications } from '../hooks/useNotifications'
+import CalendarWidget from '../components/CalendarWidget'
 
 const REFRESH_INTERVAL = 15
 
@@ -173,14 +177,12 @@ export default function HomePage() {
   const [countdown, setCountdown]   = useState(REFRESH_INTERVAL)
   const countdownRef = useRef(null)
 
-  // Show notification banner after 3 seconds if not yet decided
   useEffect(() => {
     if (permission === 'default') {
       const t = setTimeout(() => setShowNotifBanner(true), 3000)
       return () => clearTimeout(t)
     }
   }, [permission])
-
 
   const resetCountdown = () => {
     setCountdown(REFRESH_INTERVAL)
@@ -278,10 +280,12 @@ export default function HomePage() {
           onDismiss={() => setShowNotifBanner(false)}
         />
       )}
+      
 
       {/* Widget grid */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))',
         gap:'0.875rem', alignItems:'stretch' }}>
+        <CalendarWidget />
         <ToggleWidget section="sec" icon={Bell} label="Home Alarm" sublabel="Security system"
           isOn={alarm} loading={alarmLoading} onToggle={toggleAlarm} onNavigate={()=>nav('/security')}/>
         <ToggleWidget section="temp" icon={Flame} label="Boiler"
@@ -303,6 +307,9 @@ export default function HomePage() {
           color2={raspiTemp&&parseFloat(raspiTemp)>70?'var(--color-danger)':'var(--card-temp-accent)'}/>
         <WeatherWidget/>
         <PingWidget/>
+        <TrainWidget/>
+        <AirQualityExternalWidget/>
+        <OnThisDayWidget/>
       </div>
 
       {/* 24h summary */}
