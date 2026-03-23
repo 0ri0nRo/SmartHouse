@@ -254,7 +254,7 @@ body {
   transition: background var(--transition), color var(--transition);
 }
 
-#root { display: flex; min-height: 100vh; }
+#root { display: block; min-height: 100vh; width: 100%; }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: var(--font-body); }
 input, select, textarea { font-family: var(--font-body); }
@@ -265,9 +265,8 @@ ul, ol { list-style: none; }
 /* ────────────────────────────────────────────
    LAYOUT
 ──────────────────────────────────────────── */
-.layout         { display: flex; width: 100%; min-height: 100vh; }
-.layout-content { flex: 1; margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left var(--transition); }
-.page           { flex: 1; padding: var(--space-8); max-width: 1400px; width: 100%; }
+/* Layout is handled via inline styles in Layout.jsx for precise control */
+.page { flex: 1; }
 .page-sm        { max-width: 680px; }
 .page-md        { max-width: 1000px; }
 .page-full      { max-width: 100%; }
@@ -716,12 +715,6 @@ tbody tr:hover td { background: var(--bg-surface-2); }
 }
 
 @media (max-width: 768px) {
-  :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; width: 220px; }
-  .sidebar.open { transform: translateX(0); }
-  .layout-content { margin-left: 0; }
-  .page   { padding: var(--space-4); }
-  .topbar { padding: 0 var(--space-4); }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }

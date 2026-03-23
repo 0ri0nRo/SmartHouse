@@ -72,9 +72,10 @@ def alarm_status():
             conn.close()
 
 
-@security_bp.route('/security')
-def page_security():
-    """
-    Web page to display and control the security system.
-    """
-#     return render_template('security.html')
+# @security_bp.route('/security')
+# def page_security():
+#     """
+#     Web page to display and control the security system.
+#     """
+#     pass  # route disabled - served by React
+

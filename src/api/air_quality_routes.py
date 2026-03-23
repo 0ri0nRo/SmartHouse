@@ -174,7 +174,8 @@ def api_gas_concentration_today():
         return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 
-@air_quality_bp.route('/air_quality')
-def page_air_quality():
-    """Renders the air quality dashboard HTML page."""
-#     return render_template('air_quality.html')
+# @air_quality_bp.route('/air_quality')
+# def page_air_quality():
+#     """Renders the air quality dashboard HTML page."""
+#     pass  # route disabled - served by React
+

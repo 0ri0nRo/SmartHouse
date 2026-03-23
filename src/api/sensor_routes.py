@@ -186,16 +186,18 @@ def last_temp():
 
 
 # Template pages
-@sensor_bp.route('/temp')
-def page_temp():
-    """Page to display temperature data."""
-#     return render_template('temperature.html')
+# @sensor_bp.route('/temp')
+# def page_temp():
+#     """Page to display temperature data."""
+#     pass  # route disabled - served by React
 
 
-@sensor_bp.route('/umid')
-def page_umid():
-    """Page to display humidity data."""
-#     return render_template('umid.html')
+
+# @sensor_bp.route('/umid')
+# def page_umid():
+#     """Page to display humidity data."""
+#     pass  # route disabled - served by React
+
 
 
 @sensor_bp.route('/api/monthly_average_humidity/<int:month>/<int:year>', methods=['GET'])

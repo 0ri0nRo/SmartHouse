@@ -54,7 +54,7 @@ def create_app():
     logger.info("Starting Flask application...")
 
     # Create Flask app instance
-    app = Flask(__name__, static_folder='static/react', static_url_path='')
+    app = Flask(__name__)
 
     # Load configuration
     config = get_config()

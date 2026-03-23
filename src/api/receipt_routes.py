@@ -71,7 +71,8 @@ def health_check():
     return jsonify({'status': 'ok', 'service': 'receipt_service'})
 
 # Rotta per la pagina web degli scontrini
-@receipt_bp.route('/page', methods=['GET'])
-def receipt_page():
-    """Pagina web per la gestione scontrini"""
-#     return render_template('receipts.html')
+# @receipt_bp.route('/page', methods=['GET'])
+# def receipt_page():
+#     """Pagina web per la gestione scontrini"""
+#     pass  # route disabled - served by React
+
