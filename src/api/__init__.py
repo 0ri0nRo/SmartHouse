@@ -8,6 +8,7 @@ from .security_routes import security_bp
 from .system_routes import system_bp
 from .expenses_routes import expense_bp
 from .receipt_routes import receipt_bp
+from .ping_routes import ping_bp
 
 def register_blueprints(app):
     """Registra tutti i blueprint delle API nell'app Flask"""

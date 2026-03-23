@@ -29,6 +29,7 @@ from api import register_blueprints
 from services.pico_log_service import PicoLogService
 from api.pico_logs_routes import init_pico_logs_service, pico_logs_bp
 from api.activity_routes import activity_bp
+from api.ping_routes import ping_bp
 
 
 def create_app():
@@ -111,6 +112,7 @@ def create_app():
 
     # Register activity blueprint
     app.register_blueprint(activity_bp)
+    app.register_blueprint(ping_bp)
 
     # Health check endpoint
     @app.route('/health')
