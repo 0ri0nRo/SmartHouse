@@ -4,7 +4,7 @@ import { Thermometer, Droplets, Wind, Cpu, Bell, Flame, ChevronRight, RefreshCw 
 import { api } from '../api'
 import WeatherWidget            from '../components/WeatherWidget'
 import PingWidget               from '../components/PingWidget'
-import TrainWidget              from '../components/TrainPage'
+import TrainWidget              from '../components/TrainWidget'
 import AirQualityExternalWidget from '../components/AirQualityExternalWidget'
 import OnThisDayWidget          from '../components/OnThisDayWidget'
 import { useNotifications } from '../hooks/useNotifications'
