@@ -22,7 +22,8 @@ def api_trains_data(destination):
     res = train_service.fetch_and_save(destination)
     return jsonify(res)
 
-@train_bp.route('/train')
-def page_train():
-    """Page to display train information."""
-    return render_template('train.html')
+# @train_bp.route('/train')
+# def page_train():
+#     """Page to display train information."""
+#     pass  # route disabled - served by React
+

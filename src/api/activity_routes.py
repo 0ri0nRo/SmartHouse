@@ -29,12 +29,12 @@ def get_activity_service():
     return ActivityService(pg_client, gcal_client)
 
 
-# ==================== ROUTES HTML ====================
+# ==================== ROUTES HTML (disabled — served by React) ====================
 
-@activity_bp.route('/dashboard')
-def dashboard():
-    """Pagina dashboard principale"""
-    return render_template('activities.html')
+# @activity_bp.route('/dashboard')
+# def dashboard():
+#     """Pagina dashboard principale"""
+    pass  # route disabled - served by React
 
 
 # ==================== API ENDPOINTS ====================
@@ -72,7 +72,6 @@ def get_categories():
 @activity_bp.route('/sync', methods=['POST'])
 def sync_events():
     try:
-        # Evita crash se non c'è JSON
         data = request.get_json(silent=True) or {}
         
         start_date = datetime.strptime(data['start_date'], '%Y-%m-%d') if 'start_date' in data else None
@@ -89,23 +88,15 @@ def sync_events():
 
 @activity_bp.route('/stats/daily', methods=['GET'])
 def get_daily_stats():
-    """
-    GET /api/activity/stats/daily?date=YYYY-MM-DD
-    Restituisce le statistiche delle attività per una data specifica
-    """
+    """GET /api/activity/stats/daily?date=YYYY-MM-DD"""
     try:
-        # Recupera la data dai parametri o usa oggi come default
         date_str = request.args.get('date')
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else date.today()
 
-        # Ottieni l'istanza del servizio
-        service = get_activity_service()  # qui creiamo l'istanza di ActivityService
-
-        # Calcola le statistiche giornaliere
+        service = get_activity_service()
         service.calculate_daily_stats(target_date)
         stats = service.get_daily_stats(target_date)
 
-        # Totali
         total_minutes = sum(s['total_minutes'] for s in stats)
         total_hours = round(total_minutes / 60, 2)
 
@@ -124,12 +115,11 @@ def get_daily_stats():
             'error': str(e),
             'traceback': traceback.format_exc()
         }), 500
+
+
 @activity_bp.route("/stats/weekly", methods=['GET'])
 def get_weekly_stats():
-    """
-    Restituisce le statistiche aggregate della settimana.
-    Parametri query: ?year=YYYY&week=N
-    """
+    """GET /api/activity/stats/weekly?year=YYYY&week=N"""
     try:
         year = request.args.get('year', type=int)
         week = request.args.get('week', type=int)
@@ -145,14 +135,13 @@ def get_weekly_stats():
         total_minutes = sum(s['total_minutes'] for s in stats_list)
         total_hours = round(total_minutes / 60, 2)
 
-        response = {
+        return jsonify({
             "success": True,
             "title": f"Settimana {week} - {year}",
             "total_minutes": total_minutes,
             "total_hours": total_hours,
             "stats": stats_list
-        }
-        return jsonify(response)
+        })
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "traceback": traceback.format_exc()}), 500
@@ -160,10 +149,7 @@ def get_weekly_stats():
 
 @activity_bp.route("/stats/monthly", methods=['GET'])
 def get_monthly_stats():
-    """
-    Restituisce le statistiche aggregate del mese.
-    Parametri query: ?year=YYYY&month=N
-    """
+    """GET /api/activity/stats/monthly?year=YYYY&month=N"""
     try:
         year = request.args.get('year', type=int)
         month = request.args.get('month', type=int)
@@ -179,14 +165,13 @@ def get_monthly_stats():
         total_minutes = sum(s['total_minutes'] for s in stats_list)
         total_hours = round(total_minutes / 60, 2)
 
-        response = {
+        return jsonify({
             "success": True,
             "title": f"{get_month_name(month)} {year}",
             "total_minutes": total_minutes,
             "total_hours": total_hours,
             "stats": stats_list
-        }
-        return jsonify(response)
+        })
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "traceback": traceback.format_exc()}), 500
@@ -198,10 +183,9 @@ def get_month_name(month):
     return months[month - 1]
 
 
-
 @activity_bp.route('/stats/range', methods=['GET'])
 def get_range_stats():
-    """GET /api/activity/stats/range?start=YYYY-MM-DD&end=YYYY-MM-DD - Statistiche per range di date"""
+    """GET /api/activity/stats/range?start=YYYY-MM-DD&end=YYYY-MM-DD"""
     try:
         start_str = request.args.get('start')
         end_str = request.args.get('end')
@@ -269,14 +253,13 @@ def get_uncategorized():
 
 @activity_bp.route('/events', methods=['GET'])
 def get_events():
-    """GET /api/activity/events?start=YYYY-MM-DD&end=YYYY-MM-DD - Eventi in un range di date"""
+    """GET /api/activity/events?start=YYYY-MM-DD&end=YYYY-MM-DD"""
     try:
         start_str = request.args.get('start')
         end_str = request.args.get('end')
         if not start_str or not end_str:
             return jsonify({'success': False, 'error': 'start and end parameters are required'}), 400
         
-        # TODO: Implementare query reali dal DB
         return jsonify({'success': True, 'message': 'Endpoint in development', 'events': []})
     
     except Exception as e:
@@ -302,7 +285,11 @@ def health_check():
     try:
         service = get_activity_service()
         gcal_ok = service.gcal.test_connection()
-        return jsonify({'success': True, 'status': 'healthy', 'google_calendar': 'connected' if gcal_ok else 'disconnected'})
+        return jsonify({
+            'success': True,
+            'status': 'healthy',
+            'google_calendar': 'connected' if gcal_ok else 'disconnected'
+        })
     
     except Exception as e:
         return jsonify({'success': False, 'status': 'unhealthy', 'error': str(e)}), 500
@@ -314,17 +301,18 @@ def save_today_events():
     try:
         service = get_activity_service()
 
-        # Data di oggi
         today = datetime.now().date()
         start_datetime = datetime.combine(today, datetime.min.time())
         end_datetime = datetime.combine(today, datetime.max.time())
 
-        # Recupera eventi di oggi dal Google Calendar
         events = service.gcal.get_events(start=start_datetime, end=end_datetime)
         saved_count = 0
         for g_event in events:
-            event_obj = Event.from_google_event(g_event, calendar_name=g_event.get('organizer', {}).get('email', 'Unknown'))
-            saved = service.save_event(event_obj)  # Metodo che inserisce/aggiorna DB
+            event_obj = Event.from_google_event(
+                g_event,
+                calendar_name=g_event.get('organizer', {}).get('email', 'Unknown')
+            )
+            saved = service.save_event(event_obj)
             if saved:
                 saved_count += 1
 

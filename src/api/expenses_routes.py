@@ -92,7 +92,8 @@ def api_p49():
         return jsonify({"error": str(e)}), 500
 
 
-@expense_bp.route('/expenses')
-def page_expenses():
-    """Renders the expenses management HTML page."""
-    return render_template('expenses.html')
+# @expense_bp.route('/expenses')
+# def page_expenses():
+#     """Renders the expenses management HTML page."""
+#     pass  # route disabled - served by React
+

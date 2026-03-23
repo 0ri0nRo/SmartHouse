@@ -116,7 +116,8 @@ def api_ssh_exec():
         return jsonify({"error": str(e)}), 400
 
 
-@system_bp.route('/raspi')
-def page_raspi():
-    """Page to display Raspberry Pi statistics."""
-    return render_template('raspi.html')
+# @system_bp.route('/raspi')
+# def page_raspi():
+#     """Page to display Raspberry Pi statistics."""
+#     pass  # route disabled - served by React
+

@@ -73,10 +73,11 @@ def todolist_search_by_timestamp(start_timestamp, end_timestamp):
     except Exception as e:
         return jsonify({"message": f"Error retrieving history: {str(e)}"}), 500
 
-@todolist_bp.route('/shopping-list', methods=['GET'])
-def shopping_list_page():
-    """Page to display the shopping list."""
-    return render_template("shopping-list.html"), 200
+# @todolist_bp.route('/shopping-list', methods=['GET'])
+# def shopping_list_page():
+#     """Page to display the shopping list."""
+#     pass  # route disabled - served by React
+
 
 @todolist_bp.route('/api/shopping-list/complete/<item_id>', methods=['POST'])
 def mark_item_complete(item_id):

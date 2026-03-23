@@ -28,10 +28,9 @@ from api import register_blueprints
 # Import the new Pico logs service and blueprint
 from services.pico_log_service import PicoLogService
 from api.pico_logs_routes import init_pico_logs_service, pico_logs_bp
-# Aggiungi all'inizio del file, con gli altri import
 from api.activity_routes import activity_bp
-
-
+from api.ping_routes import ping_bp
+from api.calendar_routes import calendar_bp
 
 def create_app():
     """
@@ -56,13 +55,12 @@ def create_app():
     logger.info("Starting Flask application...")
 
     # Create Flask app instance
-    # At the top of create_app()
-    app = Flask(__name__, static_folder='static', static_url_path='/static')
+    app = Flask(__name__)
 
     # Load configuration
     config = get_config()
     app.config.update(config)
-    
+
     # Add secret key for session management (required for SocketIO)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-this')
 
@@ -89,14 +87,13 @@ def create_app():
         """Serve the favicon from the static directory."""
         try:
             return send_from_directory(
-                os.path.join(app.root_path, 'static'), 
+                os.path.join(app.root_path, 'static'),
                 'favicon.ico',
                 mimetype='image/vnd.microsoft.icon'
             )
         except Exception as e:
             app.logger.warning(f"Favicon not found: {str(e)}")
             return '', 404
-
 
     # Initialize Pico logs service
     try:
@@ -105,23 +102,41 @@ def create_app():
         logger.info("Pico logs WebSocket service initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize Pico logs service: {str(e)}")
-        # Continue without the service - it's not critical for basic functionality
+        # Continue without the service — not critical for basic functionality
 
     # Register all API blueprints
     register_blueprints(app)
-    
-    # Register the new Pico logs blueprint
-    #app.register_blueprint(pico_logs_bp)
 
-    # Dopo aver creato l'app Flask, registra il blueprint
+    # Register the Pico logs blueprint (disabled for now)
+    # app.register_blueprint(pico_logs_bp)
+
+    # Register activity blueprint
     app.register_blueprint(activity_bp)
+    app.register_blueprint(ping_bp)
+    app.register_blueprint(calendar_bp)
 
-    
-    # Add a health check endpoint
+    # Health check endpoint
     @app.route('/health')
     def health_check():
         """Health check endpoint for monitoring and load balancers."""
         return {'status': 'healthy', 'service': 'raspberry-pi-dashboard'}, 200
+
+    # Serve React frontend for all non-API routes.
+    # This must be the LAST route registered so it does not
+    # shadow any of the API blueprints above.
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_react(path):
+        """Return the React index.html for every unknown route so that
+        React Router can handle client-side navigation."""
+        react_dir = os.path.join(app.root_path, 'static', 'react')
+
+        # If the requested path matches a real file (JS, CSS, assets) serve it
+        if path and os.path.exists(os.path.join(react_dir, path)):
+            return send_from_directory(react_dir, path)
+
+        # Otherwise fall back to index.html and let React handle routing
+        return send_from_directory(react_dir, 'index.html')
 
     logger.info("Flask application configured successfully")
 
