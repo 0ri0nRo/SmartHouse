@@ -71,6 +71,8 @@ services:
       - TZ=Europe/Rome
       - UPLOAD_FOLDER=/app/uploads
       - TESSERACT_CMD=/usr/bin/tesseract
+      - NETWORK_SUBNET=192.168.178.0/24
+      - FRITZ_IP=192.168.178.1
     volumes:
       - ./backup:/backup
       - ./src/static:/app/static
@@ -86,16 +88,16 @@ services:
   network_scanner:
     build:
       context: ./src
-      dockerfile: Dockerfile
-    command: python3 utils/scanner.py
-    depends_on:
-      - db
+      dockerfile: Dockerfile.scanner
+    privileged: true
+    network_mode: host   # necessario per arp-scan
+    command: python3 scanner_service.py
     environment:
-      - DB_HOST=db
-      - DB_DATABASE=sensor_data
-      - DB_USER=postgres
-      - DB_PASSWORD=1234
-      - TZ=Europe/Rome
+      - NETWORK_SUBNET=192.168.178.0/24
+      - DB_HOST=192.168.178.101  # IP host reale, non "db", perché usi host network
+      - REDIS_HOST=127.0.0.1
+    depends_on:
+      - redis
     restart: unless-stopped
 
   nginx:

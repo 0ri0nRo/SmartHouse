@@ -31,6 +31,8 @@ from api.pico_logs_routes import init_pico_logs_service, pico_logs_bp
 from api.activity_routes import activity_bp
 from api.ping_routes import ping_bp
 from api.calendar_routes import calendar_bp
+from api.recipe_routes          import recipe_bp
+from api.sunmoon_routes         import sunmoon_bp
 
 def create_app():
     """
@@ -114,6 +116,8 @@ def create_app():
     app.register_blueprint(activity_bp)
     app.register_blueprint(ping_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(recipe_bp)
+    app.register_blueprint(sunmoon_bp)
 
     # Health check endpoint
     @app.route('/health')

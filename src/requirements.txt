@@ -1,4 +1,4 @@
-# Flask core and extensions
+# Flask core
 Flask==3.0.3
 flask-cors==4.0.0
 Werkzeug==3.0.3
@@ -7,22 +7,22 @@ Jinja2==3.1.4
 MarkupSafe==2.1.5
 blinker==1.8.2
 click==8.1.7
-pytz
+pytz==2024.1
 
-# WSGI server
+# WSGI
 gunicorn==23.0.0
 
-# Database connectors
+# Database
 mysql-connector-python==9.0.0
 psycopg2-binary==2.9.9
 pymongo[srv]==4.5.0
 
-# Networking and system utilities
+# Networking (Python only)
 python-nmap==0.7.1
 psutil==5.9.5
 paramiko==3.3.1
 
-# Google Sheets & Google API
+# Google APIs
 google-auth==2.23.3
 google-auth-oauthlib==1.1.0
 google-auth-httplib2==0.1.1
@@ -30,10 +30,10 @@ google-api-python-client==2.103.0
 gspread==5.11.3
 oauth2client==4.1.3
 
-# Caching
+# Cache
 redis==4.6.0
 
-# General utilities
+# Utils
 python-dotenv==1.0.1
 requests==2.31.0
 beautifulsoup4==4.12.2
@@ -43,20 +43,19 @@ zipp==3.20.0
 importlib_metadata==8.2.0
 pyserial==3.5
 
-# Real-time communication
+# Realtime
 flask-socketio==5.3.6
-python-socketio>=5.8.0
-eventlet>=0.33.0
+python-socketio==5.8.0
+eventlet==0.36.1
 
-# Development & testing
+# Test
 pytest==7.4.2
 pytest-flask==1.2.0
 black==23.9.1
 flake8==6.1.0
 
-
-
-# OCR and Image Processing
+# OCR
 pytesseract==0.3.10
 Pillow==10.0.0
 pdf2image==1.16.3
+fritzconnection==1.15.1
