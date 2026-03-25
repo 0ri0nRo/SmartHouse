@@ -1,160 +1,175 @@
-import psycopg2
-import nmap
-from datetime import datetime
+import subprocess
+import re
+import socket
 import logging
-from models.database import BaseService
+import os
+import requests
+import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
-class NetworkService(BaseService):
-    """Service to manage scanning and monitoring of network devices"""
-    
-    def scan_network(self, network='192.168.178.0/24'):
-        """Scans the network to find active devices"""
-        nm = nmap.PortScanner()
-        nm.scan(hosts=network, arguments='-sn')
+
+class NetworkService:
+    def __init__(self):
+        self.fritzbox_host = os.getenv("FRITZBOX_HOST", "192.168.178.1")
+        self.fritzbox_user = os.getenv("FRITZBOX_USER")
+        self.fritzbox_password = os.getenv("FRITZBOX_PASSWORD")
+
+    # =========================
+    # MAIN SCAN
+    # =========================
+    def scan_network(self):
         devices = {}
-        
-        for host in nm.all_hosts():
-            hostname = nm[host].hostname() or 'Unknown'
-            devices[host] = {'hostname': hostname, 'status': nm[host].state()}
-        
-        # Save results to database
-        self._save_devices_to_db(devices)
-        return devices
-    
-    def _save_devices_to_db(self, devices):
-        """Saves found devices into the database"""
-        conn = None
-        cur = None
+
+        fritz_devices = self._get_fritzbox_devices()
+        logger.info(f"FritzBox devices: {len(fritz_devices)}")
+
         try:
-            conn = self._connect()
-            cur = conn.cursor()
-            
-            # Create the table if it does not exist
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS network_devices (
-                    id SERIAL PRIMARY KEY,
-                    ip_address VARCHAR(45) NOT NULL,
-                    hostname VARCHAR(255),
-                    status VARCHAR(50),
-                    timestamp TIMESTAMP NOT NULL
-                );
-            """)
-            conn.commit()
-            
-            ts = datetime.now()
-            insert_q = "INSERT INTO network_devices (ip_address, hostname, status, timestamp) VALUES (%s, %s, %s, %s)"
-            for ip, info in devices.items():
-                cur.execute(insert_q, (ip, info['hostname'], info['status'], ts))
-            conn.commit()
+            result = subprocess.run(
+                ["arp-scan", "--localnet"],
+                capture_output=True,
+                text=True
+            )
+
+            for line in result.stdout.split("\n"):
+                parsed = self._parse_arp_line(line)
+                if not parsed:
+                    continue
+
+                mac = self._normalize_mac(parsed["mac"])
+
+                device = {
+                    "ip": parsed["ip"],
+                    "mac": mac,
+                    "vendor": parsed["vendor"],
+                    "hostname": "unknown",
+                    "status": "up"
+                }
+
+                # =========================
+                # FRITZBOX OVERRIDE (IMPORTANT)
+                # =========================
+                if mac in fritz_devices:
+                    fb = fritz_devices[mac]
+
+                    if fb.get("hostname"):
+                        device["hostname"] = fb["hostname"]
+
+                    if fb.get("ip"):
+                        device["ip"] = fb["ip"]
+
+                # fallback DNS
+                if device["hostname"] == "unknown":
+                    device["hostname"] = self._resolve_hostname(device["ip"])
+
+                devices[mac] = device
+
+        except FileNotFoundError:
+            logger.warning("arp-scan not found → fallback ping scan")
+            return self._fallback_ping_scan()
+
+        return list(devices.values())
+
+    # =========================
+    # FRITZBOX DEVICES
+    # =========================
+
+    def _get_fritzbox_devices(self):
+        try:
+            from fritzconnection import FritzConnection
+
+            fc = FritzConnection(
+                address=self.fritzbox_host,
+                user=self.fritzbox_user,
+                password=self.fritzbox_password
+            )
+
+            # 🔥 lista host reali DHCP
+            result = fc.call_action("Hosts", "GetHostNumberOfEntries")
+
+            devices = {}
+            count = int(result["NewHostNumberOfEntries"])
+
+            for i in range(count):
+                host = fc.call_action("Hosts", "GetGenericHostEntry", NewIndex=i)
+
+                mac = host.get("NewMACAddress")
+                ip = host.get("NewIPAddress")
+                name = host.get("NewHostName")
+
+                if mac:
+                    mac = mac.strip().lower()
+
+                    devices[mac] = {
+                        "hostname": name if name else None,
+                        "ip": ip
+                    }
+
+            return devices
+
         except Exception as e:
-            logger.error(f"Error saving network devices: {e}")
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
+            logger.warning(f"FritzBox error: {e}")
+            return {}
 
-    def get_device_stats(self):
-        """Gets statistics on network devices"""
-        query = """
-            SELECT hostname, COUNT(*) AS connection_count
-            FROM network_devices
-            WHERE hostname NOT IN ('raspberrypi.fritz.box', 'Fritzbox-Modem.fritz.box', 'fritz.box')
-            GROUP BY hostname
-            ORDER BY connection_count DESC;
-        """
-        conn = None
-        cur = None
-        try:
-            conn = self._connect()
-            cur = conn.cursor()
-            cur.execute(query)
-            stats = cur.fetchall()
-            result = []
-            for stat in stats:
-                hostname = (stat[0] or '')[:-10]
-                if not hostname:
-                    hostname = "Fritzbox-modem1234567890"
-                if stat[1] >= 100:
-                    result.append({'ip_address': hostname, 'connection_count': stat[1]})
-            return result
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
+    # =========================
+    # ARP PARSER
+    # =========================
+    def _parse_arp_line(self, line: str):
+        match = re.search(
+            r"(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F:]{17})\s+(.+)",
+            line
+        )
 
-    def get_most_connected_days(self):
-        """Gets the days of the week with the most connections per device"""
-        query = """
-            SELECT hostname, EXTRACT(DOW FROM timestamp) AS day_of_week, COUNT(*) AS connection_count
-            FROM network_devices
-            WHERE hostname NOT IN ('raspberrypi.fritz.box', 'Fritzbox-Modem.fritz.box', 'fritz.box')
-            GROUP BY hostname, day_of_week
-            ORDER BY hostname, day_of_week;
-        """
-        conn = None
-        cur = None
-        try:
-            conn = self._connect()
-            cur = conn.cursor()
-            cur.execute(query)
-            stats = cur.fetchall()
-            
-            total_counts = {}
-            for stat in stats:
-                hostname = (stat[0] or '')[:-10] or "Fritzbox-Modem"
-                total_counts[hostname] = total_counts.get(hostname, 0) + stat[2]
-            
-            top_devices = sorted(total_counts.items(), key=lambda item: item[1], reverse=True)[:10]
-            result = {hostname: [0]*7 for hostname, _ in top_devices}
-            
-            for stat in stats:
-                hostname = (stat[0] or '')[:-10] or "Fritzbox-Modem"
-                day = int(stat[1])
-                count = stat[2]
-                if hostname in result:
-                    result[hostname][day] += count
-            
-            return result
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
+        if not match:
+            return None
 
-    def get_latest_devices(self):
-        """Gets the latest scan results of devices"""
-        query = """
-            SELECT * FROM network_devices 
-            WHERE timestamp = (SELECT MAX(timestamp) FROM network_devices) 
-            ORDER BY timestamp DESC;
-        """
-        conn = None
-        cur = None
+        ip, mac, vendor = match.groups()
+
+        return {
+            "ip": ip,
+            "mac": mac,
+            "vendor": vendor.strip()
+        }
+
+    # =========================
+    # NORMALIZE MAC (IMPORTANT FIX)
+    # =========================
+    def _normalize_mac(self, mac: str):
+        return mac.strip().lower().replace("-", ":")
+
+    # =========================
+    # HOSTNAME RESOLVE
+    # =========================
+    def _resolve_hostname(self, ip):
         try:
-            conn = self._connect()
-            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cur.execute(query)
-            devices = cur.fetchall()
-            
-            devices_list = []
-            for device in devices:
-                hostname_trim = (device['hostname'] or '')[:-10]
-                if hostname_trim == "":
-                    hostname_trim = "Fritzbox-modem1234567890"
-                devices_list.append({
-                    'id': device['id'],
-                    'ip_address': device['ip_address'],
-                    'hostname': hostname_trim,
-                    'status': device['status'],
-                    'last_seen': device['timestamp'].isoformat()[:-7]
-                })
-            return devices_list
-        finally:
-            if cur:
-                cur.close()
-            if conn:
-                conn.close()
+            return socket.gethostbyaddr(ip)[0]
+        except:
+            return "unknown"
+
+    # =========================
+    # FALLBACK PING SCAN
+    # =========================
+    def _fallback_ping_scan(self):
+        devices = {}
+        base_ip = "192.168.178."
+
+        for i in range(1, 255):
+            ip = base_ip + str(i)
+
+            res = subprocess.run(
+                ["ping", "-c", "1", "-W", "1", ip],
+                stdout=subprocess.DEVNULL
+            )
+
+            if res.returncode == 0:
+                mac = "unknown"
+
+                devices[ip] = {
+                    "ip": ip,
+                    "mac": mac,
+                    "vendor": "unknown",
+                    "hostname": self._resolve_hostname(ip),
+                    "status": "up"
+                }
+
+        return list(devices.values())

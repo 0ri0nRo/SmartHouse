@@ -4,11 +4,15 @@ import { Thermometer, Droplets, Wind, Cpu, Bell, Flame, ChevronRight, RefreshCw 
 import { api } from '../api'
 import WeatherWidget            from '../components/WeatherWidget'
 import PingWidget               from '../components/PingWidget'
-import TrainWidget              from '../components/TrainPage'
+import TrainWidget              from '../components/TrainWidget'
 import AirQualityExternalWidget from '../components/AirQualityExternalWidget'
 import OnThisDayWidget          from '../components/OnThisDayWidget'
 import { useNotifications } from '../hooks/useNotifications'
 import CalendarWidget from '../components/CalendarWidget'
+import RecipeWidget         from '../components/RecipeWidget'
+import NetworkDevicesWidget from '../components/NetworkDevicesWidget'
+import SunMoonWidget        from '../components/SunMoonWidget'
+
 
 const REFRESH_INTERVAL = 15
 
@@ -310,6 +314,9 @@ export default function HomePage() {
         <TrainWidget/>
         <AirQualityExternalWidget/>
         <OnThisDayWidget/>
+        <RecipeWidget />
+        <NetworkDevicesWidget />
+        <SunMoonWidget />
       </div>
 
       {/* 24h summary */}
