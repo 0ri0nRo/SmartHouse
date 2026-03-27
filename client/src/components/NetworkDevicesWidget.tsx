@@ -53,7 +53,7 @@ export default function NetworkDevicesWidget() {
     setError(null)
 
     try {
-      const res = await fetch('/api/network/devices')
+      const res = await fetch('/api/devices') // ← updated endpoint
 
       if (!res.ok) throw new Error('Scan failed')
 

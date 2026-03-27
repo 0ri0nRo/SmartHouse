@@ -260,7 +260,7 @@ export default function TemperaturePage() {
   return (
     <div className="page animate-fade">
       <div className="page-header">
-        <h1 className="page-title">Temperature</h1>
+        <h1 className="page-title">Tempera<span style={{ color: 'var(--accent)' }}>ture</span></h1>      
         <p className="page-subtitle">Boiler control & climate monitoring</p>
       </div>
 

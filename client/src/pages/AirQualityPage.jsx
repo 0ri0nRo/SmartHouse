@@ -138,7 +138,7 @@ export default function AirQualityPage() {
       <div className="page-header" style={{ display:'flex', alignItems:'flex-start',
         justifyContent:'space-between', flexWrap:'wrap', gap:'0.75rem' }}>
         <div>
-          <h1 className="page-title">Air Quality</h1>
+          <h1 className="page-title">Air Qua<span style={{ color: 'var(--accent)' }}>lity</span></h1>
           <p className="page-subtitle">Real-time monitoring and gas analysis</p>
         </div>
         {latestAQI!=null && (
