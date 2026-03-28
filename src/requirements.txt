@@ -59,3 +59,5 @@ pytesseract==0.3.10
 Pillow==10.0.0
 pdf2image==1.16.3
 fritzconnection==1.15.1
+
+feedparser
