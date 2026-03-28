@@ -109,8 +109,8 @@ def create_app():
     # Register all API blueprints
     register_blueprints(app)
 
-    # Register the Pico logs blueprint (disabled for now)
-    # app.register_blueprint(pico_logs_bp)
+    # Register the Pico logs blueprint
+    app.register_blueprint(pico_logs_bp)
 
     # Register activity blueprint
     app.register_blueprint(activity_bp)

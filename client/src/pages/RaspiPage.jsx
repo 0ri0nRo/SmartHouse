@@ -186,6 +186,193 @@ function SshPanel() {
   )
 }
 
+// ── Pico W Live Logs ───────────────────────────────────────
+function PicoLogsPanel() {
+  const [logs,         setLogs]         = useState([])
+  const [filter,       setFilter]       = useState('all')
+  const [paused,       setPaused]       = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [connected,    setConnected]    = useState(true)
+  const termRef = useRef(null)
+  const pausedRef = useRef(false)
+
+  pausedRef.current = paused
+
+  const fetchLogs = async () => {
+    if (pausedRef.current) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/pico-logs?limit=200')
+      if (!r.ok) throw new Error(r.status)
+      const d = await r.json()
+      setLogs(d.logs || [])
+      setConnected(true)
+    } catch {
+      setConnected(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+    const id = setInterval(fetchLogs, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight
+  }, [logs, filter])
+
+  const LEVELS = ['all', 'info', 'success', 'warning', 'error', 'sensor', 'system']
+
+  const BADGE = {
+    info:    { bg:'#0d2840', color:'#58a6ff' },
+    success: { bg:'#0d2b1a', color:'#3fb950' },
+    warning: { bg:'#2d1e04', color:'#d29922' },
+    warn:    { bg:'#2d1e04', color:'#d29922' },
+    error:   { bg:'#2d0e0e', color:'#f85149' },
+    critical:{ bg:'#3d0505', color:'#ff7b72' },
+    sensor:  { bg:'#1a0d2d', color:'#d2a8ff' },
+    system:  { bg:'#21262d', color:'#8b949e' },
+  }
+
+  const filtered = filter === 'all'
+    ? logs
+    : logs.filter(l => {
+        const lv = (l.level || '').toLowerCase()
+        return lv === filter || (filter === 'warning' && lv === 'warn')
+      })
+
+  const fmtTs = (raw) => {
+    if (!raw) return '--:--:--'
+    try {
+      const d = new Date(raw)
+      return isNaN(d) ? String(raw).slice(0, 8)
+        : d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+    } catch { return '--:--:--' }
+  }
+
+  const lastTs = logs.length ? fmtTs(logs[logs.length-1].timestamp || logs[logs.length-1].created_at) : null
+
+  return (
+    <div style={{ borderRadius:'var(--radius-md)', overflow:'hidden',
+      border:'1px solid rgba(255,255,255,0.07)', background:'#0d1117' }}>
+
+      {/* ── Title bar ── */}
+      <div style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 12px',
+        background:'rgba(255,255,255,0.04)', borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+        {['#ff5f56','#ffbd2e','#27c93f'].map(c => (
+          <span key={c} style={{ width:10, height:10, borderRadius:'50%', background:c, flexShrink:0 }}/>
+        ))}
+        <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.68rem', color:'#6e7681', marginLeft:6 }}>
+          pico-w-001 — live logs
+        </span>
+
+        <span style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:4,
+          padding:'1px 8px', borderRadius:10, fontSize:'0.62rem', fontWeight:500,
+          background: connected ? 'rgba(63,185,80,.12)' : 'rgba(248,81,73,.12)',
+          color: connected ? '#3fb950' : '#f85149' }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+            background: connected ? '#3fb950' : '#f85149' }}/>
+          {connected ? 'connected' : 'error'}
+        </span>
+
+        {[
+          { label:'✕ clear', onClick: () => setLogs([]) },
+          { label: paused ? '▶ resume' : '⏸ pause', onClick: () => setPaused(p => !p),
+            style: paused ? { color:'#d29922' } : {} },
+          { label: loading ? null : '↻ refresh', onClick: fetchLogs },
+        ].map(({ label, onClick, style = {} }, i) => (
+          <button key={i} onClick={onClick} style={{
+            marginLeft: i === 0 ? 8 : 4, background:'rgba(255,255,255,.06)',
+            border:'1px solid rgba(255,255,255,.08)', borderRadius:5,
+            padding:'3px 8px', fontSize:'0.68rem', color:'#8b949e',
+            cursor:'pointer', fontFamily:'var(--font-mono)', display:'flex',
+            alignItems:'center', gap:4, ...style }}>
+            {label ?? <RefreshCw size={11} style={{ animation:'spin 0.6s linear infinite' }}/>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Filter bar ── */}
+      <div style={{ display:'flex', gap:6, padding:'5px 12px', flexWrap:'wrap',
+        background:'rgba(255,255,255,.02)', borderBottom:'1px solid rgba(255,255,255,.05)',
+        alignItems:'center' }}>
+        {LEVELS.map(lv => {
+          const b = BADGE[lv] || { bg:'#21262d', color:'#8b949e' }
+          const active = filter === lv
+          return (
+            <button key={lv} onClick={() => setFilter(lv)} style={{
+              border: `1px solid ${active ? b.color + '55' : 'rgba(255,255,255,.1)'}`,
+              background: active ? b.bg : 'transparent',
+              borderRadius:12, padding:'2px 9px', fontSize:'0.62rem', fontWeight:600,
+              cursor:'pointer', fontFamily:'var(--font-mono)',
+              color: active ? b.color : '#6e7681',
+              opacity: active ? 1 : 0.55, transition:'opacity .15s',
+              letterSpacing:'0.2px' }}>
+              {lv.toUpperCase()}
+            </button>
+          )
+        })}
+        <span style={{ marginLeft:'auto', fontFamily:'var(--font-mono)', fontSize:'0.62rem', color:'#484850' }}>
+          {filtered.length} lines
+        </span>
+      </div>
+
+      {/* ── Terminal output ── */}
+      <div ref={termRef} style={{
+        padding:'10px 12px', fontFamily:'var(--font-mono)', fontSize:'0.72rem',
+        lineHeight:1.7, maxHeight:280, overflowY:'auto' }}>
+        {filtered.length === 0 ? (
+          <div style={{ display:'flex', gap:8 }}>
+            <span style={{ color:'#484850' }}>--:--:--</span>
+            <span style={{ display:'inline-block', minWidth:58, textAlign:'center',
+              borderRadius:3, padding:'0 5px', fontSize:'0.62rem', fontWeight:600,
+              background:'#21262d', color:'#8b949e', lineHeight:'18px' }}>SYSTEM</span>
+            <span style={{ color:'#484850' }}>no logs match filter</span>
+          </div>
+        ) : filtered.map((l, i) => {
+          const lv  = (l.level || 'info').toLowerCase()
+          const b   = BADGE[lv] || { bg:'#21262d', color:'#8b949e' }
+          const ts  = fmtTs(l.timestamp || l.created_at)
+          const sd  = l.sensor_data && Object.keys(l.sensor_data).length
+            ? Object.entries(l.sensor_data).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(' ')
+            : null
+          return (
+            <div key={i} style={{ display:'flex', gap:8, marginBottom:1 }}>
+              <span style={{ color:'#484850', flexShrink:0, userSelect:'none' }}>{ts}</span>
+              <span style={{ display:'inline-block', minWidth:58, textAlign:'center',
+                borderRadius:3, padding:'0 5px', fontSize:'0.62rem', fontWeight:600,
+                background:b.bg, color:b.color, lineHeight:'18px', flexShrink:0 }}>
+                {lv.toUpperCase().slice(0, 7)}
+              </span>
+              <span style={{ whiteSpace:'pre-wrap', color:'#c9d1d9' }}>
+                {l.message || ''}
+                {sd && <span style={{ color:'#484850' }}> │ {sd}</span>}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{ display:'flex', alignItems:'center', padding:'5px 12px',
+        background:'rgba(255,255,255,.02)', borderTop:'1px solid rgba(255,255,255,.05)',
+        fontFamily:'var(--font-mono)', fontSize:'0.68rem', color:'#484850' }}>
+        <span>pico-w-001 @ 192.168.178.101</span>
+        {lastTs && <span style={{ marginLeft:'auto' }}>last: {lastTs}</span>}
+        <span style={{ display:'inline-block', width:7, height:12, background:'#3fb950',
+          borderRadius:1, marginLeft:6, animation:'blink 1.1s step-end infinite' }}/>
+      </div>
+
+      <style>{`
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+      `}</style>
+    </div>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────
 export default function RaspiPage() {
   const { toast, showToast } = useToast()
@@ -385,6 +572,7 @@ export default function RaspiPage() {
 
         {/* ── SSH + Backup — stacked on mobile, side by side on desktop ── */}
         <SshPanel/>
+        <PicoLogsPanel/>
 
         <div className="card">
           <div className="card-header">

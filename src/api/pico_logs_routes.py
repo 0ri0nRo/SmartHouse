@@ -34,43 +34,46 @@ def get_recent_logs():
         logger.error(f"Error fetching Pico logs: {str(e)}")
         return jsonify({'error': 'Failed to fetch logs'}), 500
 
+
 @pico_logs_bp.route('/api/pico-logs', methods=['POST'])
 @handle_db_error
 def receive_pico_log():
-    """API endpoint to receive a single log from Pico W"""
     if not pico_log_service:
         return jsonify({'error': 'Pico logs service not initialized'}), 500
-    
+
     try:
-        log_data = request.get_json()
+        # Debug — vedi cosa arriva raw
+        logger.info(f"Content-Type: {request.content_type}")
+        logger.info(f"Raw data: {request.data}")
+
+        # Prova a parsare in modo più permissivo
+        log_data = request.get_json(force=True, silent=True)
         
+        logger.info(f"Parsed JSON: {log_data}")
+
         if not log_data:
             return jsonify({'error': 'No JSON data provided'}), 400
-        
-        # Validate required fields
-        required_fields = ['level', 'message', 'device_id', 'timestamp']
-        for field in required_fields:
-            if field not in log_data:
-                return jsonify({'error': f'Missing required field: {field}'}), 400
-        
-        # Store the log
-        log_id = pico_log_service.store_log(
-            level=log_data['level'],
-            message=log_data['message'],
-            device_id=log_data['device_id'],
-            timestamp=log_data['timestamp'],
-            sensor_data=log_data.get('sensor_data', {})
+
+        log_entry = pico_log_service.process_pico_log(log_data)
+        if not log_entry:
+            return jsonify({'error': 'Invalid log data'}), 400
+
+        pico_log_service.save_log_to_db(log_entry)
+
+        pico_log_service.socketio.emit(
+            'new_log', log_entry, namespace='/pico-logs'
         )
-        
+
         return jsonify({
             'success': True,
             'message': 'Log received and stored',
-            'log_id': log_id
+            'log_id': log_entry.get('id')
         }), 201
-        
+
     except Exception as e:
         logger.error(f"Error storing Pico log: {str(e)}")
         return jsonify({'error': 'Failed to store log'}), 500
+
 
 @pico_logs_bp.route('/api/pico-logs/batch', methods=['POST'])
 @handle_db_error
