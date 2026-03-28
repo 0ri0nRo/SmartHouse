@@ -91,6 +91,10 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
 
   nginx:
     image: nginx:latest

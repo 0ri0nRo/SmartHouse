@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  Shield, Monitor, RefreshCw, Bell, BellOff, Wifi, WifiOff,
+  Shield, Monitor, RefreshCw, Bell, BellOff, Wifi,
   Cpu, Globe, Server, Smartphone, Laptop, Router, HardDrive,
   ChevronDown, ChevronUp, Scan, Search, X, Clock, Activity,
-  AlertTriangle, Check,
+  AlertTriangle, Check, Calendar, Eye,
 } from 'lucide-react'
 import {
   PieChart, Pie, Cell, BarChart, Bar,
@@ -14,14 +14,14 @@ import { useToast } from '../hooks/useToast'
 
 // ── API ────────────────────────────────────────────────────
 const api = {
-  devices:      () => fetch('/api/devices').then(r => r.json()),
-  stats:        () => fetch('/api/devices/stats').then(r => r.json()),
-  connDays:     () => fetch('/api/devices/most_connected_days').then(r => r.json()),
-  alerts:       () => fetch('/api/devices/alerts').then(r => r.json()),
-  clearAlerts:  () => fetch('/api/devices/alerts', { method: 'DELETE' }).then(r => r.json()),
-  history:      () => fetch('/api/devices/history').then(r => r.json()),
-  portScan:     (mac) => fetch(`/api/devices/${mac}/portscan`, { method: 'POST' }).then(r => r.json()),
-  osScan:       (mac) => fetch(`/api/devices/${mac}/osscan`,  { method: 'POST' }).then(r => r.json()),
+  devices:     () => fetch('/api/devices').then(r => r.json()),
+  stats:       () => fetch('/api/devices/stats').then(r => r.json()),
+  connDays:    () => fetch('/api/devices/most_connected_days').then(r => r.json()),
+  alerts:      () => fetch('/api/devices/alerts').then(r => r.json()),
+  clearAlerts: () => fetch('/api/devices/alerts', { method: 'DELETE' }).then(r => r.json()),
+  history:     () => fetch('/api/devices/history').then(r => r.json()),
+  portScan:    (mac) => fetch(`/api/devices/${mac}/portscan`, { method: 'POST' }).then(r => r.json()),
+  osScan:      (mac) => fetch(`/api/devices/${mac}/osscan`, { method: 'POST' }).then(r => r.json()),
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -30,7 +30,7 @@ const COLORS = [
   'var(--card-temp-accent)', 'var(--card-train-accent)', 'var(--card-exp-accent)',
   'var(--card-act-accent)', 'var(--card-raspi-accent)',
 ]
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -44,13 +44,13 @@ const TOOLTIP_STYLE = {
 }
 
 const OS_ICON = {
-  Windows: <Monitor size={13}/>,
-  Linux:   <Server size={13}/>,
-  Apple:   <Laptop size={13}/>,
-  Android: <Smartphone size={13}/>,
-  Network: <Router size={13}/>,
-  BSD:     <HardDrive size={13}/>,
-  Unknown: <Cpu size={13}/>,
+  Windows: <Monitor size={13} />,
+  Linux:   <Server size={13} />,
+  Apple:   <Laptop size={13} />,
+  Android: <Smartphone size={13} />,
+  Network: <Router size={13} />,
+  BSD:     <HardDrive size={13} />,
+  Unknown: <Cpu size={13} />,
 }
 
 const OS_COLOR = {
@@ -63,39 +63,47 @@ const OS_COLOR = {
   Unknown: 'var(--text-secondary)',
 }
 
+// OS shape indicator in SVG (no emoji)
+function osShape(os) {
+  switch (os) {
+    case 'Apple':   return 'A'
+    case 'Windows': return 'W'
+    case 'Linux':   return 'L'
+    case 'Android': return 'D'
+    case 'Network': return 'N'
+    case 'BSD':     return 'B'
+    default:        return '?'
+  }
+}
+
 // ── Sub-components ─────────────────────────────────────────
 
-// Tab bar — orizzontale con scroll su mobile
 function TabBar({ active, onChange }) {
   const tabs = [
-    { id: 'devices',  label: 'Devices',   icon: <Monitor size={13}/> },
-    { id: 'topology', label: 'Topology',  icon: <Globe size={13}/> },
-    { id: 'stats',    label: 'Analytics', icon: <Activity size={13}/> },
-    { id: 'history',  label: 'History',   icon: <Clock size={13}/> },
+    { id: 'devices',  label: 'Devices',   icon: <Monitor size={13} /> },
+    { id: 'topology', label: 'Topology',  icon: <Globe size={13} /> },
+    { id: 'stats',    label: 'Analytics', icon: <Activity size={13} /> },
+    { id: 'history',  label: 'History',   icon: <Clock size={13} /> },
   ]
   return (
     <div style={{
-      display: 'flex',
-      gap: '0.15rem',
+      display: 'flex', gap: '0.15rem',
       borderBottom: '1px solid var(--border)',
       marginBottom: '1.5rem',
-      overflowX: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      scrollbarWidth: 'none',
-      msOverflowStyle: 'none',
+      overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+      scrollbarWidth: 'none', msOverflowStyle: 'none',
     }}>
       {tabs.map(t => (
-        <button key={t.id} onClick={() => onChange(t.id)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
-            padding: '0.55rem 0.85rem',
-            border: 'none', background: 'transparent',
-            fontFamily: 'var(--font-mono)', fontSize: '0.78rem',
-            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-            color: active === t.id ? 'var(--accent)' : 'var(--text-secondary)',
-            borderBottom: active === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-            marginBottom: '-1px', transition: 'color 0.15s',
-          }}>
+        <button key={t.id} onClick={() => onChange(t.id)} style={{
+          display: 'flex', alignItems: 'center', gap: '0.4rem',
+          padding: '0.55rem 0.85rem',
+          border: 'none', background: 'transparent',
+          fontFamily: 'var(--font-mono)', fontSize: '0.78rem',
+          cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+          color: active === t.id ? 'var(--accent)' : 'var(--text-secondary)',
+          borderBottom: active === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+          marginBottom: '-1px', transition: 'color 0.15s',
+        }}>
           {t.icon}{t.label}
         </button>
       ))}
@@ -117,7 +125,7 @@ function OnlineBadge({ status }) {
         width: 5, height: 5, borderRadius: '50%',
         background: online ? '#22c55e' : '#ef4444',
         animation: online ? 'pulse 2s infinite' : 'none',
-      }}/>
+      }} />
       {online ? 'online' : 'offline'}
     </span>
   )
@@ -132,7 +140,7 @@ function OsBadge({ os }) {
       background: 'var(--bg-muted)', color: OS_COLOR[os] || 'var(--text-secondary)',
       fontFamily: 'var(--font-mono)', fontSize: '0.7rem',
     }}>
-      {OS_ICON[os] || <Cpu size={12}/>} {os}
+      {OS_ICON[os] || <Cpu size={12} />} {os}
     </span>
   )
 }
@@ -157,24 +165,14 @@ function DeviceCard({ device, onPortScan, onOsScan, scanningPort, scanningOs, co
 
   return (
     <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 10,
-      overflow: 'hidden',
-      marginBottom: '0.6rem',
+      background: 'var(--bg-surface)', border: '1px solid var(--border)',
+      borderRadius: 10, overflow: 'hidden', marginBottom: '0.6rem',
     }}>
-      {/* Card header — sempre visibile */}
-      <div
-        onClick={() => setExpanded(p => !p)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '0.65rem',
-          padding: '0.75rem 0.9rem', cursor: 'pointer',
-        }}
-      >
-        <span style={{
-          width: 9, height: 9, borderRadius: '50%',
-          background: accent, flexShrink: 0,
-        }}/>
+      <div onClick={() => setExpanded(p => !p)} style={{
+        display: 'flex', alignItems: 'center', gap: '0.65rem',
+        padding: '0.75rem 0.9rem', cursor: 'pointer',
+      }}>
+        <span style={{ width: 9, height: 9, borderRadius: '50%', background: accent, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: '0.85rem',
@@ -183,68 +181,52 @@ function DeviceCard({ device, onPortScan, onOsScan, scanningPort, scanningOs, co
           }}>
             {device.hostname !== 'unknown' ? device.hostname : device.ip}
           </div>
-          <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: '0.7rem',
-            color: 'var(--text-secondary)', marginTop: '0.1rem',
-          }}>
-            {device.ip}
-            {device.vendor ? ` · ${device.vendor.substring(0, 20)}` : ''}
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
+            {device.ip}{device.vendor ? ` · ${device.vendor.substring(0, 20)}` : ''}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-          <OnlineBadge status={device.status}/>
+          <OnlineBadge status={device.status} />
           {expanded
-            ? <ChevronUp size={13} style={{ color: 'var(--text-secondary)' }}/>
-            : <ChevronDown size={13} style={{ color: 'var(--text-secondary)' }}/>}
+            ? <ChevronUp size={13} style={{ color: 'var(--text-secondary)' }} />
+            : <ChevronDown size={13} style={{ color: 'var(--text-secondary)' }} />}
         </div>
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          background: 'var(--bg-muted)',
-          padding: '0.75rem 0.9rem',
-        }}>
-          {/* OS + MAC row */}
+        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-muted)', padding: '0.75rem 0.9rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-            <OsBadge os={device.os}/>
+            <OsBadge os={device.os} />
             {device.mac !== 'unknown' && (
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-                color: 'var(--text-secondary)',
-              }}>{device.mac}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{device.mac}</span>
             )}
           </div>
 
-          {/* Meta */}
           {device.os_detail && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-              🖥 {device.os_detail}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+              <Monitor size={11} /> {device.os_detail}
             </div>
           )}
           {device.last_seen && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-              🕐 {new Date(device.last_seen).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+              <Clock size={11} /> {new Date(device.last_seen).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
             </div>
           )}
           {device.first_seen && (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-              📅 First seen {new Date(device.first_seen).toLocaleDateString('en-GB', { dateStyle: 'medium' })}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+              <Calendar size={11} /> First seen {new Date(device.first_seen).toLocaleDateString('en-GB', { dateStyle: 'medium' })}
             </div>
           )}
 
-          {/* Open ports */}
           <div style={{
-            fontSize: '0.65rem', color: 'var(--text-secondary)',
-            fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
-            letterSpacing: '0.05em', marginBottom: '0.3rem',
+            fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)',
+            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem',
           }}>
             Open Ports {device.open_ports?.length > 0 && `(${device.open_ports.length})`}
           </div>
           {device.open_ports?.length > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginBottom: '0.65rem' }}>
-              {device.open_ports.map((p, i) => <PortBadge key={i} port={p}/>)}
+              {device.open_ports.map((p, i) => <PortBadge key={i} port={p} />)}
             </div>
           ) : (
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.65rem' }}>
@@ -252,20 +234,19 @@ function DeviceCard({ device, onPortScan, onOsScan, scanningPort, scanningOs, co
             </div>
           )}
 
-          {/* Action buttons */}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className="btn btn--ghost btn--sm"
               disabled={scanningPort === device.mac}
               onClick={() => onPortScan(device.mac)}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, justifyContent: 'center' }}>
-              <Scan size={12} style={{ animation: scanningPort === device.mac ? 'spin 1s linear infinite' : 'none' }}/>
+              <Scan size={12} style={{ animation: scanningPort === device.mac ? 'spin 1s linear infinite' : 'none' }} />
               {scanningPort === device.mac ? 'Scanning…' : 'Port Scan'}
             </button>
             <button className="btn btn--ghost btn--sm"
               disabled={scanningOs === device.mac}
               onClick={() => onOsScan(device.mac)}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, justifyContent: 'center' }}>
-              <Cpu size={12} style={{ animation: scanningOs === device.mac ? 'spin 1s linear infinite' : 'none' }}/>
+              <Cpu size={12} style={{ animation: scanningOs === device.mac ? 'spin 1s linear infinite' : 'none' }} />
               {scanningOs === device.mac ? 'Detecting…' : 'OS Detect'}
             </button>
           </div>
@@ -275,7 +256,7 @@ function DeviceCard({ device, onPortScan, onOsScan, scanningPort, scanningOs, co
   )
 }
 
-// ── Device row (desktop) — invariato ──────────────────────
+// ── Device row (desktop) ───────────────────────────────────
 function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, colorIdx }) {
   const [expanded, setExpanded] = useState(false)
   const accent = COLORS[colorIdx % COLORS.length]
@@ -285,7 +266,7 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
       <tr style={{ cursor: 'pointer' }} onClick={() => setExpanded(p => !p)}>
         <td>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, flexShrink: 0 }}/>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, flexShrink: 0 }} />
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.83rem', color: 'var(--text-primary)' }}>
               {device.hostname !== 'unknown' ? device.hostname : '—'}
             </span>
@@ -298,10 +279,10 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
         <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
           {device.vendor ? device.vendor.substring(0, 22) : '—'}
         </td>
-        <td><OsBadge os={device.os}/></td>
-        <td><OnlineBadge status={device.status}/></td>
+        <td><OsBadge os={device.os} /></td>
+        <td><OnlineBadge status={device.status} /></td>
         <td style={{ textAlign: 'right' }}>
-          {expanded ? <ChevronUp size={13}/> : <ChevronDown size={13}/>}
+          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </td>
       </tr>
 
@@ -312,18 +293,18 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
               <div style={{ minWidth: 180 }}>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Details</div>
                 {device.os_detail && (
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
-                    🖥 {device.os_detail}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
+                    <Monitor size={11} /> {device.os_detail}
                   </div>
                 )}
                 {device.last_seen && (
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
-                    🕐 {new Date(device.last_seen).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
+                    <Clock size={11} /> {new Date(device.last_seen).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
                   </div>
                 )}
                 {device.first_seen && (
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                    📅 First seen {new Date(device.first_seen).toLocaleDateString('en-GB', { dateStyle: 'medium' })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                    <Calendar size={11} /> First seen {new Date(device.first_seen).toLocaleDateString('en-GB', { dateStyle: 'medium' })}
                   </div>
                 )}
               </div>
@@ -333,7 +314,7 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
                 </div>
                 {device.open_ports?.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                    {device.open_ports.map((p, i) => <PortBadge key={i} port={p}/>)}
+                    {device.open_ports.map((p, i) => <PortBadge key={i} port={p} />)}
                   </div>
                 ) : (
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>Not scanned yet</span>
@@ -344,14 +325,14 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
                   disabled={scanningPort === device.mac}
                   onClick={e => { e.stopPropagation(); onPortScan(device.mac) }}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Scan size={12} style={{ animation: scanningPort === device.mac ? 'spin 1s linear infinite' : 'none' }}/>
+                  <Scan size={12} style={{ animation: scanningPort === device.mac ? 'spin 1s linear infinite' : 'none' }} />
                   {scanningPort === device.mac ? 'Scanning…' : 'Port Scan'}
                 </button>
                 <button className="btn btn--ghost btn--sm"
                   disabled={scanningOs === device.mac}
                   onClick={e => { e.stopPropagation(); onOsScan(device.mac) }}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Cpu size={12} style={{ animation: scanningOs === device.mac ? 'spin 1s linear infinite' : 'none' }}/>
+                  <Cpu size={12} style={{ animation: scanningOs === device.mac ? 'spin 1s linear infinite' : 'none' }} />
                   {scanningOs === device.mac ? 'Detecting…' : 'OS Detect'}
                 </button>
               </div>
@@ -363,75 +344,283 @@ function DeviceRow({ device, onPortScan, onOsScan, scanningPort, scanningOs, col
   )
 }
 
-// ── Topology map ───────────────────────────────────────────
+// ── Interactive Topology Map ───────────────────────────────
 function TopologyMap({ devices }) {
+  const svgRef = useRef(null)
+  const gRef   = useRef(null)
+
+  // zoom/pan state
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
+  const [selectedDevice, setSelectedDevice] = useState(null)
+  const dragging = useRef(false)
+  const lastPos  = useRef({ x: 0, y: 0 })
+  const pinchDist = useRef(null)
+
+  const placed = devices.slice(0, 16)
   const WIDTH  = 700
   const HEIGHT = 420
-  const CX     = WIDTH  / 2
+  const CX     = WIDTH / 2
   const CY     = HEIGHT / 2
-  const R      = 155
-  const placed = devices.slice(0, 16)
+  const R      = 150
+
+  const clampTransform = (t) => {
+    const minScale = 0.4
+    const maxScale = 3
+    const scale = Math.min(maxScale, Math.max(minScale, t.scale))
+    return { ...t, scale }
+  }
+
+  // Mouse wheel zoom
+  const onWheel = (e) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 0.9 : 1.1
+    const rect  = svgRef.current.getBoundingClientRect()
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+    setTransform(prev => {
+      const newScale = Math.min(3, Math.max(0.4, prev.scale * delta))
+      const ratio = newScale / prev.scale
+      return clampTransform({
+        scale: newScale,
+        x: mx - ratio * (mx - prev.x),
+        y: my - ratio * (my - prev.y),
+      })
+    })
+  }
+
+  // Mouse drag
+  const onMouseDown = (e) => {
+    if (e.target.closest('.topo-node')) return
+    dragging.current = true
+    lastPos.current = { x: e.clientX, y: e.clientY }
+  }
+  const onMouseMove = (e) => {
+    if (!dragging.current) return
+    const dx = e.clientX - lastPos.current.x
+    const dy = e.clientY - lastPos.current.y
+    lastPos.current = { x: e.clientX, y: e.clientY }
+    setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
+  }
+  const onMouseUp = () => { dragging.current = false }
+
+  // Touch pan + pinch zoom
+  const onTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      pinchDist.current = Math.hypot(dx, dy)
+    } else {
+      dragging.current = true
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+  }
+  const onTouchMove = (e) => {
+    e.preventDefault()
+    if (e.touches.length === 2 && pinchDist.current !== null) {
+      const dx   = e.touches[0].clientX - e.touches[1].clientX
+      const dy   = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.hypot(dx, dy)
+      const delta = dist / pinchDist.current
+      pinchDist.current = dist
+      const rect = svgRef.current.getBoundingClientRect()
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+      setTransform(prev => {
+        const newScale = Math.min(3, Math.max(0.4, prev.scale * delta))
+        const ratio = newScale / prev.scale
+        return clampTransform({
+          scale: newScale,
+          x: mx - ratio * (mx - prev.x),
+          y: my - ratio * (my - prev.y),
+        })
+      })
+    } else if (dragging.current && e.touches.length === 1) {
+      const dx = e.touches[0].clientX - lastPos.current.x
+      const dy = e.touches[0].clientY - lastPos.current.y
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }))
+    }
+  }
+  const onTouchEnd = () => {
+    dragging.current  = false
+    pinchDist.current = null
+  }
+
+  const resetView = () => setTransform({ x: 0, y: 0, scale: 1 })
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} style={{ width: '100%', maxWidth: 700, display: 'block', margin: '0 auto', minWidth: 320 }}>
+    <div style={{ width: '100%', position: 'relative', userSelect: 'none' }}>
+      {/* Controls */}
+      <div style={{
+        position: 'absolute', top: 8, right: 8, zIndex: 10,
+        display: 'flex', flexDirection: 'column', gap: '0.3rem',
+      }}>
+        <button
+          onClick={() => setTransform(p => clampTransform({ ...p, scale: p.scale * 1.25 }))}
+          style={{ width: 28, height: 28, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          +
+        </button>
+        <button
+          onClick={() => setTransform(p => clampTransform({ ...p, scale: p.scale * 0.8 }))}
+          style={{ width: 28, height: 28, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          −
+        </button>
+        <button
+          onClick={resetView}
+          title="Reset view"
+          style={{ width: 28, height: 28, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Eye size={13} />
+        </button>
+      </div>
+
+      {/* SVG canvas */}
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        style={{ width: '100%', maxWidth: WIDTH, display: 'block', margin: '0 auto', minWidth: 280, cursor: dragging.current ? 'grabbing' : 'grab', touchAction: 'none' }}
+        onWheel={onWheel}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <defs>
           <radialGradient id="routerGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25"/>
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0"/>
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </radialGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
         </defs>
-        <circle cx={CX} cy={CY} r={R + 18} fill="none" stroke="var(--border)" strokeWidth={0.5} strokeDasharray="4 6"/>
-        <circle cx={CX} cy={CY} r={R - 18} fill="none" stroke="var(--border)" strokeWidth={0.5} opacity={0.4}/>
-        <circle cx={CX} cy={CY} r={48} fill="url(#routerGlow)"/>
-        {placed.map((d, i) => {
-          const angle = (2 * Math.PI * i) / placed.length - Math.PI / 2
-          const x = CX + R * Math.cos(angle)
-          const y = CY + R * Math.sin(angle)
-          const online = d.status === 'up'
-          return (
-            <line key={d.mac} x1={CX} y1={CY} x2={x} y2={y}
-              stroke={online ? COLORS[i % COLORS.length] : 'var(--border)'}
-              strokeWidth={online ? 1.2 : 0.6}
-              strokeOpacity={online ? 0.5 : 0.3}
-              strokeDasharray={online ? 'none' : '4 4'}/>
-          )
-        })}
-        <circle cx={CX} cy={CY} r={26} fill="var(--bg-surface)" stroke="var(--accent)" strokeWidth={1.5} filter="url(#glow)"/>
-        <text x={CX} y={CY - 4} textAnchor="middle" fill="var(--accent)" fontFamily="var(--font-mono)" fontSize={8} fontWeight={700}>FritzBox</text>
-        <text x={CX} y={CY + 7} textAnchor="middle" fill="var(--text-secondary)" fontFamily="var(--font-mono)" fontSize={6.5}>192.168.178.1</text>
-        {placed.map((d, i) => {
-          const angle  = (2 * Math.PI * i) / placed.length - Math.PI / 2
-          const x      = CX + R * Math.cos(angle)
-          const y      = CY + R * Math.sin(angle)
-          const color  = COLORS[i % COLORS.length]
-          const online = d.status === 'up'
-          const label  = d.hostname !== 'unknown' ? d.hostname : d.ip
-          const lx = CX + (R + 36) * Math.cos(angle)
-          const ly = CY + (R + 36) * Math.sin(angle)
-          const anchor = Math.cos(angle) > 0.1 ? 'start' : Math.cos(angle) < -0.1 ? 'end' : 'middle'
-          return (
-            <g key={d.mac}>
-              <circle cx={x} cy={y} r={13} fill="var(--bg-surface)" stroke={online ? color : 'var(--border)'}
-                strokeWidth={online ? 1.5 : 1} opacity={online ? 1 : 0.5} filter={online ? 'url(#glow)' : 'none'}/>
-              {online && <circle cx={x + 8} cy={y - 8} r={3.5} fill="#22c55e" stroke="var(--bg-surface)" strokeWidth={1}/>}
-              <text x={x} y={y + 4} textAnchor="middle" fill={online ? color : 'var(--text-secondary)'} fontFamily="var(--font-mono)" fontSize={8}>
-                {d.os === 'Apple' ? '🍎' : d.os === 'Windows' ? '🪟' : d.os === 'Linux' ? '🐧' : d.os === 'Android' ? '📱' : '💻'}
-              </text>
-              <text x={lx} y={ly + 3} textAnchor={anchor} fill={online ? 'var(--text-primary)' : 'var(--text-secondary)'} fontFamily="var(--font-mono)" fontSize={7} fontWeight={online ? 600 : 400}>
-                {label.length > 18 ? label.substring(0, 17) + '…' : label}
-              </text>
-              <text x={lx} y={ly + 11} textAnchor={anchor} fill="var(--text-secondary)" fontFamily="var(--font-mono)" fontSize={6}>
-                {d.ip}
-              </text>
-            </g>
-          )
-        })}
+
+        <g ref={gRef} transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
+          {/* Grid rings */}
+          <circle cx={CX} cy={CY} r={R + 20} fill="none" stroke="var(--border)" strokeWidth={0.5} strokeDasharray="3 6" />
+          <circle cx={CX} cy={CY} r={R - 20} fill="none" stroke="var(--border)" strokeWidth={0.4} opacity={0.4} />
+
+          {/* Router glow */}
+          <circle cx={CX} cy={CY} r={52} fill="url(#routerGlow)" />
+
+          {/* Edges */}
+          {placed.map((d, i) => {
+            const angle  = (2 * Math.PI * i) / placed.length - Math.PI / 2
+            const x      = CX + R * Math.cos(angle)
+            const y      = CY + R * Math.sin(angle)
+            const online = d.status === 'up'
+            return (
+              <line key={d.mac + '-edge'} x1={CX} y1={CY} x2={x} y2={y}
+                stroke={online ? COLORS[i % COLORS.length] : 'var(--border)'}
+                strokeWidth={online ? 1 : 0.5}
+                strokeOpacity={online ? 0.45 : 0.25}
+                strokeDasharray={online ? 'none' : '3 4'}
+              />
+            )
+          })}
+
+          {/* Router node */}
+          <circle cx={CX} cy={CY} r={28} fill="var(--bg-surface)" stroke="var(--accent)" strokeWidth={1.5} />
+          <text x={CX} y={CY - 5} textAnchor="middle" fill="var(--accent)"
+            fontFamily="var(--font-mono)" fontSize={8} fontWeight={700}>FritzBox</text>
+          <text x={CX} y={CY + 7} textAnchor="middle" fill="var(--text-secondary)"
+            fontFamily="var(--font-mono)" fontSize={6}>192.168.178.1</text>
+
+          {/* Device nodes */}
+          {placed.map((d, i) => {
+            const angle  = (2 * Math.PI * i) / placed.length - Math.PI / 2
+            const x      = CX + R * Math.cos(angle)
+            const y      = CY + R * Math.sin(angle)
+            const lx     = CX + (R + 38) * Math.cos(angle)
+            const ly     = CY + (R + 38) * Math.sin(angle)
+            const anchor = Math.cos(angle) > 0.1 ? 'start' : Math.cos(angle) < -0.1 ? 'end' : 'middle'
+            const color  = COLORS[i % COLORS.length]
+            const online = d.status === 'up'
+            const label  = d.hostname !== 'unknown' ? d.hostname : d.ip
+            const isSelected = selectedDevice?.mac === d.mac
+
+            return (
+              <g key={d.mac} className="topo-node"
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); setSelectedDevice(isSelected ? null : d) }}>
+                {/* Selection ring */}
+                {isSelected && (
+                  <circle cx={x} cy={y} r={18} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3 3" opacity={0.8} />
+                )}
+                {/* Node circle */}
+                <circle cx={x} cy={y} r={13}
+                  fill="var(--bg-surface)"
+                  stroke={online ? color : 'var(--border)'}
+                  strokeWidth={online ? 1.5 : 1}
+                  opacity={online ? 1 : 0.5}
+                />
+                {/* Online dot */}
+                {online && (
+                  <circle cx={x + 8} cy={y - 8} r={3.5} fill="#22c55e" stroke="var(--bg-surface)" strokeWidth={1} />
+                )}
+                {/* OS letter */}
+                <text x={x} y={y + 4} textAnchor="middle"
+                  fill={online ? color : 'var(--text-secondary)'}
+                  fontFamily="var(--font-mono)" fontSize={8} fontWeight={700}>
+                  {osShape(d.os)}
+                </text>
+                {/* Labels */}
+                <text x={lx} y={ly + 3} textAnchor={anchor}
+                  fill={online ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                  fontFamily="var(--font-mono)" fontSize={7} fontWeight={online ? 600 : 400}>
+                  {label.length > 18 ? label.substring(0, 17) + '…' : label}
+                </text>
+                <text x={lx} y={ly + 12} textAnchor={anchor}
+                  fill="var(--text-secondary)" fontFamily="var(--font-mono)" fontSize={6}>
+                  {d.ip}
+                </text>
+              </g>
+            )
+          })}
+        </g>
       </svg>
+
+      {/* Device detail tooltip on click */}
+      {selectedDevice && (
+        <div style={{
+          position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-surface)', border: '1px solid var(--border)',
+          borderRadius: 8, padding: '0.6rem 0.9rem', minWidth: 200, maxWidth: 280,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 20,
+          fontFamily: 'var(--font-mono)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {selectedDevice.hostname !== 'unknown' ? selectedDevice.hostname : selectedDevice.ip}
+            </span>
+            <button onClick={() => setSelectedDevice(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0, lineHeight: 1 }}>
+              <X size={12} />
+            </button>
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <span>{selectedDevice.ip}</span>
+            {selectedDevice.mac !== 'unknown' && <span>{selectedDevice.mac}</span>}
+            {selectedDevice.vendor && <span>{selectedDevice.vendor}</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem' }}>
+              <OsBadge os={selectedDevice.os} />
+              <OnlineBadge status={selectedDevice.status} />
+            </div>
+            {selectedDevice.open_ports?.length > 0 && (
+              <div style={{ marginTop: '0.25rem', display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {selectedDevice.open_ports.slice(0, 6).map((p, i) => <PortBadge key={i} port={p} />)}
+                {selectedDevice.open_ports.length > 6 && (
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>+{selectedDevice.open_ports.length - 6}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hint */}
+      <div style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', marginTop: '0.4rem', opacity: 0.7 }}>
+        scroll / pinch to zoom · drag to pan · tap node for details
+      </div>
     </div>
   )
 }
@@ -440,29 +629,24 @@ function TopologyMap({ devices }) {
 function AlertPanel({ alerts, onClear, onClose }) {
   return (
     <div style={{
-      position: 'fixed',
-      top: 0, right: 0, bottom: 0,
-      width: '100%',
-      maxWidth: 360,
-      zIndex: 200,
-      background: 'var(--bg-surface)',
-      borderLeft: '1px solid var(--border)',
+      position: 'fixed', top: 0, right: 0, bottom: 0,
+      width: '100%', maxWidth: 360, zIndex: 200,
+      background: 'var(--bg-surface)', borderLeft: '1px solid var(--border)',
       boxShadow: '-8px 0 32px rgba(0,0,0,0.25)',
       display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)',
-        flexShrink: 0,
+        padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', flexShrink: 0,
       }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 600 }}>New Devices</span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {alerts.length > 0 && (
             <button className="btn btn--ghost btn--sm" onClick={onClear} style={{ fontSize: '0.65rem' }}>
-              <Check size={10}/> Clear all
+              <Check size={10} /> Clear all
             </button>
           )}
-          <button className="btn btn--ghost btn--sm" onClick={onClose}><X size={14}/></button>
+          <button className="btn btn--ghost btn--sm" onClick={onClose}><X size={14} /></button>
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -475,7 +659,7 @@ function AlertPanel({ alerts, onClear, onClose }) {
             padding: '0.85rem 1.25rem', borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
           }}>
-            <AlertTriangle size={14} style={{ color: 'var(--card-temp-accent)', flexShrink: 0, marginTop: 2 }}/>
+            <AlertTriangle size={14} style={{ color: 'var(--card-temp-accent)', flexShrink: 0, marginTop: 2 }} />
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
                 {a.hostname || a.ip}
@@ -494,16 +678,9 @@ function AlertPanel({ alerts, onClear, onClose }) {
   )
 }
 
-// Alert backdrop
 function AlertBackdrop({ onClose }) {
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 199,
-        background: 'rgba(0,0,0,0.4)',
-      }}
-    />
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 199, background: 'rgba(0,0,0,0.4)' }} />
   )
 }
 
@@ -512,7 +689,7 @@ function HistoryView({ history, devices }) {
   const [filter, setFilter] = useState('')
   const deviceByMac = Object.fromEntries(devices.map(d => [d.mac, d]))
   const filteredMacs = Object.keys(history).filter(mac => {
-    const dev = deviceByMac[mac]
+    const dev   = deviceByMac[mac]
     const label = dev ? `${dev.hostname} ${dev.ip} ${mac}` : mac
     return label.toLowerCase().includes(filter.toLowerCase())
   })
@@ -521,26 +698,26 @@ function HistoryView({ history, devices }) {
     <div className="card">
       <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
         <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-          <Clock size={15}/>
+          <Clock size={15} />
         </div>
         <span className="card-header-title">Connection History</span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Search size={12} style={{ color: 'var(--text-secondary)' }}/>
+          <Search size={12} style={{ color: 'var(--text-secondary)' }} />
           <input value={filter} onChange={e => setFilter(e.target.value)}
             placeholder="Filter devices…"
             style={{
               background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 6,
               padding: '0.3rem 0.6rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
               color: 'var(--text-primary)', outline: 'none', width: 150,
-            }}/>
+            }} />
         </div>
       </div>
       <div style={{ maxHeight: 500, overflowY: 'auto' }}>
         {filteredMacs.length === 0 ? (
-          <div className="empty-state"><Clock size={28}/><div>No history available</div></div>
+          <div className="empty-state"><Clock size={28} /><div>No history available</div></div>
         ) : filteredMacs.map(mac => {
-          const dev = deviceByMac[mac]
-          const label = dev ? (dev.hostname !== 'unknown' ? dev.hostname : dev.ip) : mac
+          const dev     = deviceByMac[mac]
+          const label   = dev ? (dev.hostname !== 'unknown' ? dev.hostname : dev.ip) : mac
           const entries = history[mac] || []
           return (
             <div key={mac} style={{ borderBottom: '1px solid var(--border)', padding: '0.75rem 1rem' }}>
@@ -590,7 +767,6 @@ export default function SecurityPage() {
   const [showAlerts,   setShowAlerts]   = useState(false)
   const [search,       setSearch]       = useState('')
 
-  // Rilevazione mobile
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 640)
@@ -690,7 +866,7 @@ export default function SecurityPage() {
     value: s.connection_count || 0,
     color: COLORS[i % COLORS.length],
   }))
-  const ipKeys = Object.keys(weekData[0] || {}).filter(k => k !== 'day')
+  const ipKeys      = Object.keys(weekData[0] || {}).filter(k => k !== 'day')
   const onlineCount = devices.filter(d => d.status === 'up').length
 
   return (
@@ -706,15 +882,13 @@ export default function SecurityPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <span className="badge badge--success">
-            <span className="dot dot--green dot--pulse"/> {onlineCount}/{devices.length} online
+            <span className="dot dot--green dot--pulse" /> {onlineCount}/{devices.length} online
           </span>
-
-          {/* Bell */}
           <div style={{ position: 'relative' }}>
             <button className="btn btn--ghost btn--sm" onClick={() => setShowAlerts(p => !p)} style={{ position: 'relative' }}>
               {alerts.length > 0
-                ? <Bell size={14} style={{ color: 'var(--card-temp-accent)' }}/>
-                : <BellOff size={14}/>}
+                ? <Bell size={14} style={{ color: 'var(--card-temp-accent)' }} />
+                : <BellOff size={14} />}
               {alerts.length > 0 && (
                 <span style={{
                   position: 'absolute', top: -4, right: -4,
@@ -728,35 +902,33 @@ export default function SecurityPage() {
               )}
             </button>
           </div>
-
           <button className="btn btn--ghost btn--sm" onClick={() => load(true)} disabled={refreshing}>
-            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}/>
+            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
             {!isMobile && 'Refresh'}
           </button>
         </div>
       </div>
 
-      {/* Alert panel a tutto schermo su mobile */}
       {showAlerts && (
         <>
-          <AlertBackdrop onClose={() => setShowAlerts(false)}/>
-          <AlertPanel alerts={alerts} onClear={handleClearAlerts} onClose={() => setShowAlerts(false)}/>
+          <AlertBackdrop onClose={() => setShowAlerts(false)} />
+          <AlertPanel alerts={alerts} onClear={handleClearAlerts} onClose={() => setShowAlerts(false)} />
         </>
       )}
 
-      <TabBar active={tab} onChange={setTab}/>
+      <TabBar active={tab} onChange={setTab} />
 
       {/* ── DEVICES TAB ── */}
       {tab === 'devices' && (
         <div className="card">
           <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-              <Monitor size={15}/>
+              <Monitor size={15} />
             </div>
             <span className="card-header-title">Connected Devices</span>
             <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{filteredDevices.length}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Search size={12} style={{ color: 'var(--text-secondary)' }}/>
+              <Search size={12} style={{ color: 'var(--text-secondary)' }} />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search…"
                 style={{
@@ -764,50 +936,41 @@ export default function SecurityPage() {
                   padding: '0.28rem 0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
                   color: 'var(--text-primary)', outline: 'none',
                   width: isMobile ? 110 : 140,
-                }}/>
+                }} />
               {search && (
                 <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                  <X size={12}/>
+                  <X size={12} />
                 </button>
               )}
             </div>
           </div>
 
           {loading ? (
-            <div className="loading-box"><span className="spinner"/></div>
+            <div className="loading-box"><span className="spinner" /></div>
           ) : filteredDevices.length === 0 ? (
-            <div className="empty-state"><Monitor size={28}/><div>No devices found</div></div>
+            <div className="empty-state"><Monitor size={28} /><div>No devices found</div></div>
           ) : isMobile ? (
-            // ── Vista card su mobile ──
             <div style={{ padding: '0.75rem' }}>
               {filteredDevices.map((d, i) => (
-                <DeviceCard
-                  key={d.mac || i} device={d} colorIdx={i}
+                <DeviceCard key={d.mac || i} device={d} colorIdx={i}
                   onPortScan={handlePortScan} onOsScan={handleOsScan}
-                  scanningPort={scanningPort} scanningOs={scanningOs}
-                />
+                  scanningPort={scanningPort} scanningOs={scanningOs} />
               ))}
             </div>
           ) : (
-            // ── Vista tabella su desktop ──
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Hostname</th>
-                    <th>IP</th>
-                    <th>MAC</th>
-                    <th>Vendor</th>
-                    <th>OS</th>
-                    <th>Status</th>
-                    <th/>
+                    <th>Hostname</th><th>IP</th><th>MAC</th>
+                    <th>Vendor</th><th>OS</th><th>Status</th><th />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredDevices.map((d, i) => (
                     <DeviceRow key={d.mac || i} device={d} colorIdx={i}
                       onPortScan={handlePortScan} onOsScan={handleOsScan}
-                      scanningPort={scanningPort} scanningOs={scanningOs}/>
+                      scanningPort={scanningPort} scanningOs={scanningOs} />
                   ))}
                 </tbody>
               </table>
@@ -821,33 +984,42 @@ export default function SecurityPage() {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-              <Globe size={15}/>
+              <Globe size={15} />
             </div>
             <span className="card-header-title">Network Topology</span>
             <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{devices.length} nodes</span>
           </div>
           <div style={{ padding: '1rem' }}>
             {loading ? (
-              <div className="loading-box"><span className="spinner"/></div>
+              <div className="loading-box"><span className="spinner" /></div>
             ) : devices.length === 0 ? (
-              <div className="empty-state"><Globe size={28}/><div>No devices</div></div>
+              <div className="empty-state"><Globe size={28} /><div>No devices</div></div>
             ) : (
-              <TopologyMap devices={devices}/>
+              <TopologyMap devices={devices} />
             )}
           </div>
-          <div style={{ display: 'flex', gap: '1rem', padding: '0 1rem 1rem', flexWrap: 'wrap' }}>
+
+          {/* Legend — no emoji, use colored dots + OS letter */}
+          <div style={{ display: 'flex', gap: '1rem', padding: '0 1rem 1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
-              { icon: '🍎', label: 'Apple' }, { icon: '🪟', label: 'Windows' },
-              { icon: '🐧', label: 'Linux' }, { icon: '📱', label: 'Android' },
-              { icon: '💻', label: 'Other' },
-            ].map(({ icon, label }) => (
+              { letter: 'A', label: 'Apple',   color: OS_COLOR.Apple },
+              { letter: 'W', label: 'Windows', color: OS_COLOR.Windows },
+              { letter: 'L', label: 'Linux',   color: OS_COLOR.Linux },
+              { letter: 'D', label: 'Android', color: OS_COLOR.Android },
+              { letter: '?', label: 'Other',   color: OS_COLOR.Unknown },
+            ].map(({ letter, label, color }) => (
               <span key={label} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {icon} {label}
+                <span style={{ width: 14, height: 14, borderRadius: 3, border: `1px solid ${color}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, color }}>{letter}</span>
+                {label}
               </span>
             ))}
-            <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}/> Online
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--border)', display: 'inline-block', marginLeft: 6 }}/> Offline
+            <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} /> Online
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--border)', display: 'inline-block' }} /> Offline
+              </span>
             </span>
           </div>
         </div>
@@ -855,35 +1027,27 @@ export default function SecurityPage() {
 
       {/* ── ANALYTICS TAB ── */}
       {tab === 'stats' && (
-        // Su mobile stack verticale, su desktop grid 2 colonne
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-          gap: '1.25rem',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '1.25rem' }}>
           {/* Donut */}
           <div className="card">
             <div className="card-header">
               <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-                <Shield size={15}/>
+                <Shield size={15} />
               </div>
               <span className="card-header-title">Connection Distribution</span>
             </div>
             <div className="card-body" style={{ height: 300 }}>
               {loading ? (
-                <div className="loading-box"><span className="spinner"/></div>
+                <div className="loading-box"><span className="spinner" /></div>
               ) : pieData.length === 0 ? (
-                <div className="empty-state"><Shield size={28}/><div>No data</div></div>
+                <div className="empty-state"><Shield size={28} /><div>No data</div></div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} cx="50%" cy="45%" innerRadius="42%" outerRadius="65%"
-                      paddingAngle={3} dataKey="value">
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color}/>
-                      ))}
+                    <Pie data={pieData} cx="50%" cy="45%" innerRadius="42%" outerRadius="65%" paddingAngle={3} dataKey="value">
+                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [`${v} connections`, name]}/>
+                    <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [`${v} connections`, name]} />
                     <Legend
                       wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', color: 'var(--text-secondary)' }}
                       formatter={(value, entry) => {
@@ -902,27 +1066,27 @@ export default function SecurityPage() {
           <div className="card">
             <div className="card-header">
               <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-                <Activity size={15}/>
+                <Activity size={15} />
               </div>
               <span className="card-header-title">Weekly Activity</span>
             </div>
             <div className="card-body" style={{ height: 300 }}>
               {loading ? (
-                <div className="loading-box"><span className="spinner"/></div>
+                <div className="loading-box"><span className="spinner" /></div>
               ) : weekData.length === 0 ? (
-                <div className="empty-state"><Activity size={28}/><div>No data</div></div>
+                <div className="empty-state"><Activity size={28} /><div>No data</div></div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weekData} barGap={2} margin={{ left: -10, right: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                    <XAxis dataKey="day" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-secondary)' }}/>
-                    <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-secondary)' }} width={28}/>
-                    <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [`${v} connections`, name]}/>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="day" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-secondary)' }} />
+                    <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-secondary)' }} width={28} />
+                    <Tooltip {...TOOLTIP_STYLE} formatter={(v, name) => [`${v} connections`, name]} />
                     {ipKeys.length > 1 && (
-                      <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', color: 'var(--text-secondary)' }}/>
+                      <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', color: 'var(--text-secondary)' }} />
                     )}
                     {ipKeys.map((ip, i) => (
-                      <Bar key={ip} dataKey={ip} fill={COLORS[i % COLORS.length]} radius={[3,3,0,0]} maxBarSize={20}/>
+                      <Bar key={ip} dataKey={ip} fill={COLORS[i % COLORS.length]} radius={[3, 3, 0, 0]} maxBarSize={20} />
                     ))}
                   </BarChart>
                 </ResponsiveContainer>
@@ -934,7 +1098,7 @@ export default function SecurityPage() {
           <div className="card">
             <div className="card-header">
               <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-                <Cpu size={15}/>
+                <Cpu size={15} />
               </div>
               <span className="card-header-title">OS Breakdown</span>
             </div>
@@ -942,36 +1106,20 @@ export default function SecurityPage() {
               {Object.entries(
                 devices.reduce((acc, d) => {
                   const os = d.os || 'Unknown'
-                  acc[os] = (acc[os] || 0) + 1
+                  acc[os]  = (acc[os] || 0) + 1
                   return acc
                 }, {})
               ).sort((a, b) => b[1] - a[1]).map(([os, count]) => (
                 <div key={os} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.65rem' }}>
-                  <span style={{
-                    color: OS_COLOR[os] || 'var(--text-secondary)',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem',
-                    fontFamily: 'var(--font-mono)', fontSize: '0.78rem', minWidth: 80,
-                  }}>
-                    {OS_ICON[os] || <Cpu size={12}/>} {os}
+                  <span style={{ color: OS_COLOR[os] || 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-mono)', fontSize: '0.78rem', minWidth: 80 }}>
+                    {OS_ICON[os] || <Cpu size={12} />} {os}
                   </span>
                   <div style={{ flex: 1, height: 6, background: 'var(--bg-muted)', borderRadius: 99 }}>
-                    <div style={{
-                      height: '100%', borderRadius: 99,
-                      width: `${(count / devices.length) * 100}%`,
-                      background: OS_COLOR[os] || 'var(--text-secondary)',
-                      transition: 'width 0.4s ease',
-                    }}/>
+                    <div style={{ height: '100%', borderRadius: 99, width: `${(count / devices.length) * 100}%`, background: OS_COLOR[os] || 'var(--text-secondary)', transition: 'width 0.4s ease' }} />
                   </div>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: 20, textAlign: 'right' }}>
-                    {count}
-                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: 20, textAlign: 'right' }}>{count}</span>
                 </div>
               ))}
-              {devices.every(d => !d.os) && (
-                <div className="empty-state" style={{ minHeight: 80 }}>
-                  <Cpu size={20}/><div>Run OS Detect on devices first</div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -979,18 +1127,14 @@ export default function SecurityPage() {
           <div className="card">
             <div className="card-header">
               <div className="card-header-icon" style={{ background: 'var(--card-sec-bg)', color: 'var(--card-sec-accent)' }}>
-                <Wifi size={15}/>
+                <Wifi size={15} />
               </div>
               <span className="card-header-title">Device Uptime</span>
             </div>
             {isMobile ? (
-              // Su mobile: lista compatta invece di tabella
               <div style={{ padding: '0.5rem 0.75rem' }}>
                 {devices.slice(0, 10).map((d, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.6rem',
-                    padding: '0.55rem 0', borderBottom: '1px solid var(--border)',
-                  }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.55rem 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {d.hostname !== 'unknown' ? d.hostname : d.ip}
@@ -999,7 +1143,7 @@ export default function SecurityPage() {
                         {d.ip} · {d.connection_count || 0} conn
                       </div>
                     </div>
-                    <OnlineBadge status={d.status}/>
+                    <OnlineBadge status={d.status} />
                   </div>
                 ))}
               </div>
@@ -1015,7 +1159,7 @@ export default function SecurityPage() {
                         </td>
                         <td className="td-mono" style={{ fontSize: '0.75rem' }}>{d.ip}</td>
                         <td className="td-mono td-muted" style={{ fontSize: '0.75rem' }}>{d.connection_count || 0}</td>
-                        <td><OnlineBadge status={d.status}/></td>
+                        <td><OnlineBadge status={d.status} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1028,14 +1172,13 @@ export default function SecurityPage() {
 
       {/* ── HISTORY TAB ── */}
       {tab === 'history' && (
-        <HistoryView history={history} devices={devices}/>
+        <HistoryView history={history} devices={devices} />
       )}
 
-      <Toast toast={toast}/>
+      <Toast toast={toast} />
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        /* Nasconde la scrollbar del tab bar su webkit */
         div::-webkit-scrollbar { display: none; }
       `}</style>
     </div>

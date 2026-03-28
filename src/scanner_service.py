@@ -101,6 +101,26 @@ def enrich_with_cached_data(devices: list) -> list:
     return enriched
 
 
+def enrich_with_os(devices: list, scanner) -> list:
+    """Rileva OS se non già in cache Redis (24h)."""
+    enriched = []
+    for d in devices:
+        mac = d.get("mac", "")
+        ip  = d.get("ip", "")
+
+        cached = r.get(f"network:os:{mac}")
+        if cached:
+            d.update(json.loads(cached))
+        elif ip and mac and mac != "unknown":
+            print(f"[scanner] 🔍 OS scan: {ip}")
+            os_info = scanner.scan_os(ip)
+            if os_info.get("os"):
+                r.set(f"network:os:{mac}", json.dumps(os_info), ex=86400)
+                d.update(os_info)
+
+        enriched.append(d)
+    return enriched
+
 # ── Main loop ──────────────────────────────────────────────
 
 previous_macs: set = set()
@@ -108,6 +128,7 @@ previous_macs: set = set()
 while True:
     try:
         devices = scanner.scan_network()
+        devices = enrich_with_os(devices, scanner)
         devices = enrich_with_cached_data(devices)
 
         r.set("network:devices", json.dumps(devices), ex=300)
@@ -120,6 +141,8 @@ while True:
         print(f"[scanner] ✓  {len(devices)} devices  |  {len(previous_macs)} tracked")
 
     except Exception as e:
+        import traceback
         print(f"[scanner] Error: {e}")
+        traceback.print_exc()
 
     time.sleep(30)
