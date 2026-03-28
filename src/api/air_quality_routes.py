@@ -174,8 +174,54 @@ def api_gas_concentration_today():
         return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 
-# @air_quality_bp.route('/air_quality')
-# def page_air_quality():
-#     """Renders the air quality dashboard HTML page."""
-#     pass  # route disabled - served by React
+@air_quality_bp.route('/api/air_quality_monthly/<int:month>/<int:year>', methods=['GET'])
+@handle_db_error
+def api_air_quality_monthly(month, year):
+    """Returns daily average AQI for a given month/year."""
+    conn = get_db_connection(config['DB_CONFIG'])
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        q = """
+            SELECT
+                EXTRACT(DAY FROM timestamp)::int AS day,
+                ROUND(AVG(air_quality_index)::numeric, 2) AS avg_aqi
+            FROM air_quality
+            WHERE EXTRACT(MONTH FROM timestamp) = %s
+              AND EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY EXTRACT(DAY FROM timestamp)
+            ORDER BY day;
+        """
+        cur.execute(q, (month, year))
+        rows = cur.fetchall()
+        if not rows:
+            return jsonify({'error': 'No data'}), 404
+        return jsonify({str(int(r['day'])): float(r['avg_aqi']) for r in rows}), 200
+    finally:
+        cur.close()
+        conn.close()
 
+
+@air_quality_bp.route('/api/air_quality_yearly/<int:year>', methods=['GET'])
+@handle_db_error
+def api_air_quality_yearly(year):
+    """Returns monthly average AQI for a given year."""
+    conn = get_db_connection(config['DB_CONFIG'])
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        q = """
+            SELECT
+                EXTRACT(MONTH FROM timestamp)::int AS month,
+                ROUND(AVG(air_quality_index)::numeric, 2) AS avg_aqi
+            FROM air_quality
+            WHERE EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY EXTRACT(MONTH FROM timestamp)
+            ORDER BY month;
+        """
+        cur.execute(q, (year,))
+        rows = cur.fetchall()
+        if not rows:
+            return jsonify({'error': 'No data'}), 404
+        return jsonify({str(int(r['month'])): float(r['avg_aqi']) for r in rows}), 200
+    finally:
+        cur.close()
+        conn.close()
