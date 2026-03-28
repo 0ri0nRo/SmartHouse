@@ -127,10 +127,29 @@ previous_macs: set = set()
 
 while True:
     try:
+        # ── Compute OS queue scan on-demand ───────────────
+        while True:
+            item = r.rpop("network:osscan_queue")
+            if not item:
+                break      # ← esce solo dal while interno
+            req = json.loads(item)
+            mac, ip = req["mac"], req["ip"]
+            print(f"[scanner] 🔍 OS scan (on-demand): {ip}")
+            os_info = scanner.scan_os(ip)
+            if os_info.get("os"):
+                r.set(f"network:os:{mac}", json.dumps(os_info), ex=86400)
+                devices_raw = r.get("network:devices")
+                if devices_raw:
+                    devs = json.loads(devices_raw)
+                    patched = [{**d, **os_info} if d.get("mac") == mac else d for d in devs]
+                    r.set("network:devices", json.dumps(patched), ex=300)
+                print(f"[scanner] OS detected: {os_info}")
+
+        # ── Scan ──────────────────────────────────
         devices = scanner.scan_network()
         devices = enrich_with_os(devices, scanner)
-        devices = enrich_with_cached_data(devices)
-
+        devices = enrich_with_cached_data(devices)        
+        
         r.set("network:devices", json.dumps(devices), ex=300)
 
         previous_macs = update_history(devices, previous_macs)
@@ -139,7 +158,7 @@ while True:
         r.set("network:weekly_activity", json.dumps(weekly), ex=3600)
 
         print(f"[scanner] ✓  {len(devices)} devices  |  {len(previous_macs)} tracked")
-
+        
     except Exception as e:
         import traceback
         print(f"[scanner] Error: {e}")

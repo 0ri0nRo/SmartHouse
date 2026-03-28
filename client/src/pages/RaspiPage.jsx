@@ -283,7 +283,7 @@ function PicoLogsPanel() {
           className="btn btn--ghost btn--sm"
           style={{ marginLeft:'0.5rem', padding:'2px 8px', fontSize:'0.68rem',
             color: paused ? 'var(--color-warning)' : undefined }}>
-          {paused ? '▶ resume' : '⏸ pause'}
+          {paused ? 'resume' : 'pause'}
         </button>
 
         {/* Pulsante refresh */}
@@ -353,7 +353,7 @@ function PicoLogsPanel() {
         ) : filtered.map((l, i) => {
           const lv = (l.level || 'system').toLowerCase()
           const s  = LEVEL_STYLE[lv] || LEVEL_STYLE.system
-          const ts = fmtTs(l.timestamp || l.created_at)
+          const ts = fmtTs(l.created_at || l.timestamp)
           return (
             <div key={i} style={{
               display:'grid',
