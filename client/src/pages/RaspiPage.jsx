@@ -202,7 +202,7 @@ function PicoLogsPanel() {
     if (pausedRef.current) return
     setLoading(true)
     try {
-      const r = await fetch('/api/pico-logs?limit=200', { cache: 'no-store' })
+      const r = await fetch('/api/pico-logs?limit=100', { cache: 'no-store' })
       if (!r.ok) throw new Error(r.status)
       const d = await r.json()
       setLogs(d.logs || [])
