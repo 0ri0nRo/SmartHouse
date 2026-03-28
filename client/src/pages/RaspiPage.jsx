@@ -186,6 +186,237 @@ function SshPanel() {
   )
 }
 
+// ── Pico W Live Logs ───────────────────────────────────────
+// ── Pico W Live Logs ───────────────────────────────────────
+function PicoLogsPanel() {
+  const [logs,      setLogs]      = useState([])
+  const [filter,    setFilter]    = useState('all')
+  const [paused,    setPaused]    = useState(false)
+  const [loading,   setLoading]   = useState(false)
+  const [connected, setConnected] = useState(true)
+  const termRef   = useRef(null)
+  const pausedRef = useRef(false)
+  pausedRef.current = paused
+
+  const fetchLogs = async () => {
+    if (pausedRef.current) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/pico-logs?limit=100', { cache: 'no-store' })
+      if (!r.ok) throw new Error(r.status)
+      const d = await r.json()
+      setLogs(d.logs || [])
+      setConnected(true)
+    } catch {
+      setConnected(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+    const id = setInterval(fetchLogs, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight
+  }, [logs, filter])
+
+  // Level → colori semantici tramite CSS variables
+  const LEVEL_STYLE = {
+    info:    { bg:'#0d2840', color:'#58a6ff', label:'INFO'   },
+    success: { bg:'#0d2b1a', color:'#3fb950', label:'OK'     },
+    warning: { bg:'#2d1e04', color:'#d29922', label:'WARN'   },
+    warn:    { bg:'#2d1e04', color:'#d29922', label:'WARN'   },
+    error:   { bg:'#2d0e0e', color:'#f85149', label:'ERR'    },
+    critical:{ bg:'#3d0505', color:'#ff7b72', label:'CRIT'   },
+    sensor:  { bg:'#1a0d2d', color:'#d2a8ff', label:'SENSOR' },
+    system:  { bg:'#1c1c1e', color:'#8b949e', label:'SYS'    },
+  }
+
+  const LEVELS = ['all','info','success','warning','error','sensor','system']
+
+  const filtered = filter === 'all'
+    ? logs
+    : logs.filter(l => {
+        const lv = (l.level || '').toLowerCase()
+        return lv === filter || (filter === 'warning' && lv === 'warn')
+      })
+
+  const fmtTs = (raw) => {
+    if (!raw) return '--:--:--'
+    try {
+      const d = new Date(raw)
+      return isNaN(d)
+        ? String(raw).slice(0, 8)
+        : d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+    } catch { return '--:--:--' }
+  }
+
+  const lastTs = logs.length
+    ? fmtTs(logs[logs.length - 1].timestamp || logs[logs.length - 1].created_at)
+    : null
+
+  return (
+    <div className="card">
+
+      {/* ── Header — uguale agli altri card della pagina ── */}
+      <div className="card-header">
+        <div className="card-header-icon"
+          style={{ background:'var(--bg-surface-3)', color:'var(--card-temp-accent)' }}>
+          <Terminal size={14}/>
+        </div>
+        <span className="card-header-title">Pico W — Live Logs</span>
+
+        {/* Badge connessione */}
+        <span className={`badge ${connected ? 'badge--success' : 'badge--danger'}`}
+          style={{ marginLeft:'auto' }}>
+          <span className={`dot ${connected ? 'dot--green dot--pulse' : 'dot--red'}`}/>
+          {connected ? 'online' : 'offline'}
+        </span>
+
+        {/* Pulsante pause */}
+        <button
+          onClick={() => setPaused(p => !p)}
+          className="btn btn--ghost btn--sm"
+          style={{ marginLeft:'0.5rem', padding:'2px 8px', fontSize:'0.68rem',
+            color: paused ? 'var(--color-warning)' : undefined }}>
+          {paused ? '▶ resume' : '⏸ pause'}
+        </button>
+
+        {/* Pulsante refresh */}
+        <button
+          onClick={fetchLogs}
+          className="btn btn--ghost btn--sm"
+          style={{ marginLeft:'0.25rem', padding:'2px 8px', fontSize:'0.68rem' }}
+          disabled={loading}>
+          {loading
+            ? <RefreshCw size={11} style={{ animation:'spin 0.6s linear infinite' }}/>
+            : <RefreshCw size={11}/>}
+        </button>
+
+        {/* Pulsante clear */}
+        {logs.length > 0 && (
+          <button
+            onClick={() => setLogs([])}
+            className="btn btn--ghost btn--sm"
+            style={{ marginLeft:'0.25rem', padding:'2px 8px', fontSize:'0.68rem' }}>
+            <X size={11}/>
+          </button>
+        )}
+      </div>
+
+      {/* ── Filter pills ── */}
+      <div style={{
+        display:'flex', gap:'0.35rem', padding:'0.5rem 1rem',
+        flexWrap:'wrap', alignItems:'center',
+        borderBottom:'1px solid var(--border)',
+        background:'var(--bg-surface-2)',
+      }}>
+        {LEVELS.map(lv => {
+          const s = LEVEL_STYLE[lv] || LEVEL_STYLE.system
+          const active = filter === lv
+          return (
+            <button key={lv} onClick={() => setFilter(lv)} style={{
+              border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+              background: active ? s.bg : 'transparent',
+              borderRadius: 'var(--radius-full, 999px)',
+              padding:'2px 10px', fontSize:'0.62rem', fontWeight:600,
+              cursor:'pointer', fontFamily:'var(--font-mono)',
+              color: active ? s.color : 'var(--text-muted)',
+              transition:'all .15s', letterSpacing:'0.3px',
+            }}>
+              {lv.toUpperCase()}
+            </button>
+          )
+        })}
+        <span style={{ marginLeft:'auto', fontFamily:'var(--font-mono)',
+          fontSize:'0.62rem', color:'var(--text-muted)', flexShrink:0 }}>
+          {filtered.length} lines
+        </span>
+      </div>
+
+      {/* ── Terminal body ── */}
+      <div ref={termRef} style={{
+        background:'var(--bg-code, #0d1117)',
+        padding:'0.75rem 1rem',
+        fontFamily:'var(--font-mono)', fontSize:'0.72rem', lineHeight:1.75,
+        maxHeight:300, overflowY:'auto',
+        overflowX:'hidden',
+      }}>
+        {filtered.length === 0 ? (
+          <div style={{ color:'var(--text-muted)', opacity:0.5 }}>
+            — no logs match filter —
+          </div>
+        ) : filtered.map((l, i) => {
+          const lv = (l.level || 'system').toLowerCase()
+          const s  = LEVEL_STYLE[lv] || LEVEL_STYLE.system
+          const ts = fmtTs(l.timestamp || l.created_at)
+          return (
+            <div key={i} style={{
+              display:'grid',
+              gridTemplateColumns:'56px 52px 1fr',
+              gap:'8px',
+              marginBottom:'0.1rem',
+              alignItems:'baseline',
+            }}>
+              {/* Timestamp */}
+              <span style={{ color:'var(--text-muted)', opacity:0.5,
+                userSelect:'none', flexShrink:0, fontSize:'0.68rem' }}>
+                {ts}
+              </span>
+              {/* Badge livello */}
+              <span style={{
+                display:'inline-block', textAlign:'center',
+                borderRadius:4, padding:'0 4px',
+                fontSize:'0.6rem', fontWeight:700,
+                background: s.bg, color: s.color,
+                lineHeight:'17px', letterSpacing:'0.3px',
+                flexShrink:0,
+              }}>
+                {s.label}
+              </span>
+              {/* Messaggio */}
+              <span style={{
+                color:'var(--text-secondary)',
+                whiteSpace:'pre-wrap',
+                wordBreak:'break-word',
+                minWidth:0,
+              }}>
+                {l.message || ''}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{
+        display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'0.4rem 1rem',
+        background:'var(--bg-surface-2)',
+        borderTop:'1px solid var(--border)',
+        fontFamily:'var(--font-mono)', fontSize:'0.62rem',
+        color:'var(--text-muted)',
+        flexWrap:'wrap', gap:'0.25rem',
+      }}>
+        <span>pico-w-001 · 192.168.178.101:8888</span>
+        <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+          {lastTs && <span>last: {lastTs}</span>}
+          <span style={{
+            display:'inline-block', width:6, height:11,
+            background: connected ? 'var(--color-success, #3fb950)' : 'var(--color-danger)',
+            borderRadius:1,
+            animation: connected ? 'blink 1.1s step-end infinite' : 'none',
+          }}/>
+        </span>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────
 export default function RaspiPage() {
   const { toast, showToast } = useToast()
@@ -385,6 +616,7 @@ export default function RaspiPage() {
 
         {/* ── SSH + Backup — stacked on mobile, side by side on desktop ── */}
         <SshPanel/>
+        <PicoLogsPanel/>
 
         <div className="card">
           <div className="card-header">
