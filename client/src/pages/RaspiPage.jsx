@@ -243,9 +243,9 @@ export default function RaspiPage() {
 
   const rings = [
     { label:'CPU',    value: cpu,     color: cpuColor,                       unit:'%',  sublabel: loading ? '…' : 'Real-time' },
-    { label:'Temp',   value: temp,    color: tempColor,                      unit:'°C', sublabel: temp != null && temp > 70 ? '⚠ High' : 'OK' },
-    { label:'Disk',   value: diskPct, color:'var(--card-air-accent)',        unit:'%',  sublabel: diskUsed != null ? `${(diskUsed/1024).toFixed(1)} GB` : null },
-    { label:'Memory', value: memPct,  color:'var(--card-shop-accent)',       unit:'%',  sublabel: memUsed  != null ? `${(memUsed /1024).toFixed(1)} GB` : null },
+    { label:'Temperature',   value: temp,    color: tempColor,                      unit:'°C', sublabel: temp != null && temp > 70 ? '⚠ High' : 'OK' },
+    { label:'Disk Used',   value: diskPct, color:'var(--card-air-accent)',        unit:'%',  sublabel: diskUsed != null ? `${(diskUsed).toFixed(1)} GB` : null },
+    { label:'Memory Used', value: memPct,  color:'var(--card-shop-accent)',       unit:'%',  sublabel: memUsed  != null ? `${(memUsed).toFixed(1)} GB` : null },
   ]
 
   const infoRows = [
