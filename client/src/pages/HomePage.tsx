@@ -24,7 +24,6 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
   { id: 'alarm',        label: 'Home Alarm',             category: 'control' },
   { id: 'boiler',       label: 'Boiler',                 category: 'control' },
   { id: 'environment',  label: 'Temperature & Humidity', category: 'sensor'  },
-  { id: 'air_quality',  label: 'Air Quality',            category: 'sensor'  },
   { id: 'raspi',        label: 'Raspberry Pi',           category: 'system'  },
   { id: 'weather',      label: 'Weather',                category: 'info'    },
   { id: 'ping',         label: 'Ping',                   category: 'system'  },
@@ -193,7 +192,6 @@ function NewsWidget() {
       setLoading(true)
       setError(false)
       try {
-        // Il fetch BBC viene fatto server-side da Flask (niente CORS)
         const res  = await fetch('/api/news', { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const json = await res.json()
@@ -226,8 +224,6 @@ function NewsWidget() {
     <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)',
       borderRadius:'var(--radius-lg)', display:'flex', flexDirection:'column',
       overflow:'hidden', height:'100%' }}>
-
-      {/* Header */}
       <div style={{ padding:'clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem) 0',
         display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ width:'clamp(28px,5vw,36px)', height:'clamp(28px,5vw,36px)',
@@ -243,8 +239,6 @@ function NewsWidget() {
         <div style={{ fontSize:'clamp(0.6rem,1.5vw,0.72rem)', color:'var(--text-muted)',
           marginTop:'0.15rem', fontFamily:'var(--font-mono)' }}>BBC World · ogni 5 min</div>
       </div>
-
-      {/* Content */}
       <div style={{ flex:1, padding:'clamp(0.5rem,2vw,0.75rem) clamp(0.65rem,2vw,1.1rem)' }}>
         {loading ? (
           <div style={{ display:'flex', alignItems:'center', gap:'0.5rem',
@@ -283,7 +277,7 @@ function NewsWidget() {
   )
 }
 
-// ── Pico W status widget ───────────────────────────────────
+// ── Pico W widget (AQI + log details) ─────────────────────
 interface PicoLog {
   id: number
   level: string
@@ -297,6 +291,7 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
   const [online,  setOnline]  = useState<boolean | null>(null)
   const [lastLog, setLastLog] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [aqi,     setAqi]     = useState<number | null>(null)
 
   const levelColor = (level: string) => {
     switch (level.toUpperCase()) {
@@ -309,9 +304,18 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
     }
   }
 
+  const aqiColor = (v: number) =>
+    v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
+  const aqiLabel = (v: number) =>
+    v >= 80 ? 'Good' : v >= 60 ? 'Moderate' : v >= 40 ? 'Poor' : 'Hazardous'
+
+  const parseAqi = (message: string): number | null => {
+    const m = message.match(/AQI=([\d.]+)/)
+    return m ? parseFloat(m[1]) : null
+  }
+
   const parseTs = (raw: string): Date | null => {
     try {
-      // tronca microsecondi a 3 cifre (JS Date vuole ms, non µs)
       const s = raw.replace(' ', 'T').replace(/(\.(\d{3}))\d+/, '$1')
       const d = new Date(s)
       return isNaN(d.getTime()) ? null : d
@@ -327,6 +331,7 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
         if (data?.logs?.length) {
           const entry: PicoLog = data.logs[data.logs.length - 1]
           setLog(entry)
+          setAqi(parseAqi(entry.message))
           const d = parseTs(entry.created_at)
           if (d) {
             const diffMin = Math.floor((Date.now() - d.getTime()) / 60000)
@@ -396,38 +401,65 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
         </div>
       </div>
 
-      {/* Body: log entry */}
+      {/* Body: AQI sinistra + timestamp/level destra */}
       <div style={{ flex: 1, padding: `0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`,
         display: 'flex', alignItems: 'flex-end' }}>
         {loading ? (
           <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '1.2rem' }}>…</div>
         ) : log ? (
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {/* Level badge + message */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', width: '100%' }}>
+
+            {/* Sinistra: AQI */}
+            <div style={{ background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)',
+              padding: 'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)', textAlign: 'center',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.25rem' }}>
+              <div style={{ fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.5px',
+                textTransform: 'uppercase', color: 'var(--text-muted)' }}>AQI</div>
+              <div style={{ fontFamily: 'var(--font-mono)',
+                fontSize: 'clamp(1rem,3.5vw,1.4rem)', fontWeight: 700, lineHeight: 1,
+                color: aqi != null ? aqiColor(aqi) : 'var(--text-muted)' }}>
+                {aqi != null ? aqi.toFixed(0) : '—'}
+              </div>
+              {aqi != null && (
+                <div style={{ fontSize: '0.58rem', fontWeight: 600,
+                  color: aqiColor(aqi), fontFamily: 'var(--font-mono)' }}>
+                  {aqiLabel(aqi)}
+                </div>
+              )}
+            </div>
+
+            {/* Destra: level badge + timestamp */}
+            <div style={{ background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)',
+              padding: 'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.3rem' }}>
               <span style={{
+                alignSelf: 'flex-start',
                 fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.06em',
                 textTransform: 'uppercase', fontFamily: 'var(--font-mono)',
                 padding: '0.15rem 0.4rem', borderRadius: 4,
                 background: `color-mix(in srgb, ${levelColor(log.level)} 15%, transparent)`,
                 color: levelColor(log.level),
                 border: `1px solid color-mix(in srgb, ${levelColor(log.level)} 30%, transparent)`,
-                flexShrink: 0,
               }}>
                 {log.level}
               </span>
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: 'clamp(0.7rem,2vw,0.8rem)',
-                fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3,
-              }}>
-                {log.message}
-              </span>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.5px',
+                  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                  timestamp
+                </div>
+                <div style={{ color: 'var(--text-primary)' }}>
+                  {parseTs(log.created_at)?.toLocaleTimeString('it-IT', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                  }) ?? '—'}
+                </div>
+                <div style={{ opacity: 0.6, marginTop: '0.1rem' }}>
+                  {parseTs(log.created_at)?.toLocaleDateString('it-IT') ?? ''}
+                </div>
+              </div>
             </div>
-            {/* device_id */}
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)',
-              fontFamily: 'var(--font-mono)' }}>
-              {log.device_id}
-            </div>
+
           </div>
         ) : (
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)',
@@ -437,7 +469,6 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
     </div>
   )
 }
-
 
 // ── Backup widget ──────────────────────────────────────────
 function BackupWidget() {
@@ -486,7 +517,6 @@ function BackupWidget() {
     <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)',
       borderRadius:'var(--radius-lg)', display:'flex', flexDirection:'column',
       overflow:'hidden', height:'100%' }}>
-
       <div style={{ padding:'clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem) 0',
         display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ width:'clamp(28px,5vw,36px)', height:'clamp(28px,5vw,36px)',
@@ -496,7 +526,6 @@ function BackupWidget() {
           <Shield size={16}/>
         </div>
       </div>
-
       <div style={{ padding:'0.5rem clamp(0.65rem,2vw,1.1rem) 0' }}>
         <div style={{ fontSize:'clamp(0.7rem,2vw,0.82rem)', fontWeight:600,
           color:'var(--text-primary)', lineHeight:1.2 }}>Backup</div>
@@ -505,7 +534,6 @@ function BackupWidget() {
           {statusLabel}
         </div>
       </div>
-
       <div style={{ flex:1, padding:`0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`,
         display:'flex', alignItems:'flex-end' }}>
         <button onClick={runBackup} disabled={backing}
@@ -697,9 +725,6 @@ function SettingsPanel({ layout, onToggleVisible, onReset, onClose }: {
 }
 
 // ── Main page ──────────────────────────────────────────────
-const aqiColor = (v: number) => v>=80?'var(--color-success)':v>=60?'var(--color-warning)':'var(--color-danger)'
-const aqiLabel = (v: number) => v>=80?'Good':v>=60?'Moderate':v>=40?'Poor':'Hazardous'
-
 export default function HomePage() {
   const nav = useNavigate()
   const { permission, request, send } = useNotifications()
@@ -715,7 +740,6 @@ export default function HomePage() {
   const [hum,        setHum]        = useState<string | null>(null)
   const [tempMM,     setTempMM]     = useState<string | null>(null)
   const [humMM,      setHumMM]      = useState<string | null>(null)
-  const [aqi,        setAqi]        = useState<number | null>(null)
   const [cpu,        setCpu]        = useState<string | null>(null)
   const [raspiTemp,  setRaspiTemp]  = useState<string | null>(null)
   const [alarm,      setAlarm]      = useState<boolean | null>(null)
@@ -755,7 +779,6 @@ export default function HomePage() {
         setTempMM(`${parseFloat(tMM[0]).toFixed(1)} / ${parseFloat(tMM[1]).toFixed(1)}`)
         setHumMM(`${parseFloat(hMM[0]).toFixed(0)} / ${parseFloat(hMM[1]).toFixed(0)}`)
       }).catch(() => {}),
-      api.getAirQuality().then((d: any) => setAqi(parseFloat(d.air_quality_index || 0))).catch(() => {}),
       fetch('/api_raspberry_pi_stats').then(r => r.json()).then((d: any) => {
         setCpu(parseFloat(d.cpuUsage || 0).toFixed(1))
         setRaspiTemp(parseFloat(d.temperature || 0).toFixed(1))
@@ -848,12 +871,6 @@ export default function HomePage() {
           sublabel="Temperature & Humidity" onNavigate={() => nav('/temperature')}
           val1={temp}  unit1="°C" tag1="Temp"     color1="var(--card-temp-accent)"
           val2={hum}   unit2="%"  tag2="Humidity" color2="var(--card-hum-accent)"/>
-      )
-      case 'air_quality':  return (
-        <StatWidget section="air" icon={Wind} label="Air Quality"
-          sublabel={aqi != null ? aqiLabel(aqi) : 'Loading...'} onNavigate={() => nav('/air-quality')}
-          value={aqi != null ? aqi.toFixed(1) : null}
-          color={aqi != null ? aqiColor(aqi) : undefined}/>
       )
       case 'raspi':        return (
         <DualWidget section="raspi" icon={Cpu} label="Raspberry Pi" sublabel="System status"
@@ -958,7 +975,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Widget grid: 1 colonna su mobile (<~420px), auto-fill su tablet/desktop */}
+      {/* Widget grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
