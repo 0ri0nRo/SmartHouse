@@ -173,3 +173,39 @@ class AirQualityService(BaseService):
                 cur.close()
             if conn:
                 conn.close()
+    
+    def get_monthly_daily_avg(self, month: int, year: int):
+        query = """
+            SELECT EXTRACT(DAY FROM timestamp)::int AS day,
+                ROUND(AVG(air_quality_index)::numeric, 2) AS avg_aqi
+            FROM air_quality
+            WHERE EXTRACT(MONTH FROM timestamp) = %s AND EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY EXTRACT(DAY FROM timestamp) ORDER BY day;
+        """
+        conn, cur = None, None
+        try:
+            conn = self._connect()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(query, (month, year))
+            return {str(int(r['day'])): float(r['avg_aqi']) for r in cur.fetchall()}
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
+
+    def get_yearly_monthly_avg(self, year: int):
+        query = """
+            SELECT EXTRACT(MONTH FROM timestamp)::int AS month,
+                ROUND(AVG(air_quality_index)::numeric, 2) AS avg_aqi
+            FROM air_quality
+            WHERE EXTRACT(YEAR FROM timestamp) = %s
+            GROUP BY EXTRACT(MONTH FROM timestamp) ORDER BY month;
+        """
+        conn, cur = None, None
+        try:
+            conn = self._connect()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(query, (year,))
+            return {str(int(r['month'])): float(r['avg_aqi']) for r in cur.fetchall()}
+        finally:
+            if cur: cur.close()
+            if conn: conn.close()
