@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Thermometer, Droplets, Wind, Cpu, Bell, Flame, ChevronRight, RefreshCw,
          Settings, GripVertical, Eye, EyeOff, RotateCcw, X, Newspaper,
-         Radio, Shield } from 'lucide-react'
+         Radio, Shield, Sunrise, Sunset } from 'lucide-react'
 import { api } from '../api'
 import WeatherWidget            from '../components/WeatherWidget'
 import PingWidget               from '../components/PingWidget'
@@ -181,7 +181,7 @@ function StatWidget({ section, icon, label, sublabel, onNavigate, value, unit, c
   )
 }
 
-// ── News widget (/api/news → Flask → BBC World) ───────────
+// ── News widget ────────────────────────────────────────────
 function NewsWidget() {
   const [items,   setItems]   = useState<{title:string; link:string; date:string}[]>([])
   const [loading, setLoading] = useState(true)
@@ -189,8 +189,7 @@ function NewsWidget() {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true)
-      setError(false)
+      setLoading(true); setError(false)
       try {
         const res  = await fetch('/api/news', { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -202,11 +201,8 @@ function NewsWidget() {
         }))
         if (!entries.length) throw new Error('empty')
         setItems(entries)
-      } catch {
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
+      } catch { setError(true) }
+      finally  { setLoading(false) }
     }
     load()
     const id = setInterval(load, 5 * 60 * 1000)
@@ -243,47 +239,41 @@ function NewsWidget() {
         {loading ? (
           <div style={{ display:'flex', alignItems:'center', gap:'0.5rem',
             color:'var(--text-muted)', fontSize:'0.75rem' }}>
-            <RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/>
-            Caricamento...
+            <RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> Caricamento...
           </div>
         ) : error ? (
           <div style={{ color:'var(--color-danger)', fontSize:'0.72rem',
             fontFamily:'var(--font-mono)' }}>Feed non disponibile</div>
-        ) : (
-          items.map((item, i) => (
-            <a key={i} href={item.link} target="_blank" rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between',
-                gap:'0.5rem', padding:'0.35rem 0',
-                borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
-                textDecoration:'none' }}>
-              <span style={{ fontSize:'clamp(0.65rem,1.8vw,0.75rem)', color:'var(--text-primary)',
-                lineHeight:1.35, flex:1,
-                display:'-webkit-box', WebkitLineClamp:2,
-                WebkitBoxOrient:'vertical', overflow:'hidden' }}>
-                {item.title}
+        ) : items.map((item, i) => (
+          <a key={i} href={item.link} target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between',
+              gap:'0.5rem', padding:'0.35rem 0',
+              borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
+              textDecoration:'none' }}>
+            <span style={{ fontSize:'clamp(0.65rem,1.8vw,0.75rem)', color:'var(--text-primary)',
+              lineHeight:1.35, flex:1,
+              display:'-webkit-box', WebkitLineClamp:2,
+              WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+              {item.title}
+            </span>
+            {item.date && (
+              <span style={{ fontSize:'0.6rem', color:'var(--text-muted)',
+                fontFamily:'var(--font-mono)', flexShrink:0 }}>
+                {fmtDate(item.date)}
               </span>
-              {item.date && (
-                <span style={{ fontSize:'0.6rem', color:'var(--text-muted)',
-                  fontFamily:'var(--font-mono)', flexShrink:0 }}>
-                  {fmtDate(item.date)}
-                </span>
-              )}
-            </a>
-          ))
-        )}
+            )}
+          </a>
+        ))}
       </div>
     </div>
   )
 }
 
-// ── Pico W widget (AQI + log details) ─────────────────────
+// ── Pico W widget ──────────────────────────────────────────
 interface PicoLog {
-  id: number
-  level: string
-  message: string
-  created_at: string
-  device_id: string
+  id: number; level: string; message: string
+  created_at: string; device_id: string
 }
 
 function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
@@ -304,22 +294,12 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
     }
   }
 
-  const aqiColor = (v: number) =>
-    v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
-  const aqiLabel = (v: number) =>
-    v >= 80 ? 'Good' : v >= 60 ? 'Moderate' : v >= 40 ? 'Poor' : 'Hazardous'
-
-  const parseAqi = (message: string): number | null => {
-    const m = message.match(/AQI=([\d.]+)/)
-    return m ? parseFloat(m[1]) : null
-  }
-
-  const parseTs = (raw: string): Date | null => {
-    try {
-      const s = raw.replace(' ', 'T').replace(/(\.(\d{3}))\d+/, '$1')
-      const d = new Date(s)
-      return isNaN(d.getTime()) ? null : d
-    } catch { return null }
+  const aqiColor  = (v: number) => v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
+  const aqiLabel  = (v: number) => v >= 80 ? 'Good' : v >= 60 ? 'Moderate' : v >= 40 ? 'Poor' : 'Hazardous'
+  const parseAqi  = (msg: string): number | null => { const m = msg.match(/AQI=([\d.]+)/); return m ? parseFloat(m[1]) : null }
+  const parseTs   = (raw: string): Date | null => {
+    try { const d = new Date(raw.replace(' ','T').replace(/(\.(\d{3}))\d+/,'$1')); return isNaN(d.getTime()) ? null : d }
+    catch { return null }
   }
 
   useEffect(() => {
@@ -330,28 +310,16 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
         const data = await res.json()
         if (data?.logs?.length) {
           const entry: PicoLog = data.logs[data.logs.length - 1]
-          setLog(entry)
-          setAqi(parseAqi(entry.message))
+          setLog(entry); setAqi(parseAqi(entry.message))
           const d = parseTs(entry.created_at)
           if (d) {
             const diffMin = Math.floor((Date.now() - d.getTime()) / 60000)
-            setLastLog(
-              diffMin < 1  ? 'just now' :
-              diffMin < 60 ? `${diffMin}m ago` :
-              d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-            )
+            setLastLog(diffMin < 1 ? 'just now' : diffMin < 60 ? `${diffMin}m ago` : d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }))
             setOnline(diffMin >= 0 && diffMin < 5)
-          } else {
-            setOnline(false)
-          }
-        } else {
-          setOnline(false)
-        }
-      } catch {
-        setOnline(false)
-      } finally {
-        setLoading(false)
-      }
+          } else { setOnline(false) }
+        } else { setOnline(false) }
+      } catch { setOnline(false) }
+      finally { setLoading(false) }
     }
     load()
     const id = setInterval(load, 30000)
@@ -360,110 +328,76 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div onClick={onNavigate} style={{
-      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-lg)', cursor: 'pointer',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      transition: 'border-color var(--transition)', height: '100%',
+      background:'var(--bg-surface)', border:'1px solid var(--border)',
+      borderRadius:'var(--radius-lg)', cursor:'pointer',
+      display:'flex', flexDirection:'column', overflow:'hidden',
+      transition:'border-color var(--transition)', height:'100%',
     }}
-      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)'}
-      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'}
+      onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.borderColor='var(--border-strong)'}
+      onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.borderColor='var(--border)'}
     >
-      {/* Header */}
-      <div style={{ padding: 'clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem) 0',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ width: 'clamp(28px,5vw,36px)', height: 'clamp(28px,5vw,36px)',
-          borderRadius: 'var(--radius-md)', background: 'var(--card-hum-bg)',
-          color: 'var(--card-hum-accent)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ padding:'clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem) 0',
+        display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ width:'clamp(28px,5vw,36px)', height:'clamp(28px,5vw,36px)',
+          borderRadius:'var(--radius-md)', background:'var(--card-hum-bg)',
+          color:'var(--card-hum-accent)', display:'flex', alignItems:'center',
+          justifyContent:'center', flexShrink:0 }}>
           <Radio size={16}/>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-            background: online === null ? 'var(--text-muted)'
-              : online ? 'var(--color-success)' : 'var(--color-danger)',
+        <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+          <span style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+            background: online===null ? 'var(--text-muted)' : online ? 'var(--color-success)' : 'var(--color-danger)',
             boxShadow: online ? '0 0 6px var(--color-success)' : 'none' }}/>
-          <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
-            color: online === null ? 'var(--text-muted)'
-              : online ? 'var(--color-success)' : 'var(--color-danger)' }}>
-            {online === null ? '…' : online ? 'online' : 'offline'}
+          <span style={{ fontSize:'0.6rem', fontFamily:'var(--font-mono)',
+            color: online===null ? 'var(--text-muted)' : online ? 'var(--color-success)' : 'var(--color-danger)' }}>
+            {online===null ? '…' : online ? 'online' : 'offline'}
           </span>
-          <ChevronRight size={12} style={{ color: 'var(--text-muted)' }}/>
+          <ChevronRight size={12} style={{ color:'var(--text-muted)' }}/>
         </div>
       </div>
-
-      {/* Title + sublabel */}
-      <div style={{ padding: '0.5rem clamp(0.65rem,2vw,1.1rem) 0' }}>
-        <div style={{ fontSize: 'clamp(0.7rem,2vw,0.82rem)', fontWeight: 600,
-          color: 'var(--text-primary)', lineHeight: 1.2 }}>Pico W</div>
-        <div style={{ fontSize: 'clamp(0.6rem,1.5vw,0.72rem)', color: 'var(--text-muted)',
-          marginTop: '0.15rem', fontFamily: 'var(--font-mono)' }}>
+      <div style={{ padding:'0.5rem clamp(0.65rem,2vw,1.1rem) 0' }}>
+        <div style={{ fontSize:'clamp(0.7rem,2vw,0.82rem)', fontWeight:600, color:'var(--text-primary)', lineHeight:1.2 }}>Pico W</div>
+        <div style={{ fontSize:'clamp(0.6rem,1.5vw,0.72rem)', color:'var(--text-muted)', marginTop:'0.15rem', fontFamily:'var(--font-mono)' }}>
           {lastLog ? `last log: ${lastLog}` : 'Air quality sensor'}
         </div>
       </div>
-
-      {/* Body: AQI sinistra + timestamp/level destra */}
-      <div style={{ flex: 1, padding: `0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`,
-        display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ flex:1, padding:`0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`, display:'flex', alignItems:'flex-end' }}>
         {loading ? (
-          <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '1.2rem' }}>…</div>
+          <div style={{ color:'var(--text-muted)', fontFamily:'var(--font-mono)', fontSize:'1.2rem' }}>…</div>
         ) : log ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', width: '100%' }}>
-
-            {/* Sinistra: AQI */}
-            <div style={{ background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)',
-              padding: 'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)', textAlign: 'center',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.25rem' }}>
-              <div style={{ fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.5px',
-                textTransform: 'uppercase', color: 'var(--text-muted)' }}>AQI</div>
-              <div style={{ fontFamily: 'var(--font-mono)',
-                fontSize: 'clamp(1rem,3.5vw,1.4rem)', fontWeight: 700, lineHeight: 1,
-                color: aqi != null ? aqiColor(aqi) : 'var(--text-muted)' }}>
-                {aqi != null ? aqi.toFixed(0) : '—'}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.4rem', width:'100%' }}>
+            <div style={{ background:'var(--bg-surface-2)', borderRadius:'var(--radius-md)',
+              padding:'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)', textAlign:'center',
+              display:'flex', flexDirection:'column', justifyContent:'center', gap:'0.25rem' }}>
+              <div style={{ fontSize:'0.55rem', fontWeight:600, letterSpacing:'0.5px', textTransform:'uppercase', color:'var(--text-muted)' }}>AQI</div>
+              <div style={{ fontFamily:'var(--font-mono)', fontSize:'clamp(1rem,3.5vw,1.4rem)', fontWeight:700, lineHeight:1,
+                color: aqi!=null ? aqiColor(aqi) : 'var(--text-muted)' }}>
+                {aqi!=null ? aqi.toFixed(0) : '—'}
               </div>
-              {aqi != null && (
-                <div style={{ fontSize: '0.58rem', fontWeight: 600,
-                  color: aqiColor(aqi), fontFamily: 'var(--font-mono)' }}>
-                  {aqiLabel(aqi)}
-                </div>
-              )}
+              {aqi!=null && <div style={{ fontSize:'0.58rem', fontWeight:600, color:aqiColor(aqi), fontFamily:'var(--font-mono)' }}>{aqiLabel(aqi)}</div>}
             </div>
-
-            {/* Destra: level badge + timestamp */}
-            <div style={{ background: 'var(--bg-surface-2)', borderRadius: 'var(--radius-md)',
-              padding: 'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.3rem' }}>
-              <span style={{
-                alignSelf: 'flex-start',
-                fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.06em',
-                textTransform: 'uppercase', fontFamily: 'var(--font-mono)',
-                padding: '0.15rem 0.4rem', borderRadius: 4,
-                background: `color-mix(in srgb, ${levelColor(log.level)} 15%, transparent)`,
-                color: levelColor(log.level),
-                border: `1px solid color-mix(in srgb, ${levelColor(log.level)} 30%, transparent)`,
-              }}>
+            <div style={{ background:'var(--bg-surface-2)', borderRadius:'var(--radius-md)',
+              padding:'clamp(0.4rem,1.5vw,0.75rem) clamp(0.35rem,1.5vw,0.65rem)',
+              display:'flex', flexDirection:'column', justifyContent:'center', gap:'0.3rem' }}>
+              <span style={{ alignSelf:'flex-start', fontSize:'0.55rem', fontWeight:700, letterSpacing:'0.06em',
+                textTransform:'uppercase', fontFamily:'var(--font-mono)', padding:'0.15rem 0.4rem', borderRadius:4,
+                background:`color-mix(in srgb, ${levelColor(log.level)} 15%, transparent)`,
+                color:levelColor(log.level), border:`1px solid color-mix(in srgb, ${levelColor(log.level)} 30%, transparent)` }}>
                 {log.level}
               </span>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)',
-                fontFamily: 'var(--font-mono)', lineHeight: 1.4 }}>
-                <div style={{ fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.5px',
-                  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                  timestamp
+              <div style={{ fontSize:'0.6rem', color:'var(--text-muted)', fontFamily:'var(--font-mono)', lineHeight:1.4 }}>
+                <div style={{ fontSize:'0.55rem', fontWeight:600, letterSpacing:'0.5px', textTransform:'uppercase', color:'var(--text-muted)', marginBottom:'0.25rem' }}>timestamp</div>
+                <div style={{ color:'var(--text-primary)' }}>
+                  {new Date(log.created_at)?.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) ?? '—'}
                 </div>
-                <div style={{ color: 'var(--text-primary)' }}>
-                  {parseTs(log.created_at)?.toLocaleTimeString('it-IT', {
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                  }) ?? '—'}
-                </div>
-                <div style={{ opacity: 0.6, marginTop: '0.1rem' }}>
-                  {parseTs(log.created_at)?.toLocaleDateString('it-IT') ?? ''}
+                <div style={{ opacity:0.6, marginTop:'0.1rem' }}>
+                  {new Date(log.created_at)?.toLocaleDateString('it-IT') ?? ''}
                 </div>
               </div>
             </div>
-
           </div>
         ) : (
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)',
-            fontFamily: 'var(--font-mono)' }}>No logs available</div>
+          <div style={{ fontSize:'0.72rem', color:'var(--text-muted)', fontFamily:'var(--font-mono)' }}>No logs available</div>
         )}
       </div>
     </div>
@@ -482,36 +416,17 @@ function BackupWidget() {
   }, [])
 
   const runBackup = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setBacking(true)
-    setStatus('running')
+    e.stopPropagation(); setBacking(true); setStatus('running')
     try {
       await fetch('/api_run_backup', { method:'POST' })
       const now = new Date().toLocaleString('it-IT')
-      setLastDate(now)
-      localStorage.setItem('smarthome:last_backup', now)
-      setStatus('done')
-    } catch {
-      setStatus('error')
-    } finally {
-      setBacking(false)
-      setTimeout(() => setStatus('idle'), 4000)
-    }
+      setLastDate(now); localStorage.setItem('smarthome:last_backup', now); setStatus('done')
+    } catch { setStatus('error') }
+    finally { setBacking(false); setTimeout(() => setStatus('idle'), 4000) }
   }
 
-  const statusColor = {
-    idle:    'var(--text-muted)',
-    running: 'var(--color-warning)',
-    done:    'var(--color-success)',
-    error:   'var(--color-danger)',
-  }[status]
-
-  const statusLabel = {
-    idle:    lastDate ? `Ultimo: ${lastDate}` : 'Nessun backup',
-    running: 'In corso…',
-    done:    'Completato',
-    error:   'Errore',
-  }[status]
+  const statusColor = { idle:'var(--text-muted)', running:'var(--color-warning)', done:'var(--color-success)', error:'var(--color-danger)' }[status]
+  const statusLabel = { idle: lastDate ? `Ultimo: ${lastDate}` : 'Nessun backup', running:'In corso…', done:'Completato', error:'Errore' }[status]
 
   return (
     <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)',
@@ -527,20 +442,12 @@ function BackupWidget() {
         </div>
       </div>
       <div style={{ padding:'0.5rem clamp(0.65rem,2vw,1.1rem) 0' }}>
-        <div style={{ fontSize:'clamp(0.7rem,2vw,0.82rem)', fontWeight:600,
-          color:'var(--text-primary)', lineHeight:1.2 }}>Backup</div>
-        <div style={{ fontSize:'clamp(0.6rem,1.5vw,0.72rem)', fontFamily:'var(--font-mono)',
-          marginTop:'0.15rem', color: statusColor, transition:'color 0.3s' }}>
-          {statusLabel}
-        </div>
+        <div style={{ fontSize:'clamp(0.7rem,2vw,0.82rem)', fontWeight:600, color:'var(--text-primary)', lineHeight:1.2 }}>Backup</div>
+        <div style={{ fontSize:'clamp(0.6rem,1.5vw,0.72rem)', fontFamily:'var(--font-mono)', marginTop:'0.15rem', color:statusColor, transition:'color 0.3s' }}>{statusLabel}</div>
       </div>
-      <div style={{ flex:1, padding:`0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`,
-        display:'flex', alignItems:'flex-end' }}>
-        <button onClick={runBackup} disabled={backing}
-          className="btn btn--primary"
-          style={{ width:'100%', display:'flex', alignItems:'center',
-            justifyContent:'center', gap:'0.4rem',
-            fontSize:'clamp(0.68rem,2vw,0.78rem)', padding:'0.5rem' }}>
+      <div style={{ flex:1, padding:`0.5rem clamp(0.65rem,2vw,1.1rem) clamp(0.65rem,2vw,1.1rem)`, display:'flex', alignItems:'flex-end' }}>
+        <button onClick={runBackup} disabled={backing} className="btn btn--primary"
+          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem', fontSize:'clamp(0.68rem,2vw,0.78rem)', padding:'0.5rem' }}>
           {backing
             ? <><RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> In corso…</>
             : <><Shield size={12}/> Avvia backup</>}
@@ -556,11 +463,9 @@ function RefreshBar({ secondsLeft, total }: { secondsLeft: number; total: number
   return (
     <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
       <div style={{ flex:1, height:2, background:'var(--border)', borderRadius:1, overflow:'hidden' }}>
-        <div style={{ height:'100%', width:`${pct}%`, background:'var(--accent)',
-          borderRadius:1, transition:'width 1s linear' }}/>
+        <div style={{ height:'100%', width:`${pct}%`, background:'var(--accent)', borderRadius:1, transition:'width 1s linear' }}/>
       </div>
-      <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.62rem',
-        color:'var(--text-muted)', flexShrink:0, minWidth:28, textAlign:'right' }}>
+      <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.62rem', color:'var(--text-muted)', flexShrink:0, minWidth:28, textAlign:'right' }}>
         {secondsLeft}s
       </span>
     </div>
@@ -580,20 +485,13 @@ function DraggableSlot({ id, editMode, isDragOver, onDragStart, onDragOver, onDr
   const createGhost = (sourceEl: HTMLElement) => {
     const rect = sourceEl.getBoundingClientRect()
     const div = document.createElement('div')
-    div.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left}px;
-      width:${rect.width}px;height:${rect.height}px;opacity:0.72;pointer-events:none;
-      z-index:9999;border-radius:var(--radius-lg,12px);
-      border:2px dashed var(--accent,#0066cc);background:var(--bg-surface,#fff);
-      box-shadow:0 10px 32px rgba(0,0,0,0.22);`
-    document.body.appendChild(div)
-    ghost.current = div
+    div.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;height:${rect.height}px;opacity:0.72;pointer-events:none;z-index:9999;border-radius:var(--radius-lg,12px);border:2px dashed var(--accent,#0066cc);background:var(--bg-surface,#fff);box-shadow:0 10px 32px rgba(0,0,0,0.22);`
+    document.body.appendChild(div); ghost.current = div
   }
   const moveGhost = (x: number, y: number) => {
     if (!ghost.current) return
-    const w = parseFloat(ghost.current.style.width)
-    const h = parseFloat(ghost.current.style.height)
-    ghost.current.style.left = `${x - w / 2}px`
-    ghost.current.style.top  = `${y - h / 2}px`
+    ghost.current.style.left = `${x - parseFloat(ghost.current.style.width) / 2}px`
+    ghost.current.style.top  = `${y - parseFloat(ghost.current.style.height) / 2}px`
   }
   const removeGhost = () => { ghost.current?.remove(); ghost.current = null }
   const getTargetId = (x: number, y: number): string | null => {
@@ -609,63 +507,44 @@ function DraggableSlot({ id, editMode, isDragOver, onDragStart, onDragOver, onDr
       onDragOver={e => { e.preventDefault(); onDragOver(id) }}
       onDragEnd={onDragEnd}
       onDrop={e => { e.preventDefault(); onDrop(id) }}
-      onTouchStart={e => {
-        if (!editMode) return
-        touchActive.current = true
-        createGhost(e.currentTarget as HTMLElement)
-        onDragStart(id)
-      }}
+      onTouchStart={e => { if (!editMode) return; touchActive.current = true; createGhost(e.currentTarget as HTMLElement); onDragStart(id) }}
       onTouchMove={e => {
-        if (!editMode || !touchActive.current) return
-        e.preventDefault()
-        const t = e.changedTouches[0]
-        moveGhost(t.clientX, t.clientY)
-        const tid = getTargetId(t.clientX, t.clientY)
-        if (tid && tid !== id) onDragOver(tid)
+        if (!editMode || !touchActive.current) return; e.preventDefault()
+        const t = e.changedTouches[0]; moveGhost(t.clientX, t.clientY)
+        const tid = getTargetId(t.clientX, t.clientY); if (tid && tid !== id) onDragOver(tid)
       }}
       onTouchEnd={e => {
-        if (!editMode || !touchActive.current) return
-        touchActive.current = false
-        const t = e.changedTouches[0]
-        const tid = getTargetId(t.clientX, t.clientY)
-        removeGhost()
-        if (tid && tid !== id) onDrop(tid); else onDragEnd()
+        if (!editMode || !touchActive.current) return; touchActive.current = false
+        const t = e.changedTouches[0]; const tid = getTargetId(t.clientX, t.clientY)
+        removeGhost(); if (tid && tid !== id) onDrop(tid); else onDragEnd()
       }}
       style={{
         position:'relative',
         outline: isDragOver ? '2px dashed var(--accent)' : '2px dashed transparent',
-        borderRadius:'var(--radius-lg)',
-        transition:'outline 0.15s, opacity 0.15s',
+        borderRadius:'var(--radius-lg)', transition:'outline 0.15s, opacity 0.15s',
         opacity: isDragOver ? 0.55 : 1,
         cursor: editMode ? 'grab' : 'default',
         touchAction: editMode ? 'none' : 'auto',
       }}
     >
       {editMode && (
-        <div style={{ position:'absolute', top:6, left:6, zIndex:10,
-          color:'var(--text-muted)', pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:6, left:6, zIndex:10, color:'var(--text-muted)', pointerEvents:'none' }}>
           <GripVertical size={14}/>
         </div>
       )}
-      <div style={{ pointerEvents: editMode ? 'none' : 'auto', height:'100%' }}>
-        {children}
-      </div>
+      <div style={{ pointerEvents: editMode ? 'none' : 'auto', height:'100%' }}>{children}</div>
     </div>
   )
 }
 
 // ── Settings panel ─────────────────────────────────────────
 function SettingsPanel({ layout, onToggleVisible, onReset, onClose }: {
-  layout: LayoutEntry[]
-  onToggleVisible: (id: string) => void
-  onReset: () => void
-  onClose: () => void
+  layout: LayoutEntry[]; onToggleVisible: (id: string) => void; onReset: () => void; onClose: () => void
 }) {
   const categories = Array.from(new Set(DEFAULT_WIDGETS.map(w => w.category)))
   return (
     <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.5)',
-      display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}
-      onClick={onClose}>
+      display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }} onClick={onClose}>
       <div style={{ background:'var(--bg-surface)', borderRadius:'var(--radius-lg)',
         border:'1px solid var(--border)', width:'100%', maxWidth:420,
         maxHeight:'80vh', overflow:'hidden', display:'flex', flexDirection:'column' }}
@@ -690,20 +569,18 @@ function SettingsPanel({ layout, onToggleVisible, onReset, onClose }: {
                   letterSpacing:'0.07em', color: CAT_COLOR[cat] || 'var(--text-muted)',
                   marginBottom:'0.4rem', fontFamily:'var(--font-mono)' }}>{cat}</div>
                 {widgets.map(w => {
-                  const entry = layout.find(e => e.id === w.id)
+                  const entry   = layout.find(e => e.id === w.id)
                   const visible = entry?.visible ?? true
                   return (
                     <div key={w.id} onClick={() => onToggleVisible(w.id)}
                       style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
                         padding:'0.5rem 0.75rem', borderRadius:'var(--radius-md)',
                         cursor:'pointer', marginBottom:'0.2rem',
-                        background: visible ? 'transparent' : 'var(--bg-muted)',
-                        transition:'background 0.15s' }}
+                        background: visible ? 'transparent' : 'var(--bg-muted)', transition:'background 0.15s' }}
                       onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.background='var(--bg-surface-2)'}
                       onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.background=visible?'transparent':'var(--bg-muted)'}
                     >
-                      <span style={{ fontSize:'0.82rem',
-                        color: visible ? 'var(--text-primary)' : 'var(--text-muted)',
+                      <span style={{ fontSize:'0.82rem', color: visible ? 'var(--text-primary)' : 'var(--text-muted)',
                         textDecoration: visible ? 'none' : 'line-through' }}>{w.label}</span>
                       {visible
                         ? <Eye size={14} style={{ color:'var(--color-success)', flexShrink:0 }}/>
@@ -750,6 +627,12 @@ export default function HomePage() {
   const [refreshing,    setRefreshing]    = useState(false)
   const [lastUpdate,    setLastUpdate]    = useState<Date | null>(null)
   const [countdown,     setCountdown]     = useState(REFRESH_INTERVAL)
+
+  // ── Nuovi state per la barra ───────────────────────────
+  const [aqi,     setAqi]     = useState<number | null>(null)
+  const [sunrise, setSunrise] = useState<string | null>(null)
+  const [sunset,  setSunset]  = useState<string | null>(null)
+
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => { saveLayout(layout) }, [layout])
@@ -779,14 +662,38 @@ export default function HomePage() {
         setTempMM(`${parseFloat(tMM[0]).toFixed(1)} / ${parseFloat(tMM[1]).toFixed(1)}`)
         setHumMM(`${parseFloat(hMM[0]).toFixed(0)} / ${parseFloat(hMM[1]).toFixed(0)}`)
       }).catch(() => {}),
+
       fetch('/api_raspberry_pi_stats').then(r => r.json()).then((d: any) => {
         setCpu(parseFloat(d.cpuUsage || 0).toFixed(1))
         setRaspiTemp(parseFloat(d.temperature || 0).toFixed(1))
       }).catch(() => {}),
+
       api.getAlarm().then(([s]: [string]) => setAlarm(s === 'true')).catch(() => {}),
+
       Promise.all([api.getBoilerStatus(), api.getThermostatFull()])
         .then(([b, t]: [any, any]) => { setBoilerOn(b.is_on); setThermostat(t.thermostat_enabled) })
         .catch(() => {}),
+
+      // ── AQI dal Pico ─────────────────────────────────
+      fetch('/api/pico-logs?limit=20', { cache: 'no-store' })
+        .then(r => r.json())
+        .then((d: any) => {
+          const sensorLog = [...(d.logs || [])].reverse().find((l: any) =>
+            l.level === 'SENSOR' && l.message?.includes('AQI=')
+          )
+          if (sensorLog) {
+            const m = sensorLog.message.match(/AQI=([\d.]+)/)
+            if (m) setAqi(parseFloat(m[1]))
+          }
+        }).catch(() => {}),
+
+      // ── Alba e tramonto ───────────────────────────────
+      fetch('/api/sunmoon')
+        .then(r => r.json())
+        .then((d: any) => {
+          setSunrise(d.sunrise ?? null)
+          setSunset(d.sunset  ?? null)
+        }).catch(() => {}),
     ])
     setLastUpdate(new Date())
     resetCountdown()
@@ -848,8 +755,7 @@ export default function HomePage() {
       next.splice(ti, 0, moved)
       return next
     })
-    setDragOverId(null)
-    dragId.current = null
+    setDragOverId(null); dragId.current = null
   }
 
   const renderWidget = (id: string) => {
@@ -857,20 +763,18 @@ export default function HomePage() {
       case 'calendar':     return <CalendarWidget />
       case 'alarm':        return (
         <ToggleWidget section="sec" icon={Bell} label="Home Alarm" sublabel="Security system"
-          isOn={alarm} loading={alarmLoading} onToggle={toggleAlarm}
-          onNavigate={() => nav('/security')}/>
+          isOn={alarm} loading={alarmLoading} onToggle={toggleAlarm} onNavigate={() => nav('/security')}/>
       )
       case 'boiler':       return (
         <ToggleWidget section="temp" icon={Flame} label="Boiler"
           sublabel={thermostat ? 'Thermostat active' : 'Manual control'}
-          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler}
-          onNavigate={() => nav('/temperature')}/>
+          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler} onNavigate={() => nav('/temperature')}/>
       )
       case 'environment':  return (
-        <DualWidget section="hum" icon={Thermometer} label="Environment"
-          sublabel="Temperature & Humidity" onNavigate={() => nav('/temperature')}
-          val1={temp}  unit1="°C" tag1="Temp"     color1="var(--card-temp-accent)"
-          val2={hum}   unit2="%"  tag2="Humidity" color2="var(--card-hum-accent)"/>
+        <DualWidget section="hum" icon={Thermometer} label="Environment" sublabel="Temperature & Humidity"
+          onNavigate={() => nav('/temperature')}
+          val1={temp} unit1="°C" tag1="Temp"     color1="var(--card-temp-accent)"
+          val2={hum}  unit2="%" tag2="Humidity"  color2="var(--card-hum-accent)"/>
       )
       case 'raspi':        return (
         <DualWidget section="raspi" icon={Cpu} label="Raspberry Pi" sublabel="System status"
@@ -898,6 +802,14 @@ export default function HomePage() {
   const visibleLayout = layout.filter(e => e.visible)
   const hiddenCount   = layout.filter(e => !e.visible).length
 
+  // ── Colore AQI ─────────────────────────────────────────
+  const aqiColor = aqi != null
+    ? aqi >= 80 ? 'var(--color-success)' : aqi >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
+    : 'var(--text-muted)'
+  const aqiLabel = aqi != null
+    ? aqi >= 80 ? 'Good' : aqi >= 60 ? 'Moderate' : 'Poor'
+    : ''
+
   return (
     <div className="animate-fade">
 
@@ -918,13 +830,11 @@ export default function HomePage() {
             <button className={editMode ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm'}
               onClick={() => setEditMode(v => !v)}
               style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
-              <GripVertical size={13}/>
-              {editMode ? 'Done' : 'Reorder'}
+              <GripVertical size={13}/>{editMode ? 'Done' : 'Reorder'}
             </button>
             <button className="btn btn--ghost btn--sm" onClick={() => setShowSettings(true)}
               style={{ display:'flex', alignItems:'center', gap:'0.35rem', position:'relative' }}>
-              <Settings size={13}/>
-              Widgets
+              <Settings size={13}/> Widgets
               {hiddenCount > 0 && (
                 <span style={{ position:'absolute', top:-4, right:-4, minWidth:16, height:16,
                   borderRadius:99, background:'var(--accent)', color:'#fff',
@@ -969,18 +879,16 @@ export default function HomePage() {
           <div style={{ display:'flex', gap:'0.5rem' }}>
             <button className="btn btn--primary btn--sm"
               onClick={async () => { await request(); setShowNotifBanner(false) }}>Enable</button>
-            <button className="btn btn--ghost btn--sm"
-              onClick={() => setShowNotifBanner(false)}>Not now</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => setShowNotifBanner(false)}>Not now</button>
           </div>
         </div>
       )}
 
       {/* Widget grid */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
-        gap: '0.625rem',
-        alignItems: 'stretch',
+        display:'grid',
+        gridTemplateColumns:'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
+        gap:'0.625rem', alignItems:'stretch',
       }}>
         {visibleLayout.map(({ id }) => (
           <DraggableSlot key={id} id={id} editMode={editMode} isDragOver={dragOverId === id}
@@ -991,27 +899,63 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* 24h summary */}
-      {(tempMM || humMM) && (
-        <div style={{ display:'flex', gap:'2rem', flexWrap:'wrap', marginTop:'1rem',
+      {/* ── Bottom summary bar ── */}
+      {(tempMM || humMM || aqi != null || sunrise || sunset) && (
+        <div style={{ display:'flex', gap:'1.25rem', flexWrap:'wrap', marginTop:'1rem',
           padding:'0.75rem 1rem', background:'var(--bg-surface)',
-          border:'1px solid var(--border)', borderRadius:'var(--radius-md)' }}>
-          {[
-            tempMM && { icon:Thermometer, color:'var(--card-temp-accent)', label:'Temp 24h', value:`${tempMM} °C` },
-            humMM  && { icon:Droplets,   color:'var(--card-hum-accent)',  label:'Hum 24h',  value:`${humMM} %`  },
-          ].filter(Boolean).map((item: any, i: number) => {
-            const Icon = item.icon
-            return (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                <Icon size={12} style={{ color:item.color, flexShrink:0 }}/>
-                <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem',
-                  color:'var(--text-secondary)' }}>
-                  {item.label}:{' '}
-                  <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{item.value}</span>
-                </span>
-              </div>
-            )
-          })}
+          border:'1px solid var(--border)', borderRadius:'var(--radius-md)',
+          alignItems:'center' }}>
+
+          {/* Temp 24h */}
+          {tempMM && (
+            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <Thermometer size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+                Temp 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{tempMM} °C</span>
+              </span>
+            </div>
+          )}
+
+          {/* Hum 24h */}
+          {humMM && (
+            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <Droplets size={12} style={{ color:'var(--card-hum-accent)', flexShrink:0 }}/>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+                Hum 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{humMM} %</span>
+              </span>
+            </div>
+          )}
+
+          {/* AQI */}
+          {aqi != null && (
+            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <Wind size={12} style={{ color: aqiColor, flexShrink:0 }}/>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+                AQI: <span style={{ color: aqiColor, fontWeight:500 }}>{aqi.toFixed(0)} · {aqiLabel}</span>
+              </span>
+            </div>
+          )}
+
+          {/* Sunrise */}
+          {sunrise && (
+            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <Sunrise size={12} style={{ color:'var(--color-warning)', flexShrink:0 }}/>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+                Sunrise: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunrise}</span>
+              </span>
+            </div>
+          )}
+
+          {/* Sunset */}
+          {sunset && (
+            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <Sunset size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
+              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+                Sunset: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunset}</span>
+              </span>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -1023,9 +967,7 @@ export default function HomePage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
-        @media (max-width: 480px) {
-          .page-title { font-size: 1.4rem !important; }
-        }
+        @media (max-width: 480px) { .page-title { font-size: 1.4rem !important; } }
       `}</style>
     </div>
   )
