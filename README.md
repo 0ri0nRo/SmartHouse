@@ -1,6 +1,6 @@
 # Smart House Project
-<img width="1671" height="850" alt="Screenshot 2026-03-23 at 20 54 05" src="https://github.com/user-attachments/assets/1e9533a4-d7a5-499f-9b03-5e27bfad88c8" />
-<img width="1675" height="816" alt="Screenshot 2026-03-23 at 20 54 14" src="https://github.com/user-attachments/assets/6be1f5cb-a9ef-4690-87a2-dbbccf916d9a" />
+<img width="1910" height="929" alt="Screenshot 2026-04-01 at 15 39 22" src="https://github.com/user-attachments/assets/cb96e79b-22d3-4fd5-a4c8-829dde72bdd4" />
+<img width="1908" height="920" alt="Screenshot 2026-04-01 at 15 39 46" src="https://github.com/user-attachments/assets/00c23b22-271a-48b0-b5f4-f05ef13d68bd" />
 
 
 
