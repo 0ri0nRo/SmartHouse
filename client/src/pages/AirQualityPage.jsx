@@ -31,6 +31,17 @@ function aqiLabel(v) {
   return 'Hazardous'
 }
 
+// ── Safe fetch helpers ─────────────────────────────────────
+async function fetchJson(url) {
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return null
+    return await r.json()
+  } catch {
+    return null
+  }
+}
+
 // ── Custom month/year navigator ────────────────────────────
 function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
   const now = new Date()
@@ -38,9 +49,7 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
   const [open, setOpen] = useState(false)
   const [pickerYear, setPickerYear] = useState(year)
   const ref = useRef(null)
-  const years = Array.from({ length: 4 }, (_, i) => now.getFullYear() - i)
 
-  // Chiude il dropdown cliccando fuori
   useEffect(() => {
     if (!open) return
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -48,7 +57,6 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Sincronizza l'anno del picker con quello esterno
   useEffect(() => { setPickerYear(year) }, [year])
 
   const prev = () => {
@@ -74,7 +82,6 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
         <ChevronLeft size={13} />
       </button>
 
-      {/* Label cliccabile */}
       <button onClick={() => setOpen(p => !p)} style={{
         fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600,
         color: 'var(--text-primary)', minWidth: 90, textAlign: 'center',
@@ -92,7 +99,6 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
         <ChevronRight size={13} />
       </button>
 
-      {/* Dropdown picker */}
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50,
@@ -100,7 +106,6 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
           borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
           padding: '0.75rem', width: 220,
         }}>
-          {/* Year selector */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
             <button onClick={() => setPickerYear(p => p - 1)}
               className="btn btn--ghost btn--sm" style={{ padding: '0.2rem 0.35rem' }}>
@@ -117,7 +122,6 @@ function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
             </button>
           </div>
 
-          {/* Month grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.3rem' }}>
             {MONTHS.map((m, i) => {
               const mNum = i + 1
@@ -233,15 +237,19 @@ export default function AirQualityPage() {
       setLoading(true)
       try {
         const [aqi, gas] = await Promise.all([
-          fetch('/api/air_quality_today').then(r => r.json()).catch(() => ({})),
-          fetch('/api/gas_concentration_today').then(r => r.json()).catch(() => ({})),
+          fetchJson('/api/air_quality_today'),
+          fetchJson('/api/gas_concentration_today'),
         ])
 
+        // Parse AQI — null on error, filter non-numeric keys
         let aqiArr = []
-        if (Array.isArray(aqi)) {
+        if (aqi && Array.isArray(aqi)) {
           aqiArr = aqi.map(e => ({ hour: `${e.hour}:00`, aqi: parseFloat(e.aqi) }))
-        } else if (typeof aqi === 'object') {
-          aqiArr = Object.keys(aqi).map(Number).sort((a, b) => a - b)
+        } else if (aqi && typeof aqi === 'object') {
+          aqiArr = Object.keys(aqi)
+            .map(Number)
+            .filter(h => !isNaN(h))
+            .sort((a, b) => a - b)
             .map(h => ({ hour: `${h}:00`, aqi: parseFloat(aqi[h]) || 0 }))
         }
         setAqiData(aqiArr)
@@ -251,18 +259,33 @@ export default function AirQualityPage() {
           setLatestAQI(aqiArr[aqiArr.length - 1].aqi)
           setPeakAQI(Math.max(...values))
           setMinAQI(Math.min(...values))
+        } else {
+          setLatestAQI(null)
+          setPeakAQI(null)
+          setMinAQI(null)
         }
 
-        if (typeof gas === 'object' && !Array.isArray(gas)) {
-          setGasData(
-            Object.keys(gas).map(Number).sort((a, b) => a - b).map(h => ({
+        // Parse gas — null on error, filter non-numeric keys
+        if (gas && typeof gas === 'object' && !Array.isArray(gas)) {
+          const gasArr = Object.keys(gas)
+            .map(Number)
+            .filter(h => !isNaN(h))
+            .sort((a, b) => a - b)
+            .map(h => ({
               hour:     `${h}:00`,
               smoke:    parseFloat(gas[h]?.avg_smoke    || 0).toFixed(2),
               lpg:      parseFloat(gas[h]?.avg_lpg      || 0).toFixed(2),
               methane:  parseFloat(gas[h]?.avg_methane  || 0).toFixed(2),
               hydrogen: parseFloat(gas[h]?.avg_hydrogen || 0).toFixed(2),
             }))
+          // Only show if there's at least one non-zero reading
+          const hasRealData = gasArr.some(r =>
+            parseFloat(r.smoke) > 0 || parseFloat(r.lpg) > 0 ||
+            parseFloat(r.methane) > 0 || parseFloat(r.hydrogen) > 0
           )
+          setGasData(hasRealData ? gasArr : [])
+        } else {
+          setGasData([])
         }
       } catch {
         showToast('Error loading data', 'error')
@@ -282,24 +305,23 @@ export default function AirQualityPage() {
   const loadHistory = async () => {
     setLoadingHist(true)
     try {
-      const daily = await fetch(`/api/air_quality_monthly/${histMonth}/${histYear}`)
-        .then(r => r.json()).catch(() => ({}))
+      const daily = await fetchJson(`/api/air_quality_monthly/${histMonth}/${histYear}`)
 
-      if (typeof daily === 'object' && !Array.isArray(daily) && !daily.error) {
+      if (daily && typeof daily === 'object' && !Array.isArray(daily) && !daily.error) {
         setWeeklyData(
-          Object.keys(daily).map(Number).sort((a, b) => a - b).map(d => ({
-            day: `${d}`,
-            aqi: parseFloat(daily[d]).toFixed(1),
-          }))
+          Object.keys(daily)
+            .map(Number)
+            .filter(d => !isNaN(d))
+            .sort((a, b) => a - b)
+            .map(d => ({ day: `${d}`, aqi: parseFloat(daily[d]).toFixed(1) }))
         )
       } else {
         setWeeklyData([])
       }
 
-      const yearly = await fetch(`/api/air_quality_yearly/${histYear}`)
-        .then(r => r.json()).catch(() => ({}))
+      const yearly = await fetchJson(`/api/air_quality_yearly/${histYear}`)
 
-      if (typeof yearly === 'object' && !Array.isArray(yearly) && !yearly.error) {
+      if (yearly && typeof yearly === 'object' && !Array.isArray(yearly) && !yearly.error) {
         const filled = MONTHS.map((name, i) => ({
           month: name,
           aqi:   yearly[String(i + 1)] != null ? parseFloat(yearly[String(i + 1)]).toFixed(1) : null,
@@ -361,9 +383,9 @@ export default function AirQualityPage() {
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '0.625rem', marginBottom: '1rem',
         }}>
-          <MetricCard label="AQI attuale" value={latestAQI.toFixed(1)} sub="Ultima rilevazione" color={aqiColor(latestAQI)} />
-          <MetricCard label="Picco max"   value={peakAQI?.toFixed(1) ?? '—'} sub="Oggi" color={peakAQI != null ? aqiColor(peakAQI) : undefined} />
-          <MetricCard label="Picco min"   value={minAQI?.toFixed(1)  ?? '—'} sub="Oggi" color={minAQI  != null ? aqiColor(minAQI)  : undefined} />
+          <MetricCard label="AQI attuale"   value={latestAQI.toFixed(1)} sub="Ultima rilevazione" color={aqiColor(latestAQI)} />
+          <MetricCard label="Picco max"     value={peakAQI?.toFixed(1) ?? '—'} sub="Oggi" color={peakAQI != null ? aqiColor(peakAQI) : undefined} />
+          <MetricCard label="Picco min"     value={minAQI?.toFixed(1)  ?? '—'} sub="Oggi" color={minAQI  != null ? aqiColor(minAQI)  : undefined} />
           <MetricCard label="Media mensile" value={monthAvg ?? '—'} sub={`${MONTHS[histMonth - 1]} ${histYear}`} />
         </div>
       )}
@@ -418,7 +440,6 @@ export default function AirQualityPage() {
             </div>
             <span className="card-header-title">Historical Analysis</span>
 
-            {/* ── Custom period navigator ── */}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <PeriodNav
                 month={histMonth} year={histYear}
