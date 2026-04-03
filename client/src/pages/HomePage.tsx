@@ -296,7 +296,9 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
 
   const aqiColor  = (v: number) => v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
   const aqiLabel  = (v: number) => v >= 80 ? 'Good' : v >= 60 ? 'Moderate' : v >= 40 ? 'Poor' : 'Hazardous'
-  const parseAqi  = (msg: string): number | null => { const m = msg.match(/AQI=([\d.]+)/); return m ? parseFloat(m[1]) : null }
+  const parseAqi = (msg: string): number | null => {
+    const m = msg.match(/aqi\s*[:=]\s*([\d.]+)/i)
+    return m ? parseFloat(m[1]) : null}
   const parseTs   = (raw: string): Date | null => {
     try { const d = new Date(raw.replace(' ','T').replace(/(\.(\d{3}))\d+/,'$1')); return isNaN(d.getTime()) ? null : d }
     catch { return null }
@@ -305,22 +307,57 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/pico-logs?limit=1', { cache: 'no-store' })
+        const res = await fetch('/api/pico-logs?limit=20', { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
+
         if (data?.logs?.length) {
-          const entry: PicoLog = data.logs[data.logs.length - 1]
-          setLog(entry); setAqi(parseAqi(entry.message))
+
+          // 🔥 prendi ultimo log SENSOR (non l'ultimo generico)
+          const sensorLog = [...data.logs]
+            .reverse()
+            .find((l: PicoLog) => l.level === 'SENSOR')
+
+          const entry = sensorLog ?? data.logs[data.logs.length - 1]
+
+          setLog(entry)
+
+          // AQI solo se è SENSOR
+          if (entry.level === 'SENSOR') {
+            setAqi(parseAqi(entry.message))
+          } else {
+            setAqi(null)
+          }
+
+          // timestamp / online status
           const d = parseTs(entry.created_at)
           if (d) {
             const diffMin = Math.floor((Date.now() - d.getTime()) / 60000)
-            setLastLog(diffMin < 1 ? 'just now' : diffMin < 60 ? `${diffMin}m ago` : d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }))
+
+            setLastLog(
+              diffMin < 1
+                ? 'just now'
+                : diffMin < 60
+                  ? `${diffMin}m ago`
+                  : d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+            )
+
             setOnline(diffMin >= 0 && diffMin < 5)
-          } else { setOnline(false) }
-        } else { setOnline(false) }
-      } catch { setOnline(false) }
-      finally { setLoading(false) }
+          } else {
+            setOnline(false)
+          }
+
+        } else {
+          setOnline(false)
+        }
+
+      } catch {
+        setOnline(false)
+      } finally {
+        setLoading(false)
+      }
     }
+
     load()
     const id = setInterval(load, 30000)
     return () => clearInterval(id)
@@ -674,18 +711,6 @@ export default function HomePage() {
         .then(([b, t]: [any, any]) => { setBoilerOn(b.is_on); setThermostat(t.thermostat_enabled) })
         .catch(() => {}),
 
-      // ── AQI dal Pico ─────────────────────────────────
-      fetch('/api/pico-logs?limit=20', { cache: 'no-store' })
-        .then(r => r.json())
-        .then((d: any) => {
-          const sensorLog = [...(d.logs || [])].reverse().find((l: any) =>
-            l.level === 'SENSOR' && l.message?.includes('AQI=')
-          )
-          if (sensorLog) {
-            const m = sensorLog.message.match(/AQI=([\d.]+)/)
-            if (m) setAqi(parseFloat(m[1]))
-          }
-        }).catch(() => {}),
 
       // ── Alba e tramonto ───────────────────────────────
       fetch('/api/sunmoon')
@@ -793,7 +818,7 @@ export default function HomePage() {
       case 'network':      return <NetworkDevicesWidget />
       case 'sunmoon':      return <SunMoonWidget />
       case 'news':         return <NewsWidget />
-      case 'picow':        return <PicoWidget onNavigate={() => nav('/raspi')} />
+      case 'picow':        return <PicoWidget onNavigate={() => nav('/air-quality')} />
       case 'backup':       return <BackupWidget />
       default:             return null
     }
