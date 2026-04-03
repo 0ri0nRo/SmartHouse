@@ -741,7 +741,7 @@ export default function HomePage() {
       await api.getAlarm().then(([s]: [string]) => {
         const v = s === 'true'
         setAlarm(v)
-        send(v ? '🚨 Alarm ACTIVATED' : '✅ Alarm deactivated',
+        send(v ? 'Alarm ACTIVATED' : 'Alarm deactivated',
           v ? 'Home alarm has been turned ON' : 'Home alarm has been turned OFF')
       })
     } catch {} finally { setAlarmLoading(false) }
