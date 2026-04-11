@@ -644,43 +644,44 @@ class PostgresHandler:
 
     def get_thermostat_status(self):
         """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
-        query = "SELECT enabled FROM thermostat_status ORDER BY updated_at DESC LIMIT 1;"
+        query = "SELECT enabled FROM thermostat_status WHERE id = 1;"
         try:
-            self._ensure_connection()
-            self.cursor.execute(query)
-            row = self.cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    row = cur.fetchone()
+                    return bool(row[0]) if row else False
         except Exception as e:
             logger.error(f"Errore get_thermostat_status: {e}")
             return False
 
     def set_thermostat_status(self, enabled):
         """Imposta lo stato del termostato (abilitato/disabilitato)."""
-        query = "UPDATE thermostat_status SET enabled=%s, updated_at=NOW() WHERE id=1;"
+        query = """
+        INSERT INTO thermostat_status (id, enabled, updated_at)
+        VALUES (1, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET enabled = EXCLUDED.enabled, updated_at = NOW();
+        """
         try:
-            self._ensure_connection()
-            self.cursor.execute(query, (enabled,))
-            self.connection.commit()
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (enabled,))
             logger.info(f"Stato termostato impostato: {enabled}")
             return True
         except Exception as e:
             logger.error(f"Errore set_thermostat_status: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
 
     def get_boiler_status(self):
         """Ottiene lo stato corrente della caldaia (accesa/spenta)."""
-        query = "SELECT is_on FROM boiler_status ORDER BY updated_at DESC LIMIT 1;"
+        query = "SELECT is_on FROM boiler_status WHERE id = 1;"
         try:
-            self._ensure_connection()
-            self.cursor.execute(query)
-            row = self.cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    row = cur.fetchone()
+                    return bool(row[0]) if row else False
         except Exception as e:
             logger.error(f"Errore get_boiler_status: {e}")
             return False
@@ -688,21 +689,19 @@ class PostgresHandler:
     def set_boiler_status(self, is_on):
         """Imposta lo stato della caldaia (accesa/spenta)."""
         query = """
-        INSERT INTO boiler_status (is_on, updated_at) 
-        VALUES (%s, NOW())
-        ON CONFLICT (id) 
-        DO UPDATE SET is_on = EXCLUDED.is_on, updated_at = EXCLUDED.updated_at;
+        INSERT INTO boiler_status (id, is_on, updated_at)
+        VALUES (1, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET is_on = EXCLUDED.is_on, updated_at = NOW();
         """
         try:
-            self._ensure_connection()
-            self.cursor.execute(query, (is_on,))
-            self.connection.commit()
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (is_on,))
             logger.info(f"Stato caldaia impostato: {is_on}")
             return True
         except Exception as e:
             logger.error(f"Errore set_boiler_status: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
 
     def get_current_temperature(self):
@@ -860,91 +859,60 @@ class PostgresHandler:
     # ══════════════════════════════════════════════════════════════════════════
 
     def get_boiler_blackout(self) -> dict:
-        """
-        Restituisce la configurazione corrente del periodo di blackout caldaia.
-
-        Returns:
-            dict con campi: enabled, start_month, start_day, end_month, end_day,
-                            reason, updated_at
-        """
         query = """
         SELECT enabled, start_month, start_day, end_month, end_day, reason, updated_at
         FROM boiler_blackout
         WHERE id = 1;
         """
+        fallback = {
+            'enabled': False,
+            'start_month': 4, 'start_day': 1,
+            'end_month': 9,   'end_day': 30,
+            'reason': 'Boiler disabled during warm season',
+            'updated_at': None,
+        }
         try:
-            self._ensure_connection()
-            self.cursor.execute(query)
-            row = self.cursor.fetchone()
-            if row:
-                return {
-                    'enabled':     bool(row[0]),
-                    'start_month': int(row[1]),
-                    'start_day':   int(row[2]),
-                    'end_month':   int(row[3]),
-                    'end_day':     int(row[4]),
-                    'reason':      str(row[5]),
-                    'updated_at':  row[6].isoformat() if row[6] else None,
-                }
-            # Fallback sicuro se la riga non esiste ancora
-            return {
-                'enabled': False,
-                'start_month': 4, 'start_day': 1,
-                'end_month': 9,   'end_day': 30,
-                'reason': 'Boiler disabled during warm season',
-                'updated_at': None,
-            }
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    row = cur.fetchone()
+                    if row:
+                        return {
+                            'enabled':     bool(row[0]),
+                            'start_month': int(row[1]),
+                            'start_day':   int(row[2]),
+                            'end_month':   int(row[3]),
+                            'end_day':     int(row[4]),
+                            'reason':      str(row[5]),
+                            'updated_at':  row[6].isoformat() if row[6] else None,
+                        }
+            return fallback
         except Exception as e:
             logger.error(f"Errore get_boiler_blackout: {e}")
-            return {
-                'enabled': False,
-                'start_month': 4, 'start_day': 1,
-                'end_month': 9,   'end_day': 30,
-                'reason': 'Boiler disabled during warm season',
-                'updated_at': None,
-            }
+            return fallback
 
-    def set_boiler_blackout(self, enabled: bool, start_month: int, start_day: int,
-                            end_month: int, end_day: int, reason: str) -> bool:
-        """
-        Aggiorna la configurazione del periodo di blackout caldaia.
-
-        Args:
-            enabled:     Se il blackout è attivo
-            start_month: Mese di inizio (1-12)
-            start_day:   Giorno di inizio (1-31)
-            end_month:   Mese di fine (1-12)
-            end_day:     Giorno di fine (1-31)
-            reason:      Messaggio mostrato all'utente quando bloccato
-
-        Returns:
-            True se l'aggiornamento è riuscito, False altrimenti
-        """
+    def set_boiler_blackout(self, enabled, start_month, start_day,
+                            end_month, end_day, reason):
         query = """
-        UPDATE boiler_blackout
-        SET enabled     = %s,
-            start_month = %s,
-            start_day   = %s,
-            end_month   = %s,
-            end_day     = %s,
-            reason      = %s,
-            updated_at  = NOW()
-        WHERE id = 1;
+        INSERT INTO boiler_blackout (id, enabled, start_month, start_day, end_month, end_day, reason, updated_at)
+        VALUES (1, %s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET enabled     = EXCLUDED.enabled,
+            start_month = EXCLUDED.start_month,
+            start_day   = EXCLUDED.start_day,
+            end_month   = EXCLUDED.end_month,
+            end_day     = EXCLUDED.end_day,
+            reason      = EXCLUDED.reason,
+            updated_at  = NOW();
         """
         try:
-            self._ensure_connection()
-            self.cursor.execute(query, (enabled, start_month, start_day,
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (enabled, start_month, start_day,
                                         end_month, end_day, reason))
-            self.connection.commit()
-            logger.info(
-                f"Blackout caldaia aggiornato: enabled={enabled}, "
-                f"{start_day:02d}/{start_month:02d} → {end_day:02d}/{end_month:02d}"
-            )
             return True
         except Exception as e:
             logger.error(f"Errore set_boiler_blackout: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
 
     def is_in_blackout_period(self) -> tuple[bool, str]:
