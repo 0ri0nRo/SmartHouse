@@ -6,7 +6,7 @@ import {
 import {
   Thermometer, Sun, TrendingUp, CalendarDays, LineChart as LineChartIcon,
   RefreshCw, Search, Plus, Trash2, Clock, X, Flame, Moon, Home,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, Ban, AlertTriangle, CheckCircle2, Save,
 } from 'lucide-react'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
@@ -14,6 +14,7 @@ import { api } from '../api'
 
 // ── Constants ──────────────────────────────────────────────
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const DAY_MAP  = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 }
 const DAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
@@ -36,22 +37,28 @@ const TT = {
   cursor: { stroke: 'var(--border-strong)', strokeDasharray: '3 3' },
 }
 
+// ── Days per month helper ──────────────────────────────────
+function daysInMonth(month: number): number {
+  // Use a non-leap year for simplicity; day 31 is shown for months that have it
+  return new Date(2001, month, 0).getDate()
+}
+
 // ── Helpers ────────────────────────────────────────────────
-function useDebounce(fn, delay) {
-  const timer = useRef(null)
-  return useCallback((...args) => {
-    clearTimeout(timer.current)
+function useDebounce(fn: (...args: any[]) => void, delay: number) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  return useCallback((...args: any[]) => {
+    if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => fn(...args), delay)
   }, [fn, delay])
 }
 
-function getNextScheduleCountdown(schedules) {
-  const now     = new Date()
+function getNextScheduleCountdown(schedules: any[]) {
+  const now      = new Date()
   const todayDay = now.getDay()
   const nowMins  = now.getHours() * 60 + now.getMinutes()
-  let nearest = null
+  let nearest: any = null
 
-  schedules.filter(j => j.enable).forEach(job => {
+  schedules.filter((j: any) => j.enable).forEach((job: any) => {
     const p = (job.timespec || '').split(' ')
     if (p.length < 6) return
     const [, min, hour, , , dayNums] = p
@@ -59,7 +66,7 @@ function getNextScheduleCountdown(schedules) {
     const days    = dayNums.split(',').map(Number)
     const isOn    = job.calls?.[0]?.params?.on
 
-    days.forEach(d => {
+    days.forEach((d: number) => {
       let diffDays = d - todayDay
       if (diffDays < 0) diffDays += 7
       if (diffDays === 0 && jobMins <= nowMins) diffDays = 7
@@ -83,7 +90,7 @@ function Divider() {
 }
 
 // ── Section Row ────────────────────────────────────────────
-function Row({ children, style = {} }) {
+function Row({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
       padding: '1rem 1.25rem',
@@ -98,7 +105,9 @@ function Row({ children, style = {} }) {
 }
 
 // ── Stat Cell ──────────────────────────────────────────────
-function StatCell({ label, value, unit, color, right = false }) {
+function StatCell({ label, value, unit, color, right = false }: {
+  label: string; value: string; unit: string; color?: string; right?: boolean
+}) {
   return (
     <div style={{
       flex: 1,
@@ -106,24 +115,15 @@ function StatCell({ label, value, unit, color, right = false }) {
       borderRight: right ? '1px solid var(--border)' : 'none',
     }}>
       <div style={{
-        fontSize: '0.65rem',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        color: 'var(--text-muted)',
-        marginBottom: '0.5rem',
+        fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.5rem',
       }}>
         {label}
       </div>
       <div style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: '2.75rem',
-        fontWeight: 400,
-        lineHeight: 1,
-        color: color || 'var(--text-primary)',
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: '0.2rem',
+        fontFamily: 'var(--font-mono)', fontSize: '2.75rem', fontWeight: 400,
+        lineHeight: 1, color: color || 'var(--text-primary)',
+        display: 'flex', alignItems: 'baseline', gap: '0.2rem',
       }}>
         {value}
         <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>{unit}</span>
@@ -133,25 +133,19 @@ function StatCell({ label, value, unit, color, right = false }) {
 }
 
 // ── Chart Card ─────────────────────────────────────────────
-function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }) {
+function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }: any) {
   return (
     <div className="card">
       <div className="card-header">
         <div className="card-header-icon icon-amber"><Icon size={14} /></div>
         <span className="card-header-title">{title}</span>
-        {badge && (
-          <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{badge}</span>
-        )}
+        {badge && <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{badge}</span>}
       </div>
       {controls && (
         <div style={{
-          padding: '0.875rem 1rem',
-          borderBottom: '1px solid var(--border)',
+          padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)',
           background: 'var(--bg-surface-2)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.6rem',
-          alignItems: 'flex-end',
+          display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'flex-end',
         }}>
           {controls}
         </div>
@@ -164,13 +158,13 @@ function ChartCard({ title, icon: Icon, badge, controls, height = 200, children 
 }
 
 // ── Schedule Modal ─────────────────────────────────────────
-function ScheduleModal({ onClose, onSave }) {
+function ScheduleModal({ onClose, onSave }: { onClose: () => void; onSave: (v: any) => void }) {
   const [onTime,  setOnTime]  = useState('07:00')
   const [offTime, setOffTime] = useState('22:00')
   const [days,    setDays]    = useState('Mon,Tue,Wed,Thu,Fri')
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={(e: any) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <button className="modal-close" onClick={onClose}><X size={16} /></button>
         <div className="modal-title">New Schedule</div>
@@ -197,16 +191,382 @@ function ScheduleModal({ onClose, onSave }) {
   )
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// BLACKOUT BANNER — shown inline when trying to turn on during blocked period
+// ══════════════════════════════════════════════════════════════════════════════
+function BlackoutBanner({ reason, onDismiss }: { reason: string; onDismiss: () => void }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+      padding: '0.875rem 1rem',
+      background: 'rgba(255,59,48,0.07)',
+      border: '1px solid rgba(255,59,48,0.3)',
+      borderRadius: 'var(--radius-md)',
+      marginBottom: '0.75rem',
+    }}>
+      <AlertTriangle size={16} style={{ color: 'var(--color-danger)', flexShrink: 0, marginTop: 1 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-danger)', marginBottom: '0.2rem' }}>
+          Boiler blocked
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+          {reason}
+        </div>
+      </div>
+      <button onClick={onDismiss} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: 'var(--text-muted)', padding: 0, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BLACKOUT CONFIG CARD
+// ══════════════════════════════════════════════════════════════════════════════
+interface BlackoutConfig {
+  enabled: boolean
+  start_month: number
+  start_day: number
+  end_month: number
+  end_day: number
+  reason: string
+  currently_blocked: boolean
+  updated_at: string | null
+}
+
+function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) => void }) {
+  const [cfg,     setCfg]     = useState<BlackoutConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving,  setSaving]  = useState(false)
+
+  // Local editable state (only committed on Save)
+  const [enabled,     setEnabled]     = useState(false)
+  const [startMonth,  setStartMonth]  = useState(4)
+  const [startDay,    setStartDay]    = useState(1)
+  const [endMonth,    setEndMonth]    = useState(9)
+  const [endDay,      setEndDay]      = useState(30)
+  const [reason,      setReason]      = useState('Boiler disabled during warm season')
+
+  const loadCfg = async () => {
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/boiler/blackout')
+      const data = await res.json() as BlackoutConfig
+      setCfg(data)
+      setEnabled(data.enabled)
+      setStartMonth(data.start_month)
+      setStartDay(data.start_day)
+      setEndMonth(data.end_month)
+      setEndDay(data.end_day)
+      setReason(data.reason)
+    } catch {
+      showToast('Failed to load blackout config', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadCfg() }, [])
+
+  // Clamp day when month changes
+  const handleStartMonthChange = (m: number) => {
+    setStartMonth(m)
+    if (startDay > daysInMonth(m)) setStartDay(daysInMonth(m))
+  }
+  const handleEndMonthChange = (m: number) => {
+    setEndMonth(m)
+    if (endDay > daysInMonth(m)) setEndDay(daysInMonth(m))
+  }
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/boiler/blackout', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled,
+          start_month: startMonth,
+          start_day:   startDay,
+          end_month:   endMonth,
+          end_day:     endDay,
+          reason:      reason.trim() || 'Boiler disabled during this period',
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Save failed')
+      }
+      const data = await res.json()
+      setCfg(data.config)
+      showToast('Blackout settings saved')
+    } catch (e: any) {
+      showToast(e.message || 'Error saving', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Is the wrap-around scenario (e.g. Nov→Feb)?
+  const isWrapAround = startMonth * 100 + startDay > endMonth * 100 + endDay
+
+  const selectStyle: React.CSSProperties = {
+    padding: '0.42rem 0.6rem',
+    fontSize: '0.8rem',
+    background: 'var(--bg-surface-2)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-sm)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-mono)',
+    cursor: 'pointer',
+  }
+
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+
+      {/* Header */}
+      <div className="card-header">
+        <div className="card-header-icon" style={{
+          background: enabled && cfg?.currently_blocked
+            ? 'rgba(255,59,48,0.12)'
+            : enabled
+              ? 'rgba(255,149,0,0.12)'
+              : 'var(--bg-surface-3)',
+          color: enabled && cfg?.currently_blocked
+            ? 'var(--color-danger)'
+            : enabled
+              ? 'var(--color-warning)'
+              : 'var(--text-muted)',
+        }}>
+          <Ban size={14} />
+        </div>
+        <span className="card-header-title">Boiler Blackout Period</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {cfg?.currently_blocked && (
+            <span style={{
+              fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-mono)',
+              padding: '0.2rem 0.55rem', borderRadius: 99,
+              background: 'rgba(255,59,48,0.12)',
+              color: 'var(--color-danger)',
+              border: '1px solid rgba(255,59,48,0.25)',
+              letterSpacing: '0.05em',
+            }}>
+              ACTIVE NOW
+            </span>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          <RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Loading...
+        </div>
+      ) : (
+        <>
+          {/* Enable toggle row */}
+          <Row style={{ justifyContent: 'space-between', background: enabled ? 'rgba(255,149,0,0.04)' : 'transparent' }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                Enable blackout period
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                {enabled
+                  ? `Boiler blocked from ${MONTHS_SHORT[startMonth - 1]} ${startDay} to ${MONTHS_SHORT[endMonth - 1]} ${endDay}`
+                  : 'No restriction active — boiler can always be turned on'}
+              </div>
+            </div>
+            <button onClick={() => setEnabled(v => !v)} style={{
+              width: 44, height: 26, borderRadius: 13, border: 'none', padding: 0,
+              background: enabled ? 'var(--color-warning)' : 'var(--toggle-off)',
+              position: 'relative', cursor: 'pointer',
+              transition: 'background 0.25s ease', flexShrink: 0,
+            }}>
+              <div style={{
+                position: 'absolute', top: 3, left: enabled ? 20 : 3,
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.22)',
+              }} />
+            </button>
+          </Row>
+
+          <Divider />
+
+          {/* Date range pickers */}
+          <div style={{
+            padding: '1rem 1.25rem',
+            opacity: enabled ? 1 : 0.45,
+            pointerEvents: enabled ? 'auto' : 'none',
+            transition: 'opacity 0.2s',
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+
+              {/* Start */}
+              <div>
+                <div style={{
+                  fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.06em', color: 'var(--color-success)',
+                  marginBottom: '0.6rem', fontFamily: 'var(--font-mono)',
+                }}>
+                  Block starts
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <select style={selectStyle} value={startMonth} onChange={e => handleStartMonthChange(+e.target.value)}>
+                    {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
+                  </select>
+                  <select style={{ ...selectStyle, minWidth: 56 }} value={startDay} onChange={e => setStartDay(+e.target.value)}>
+                    {Array.from({ length: daysInMonth(startMonth) }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* End */}
+              <div>
+                <div style={{
+                  fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.06em', color: 'var(--color-danger)',
+                  marginBottom: '0.6rem', fontFamily: 'var(--font-mono)',
+                }}>
+                  Block ends
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <select style={selectStyle} value={endMonth} onChange={e => handleEndMonthChange(+e.target.value)}>
+                    {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
+                  </select>
+                  <select style={{ ...selectStyle, minWidth: 56 }} value={endDay} onChange={e => setEndDay(+e.target.value)}>
+                    {Array.from({ length: daysInMonth(endMonth) }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Wrap-around notice */}
+            {enabled && isWrapAround && (
+              <div style={{
+                marginTop: '0.75rem', fontSize: '0.72rem',
+                color: 'var(--color-warning)', fontFamily: 'var(--font-mono)',
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+              }}>
+                <AlertTriangle size={12} />
+                Wrap-around period: blocks from {MONTHS_SHORT[startMonth - 1]} {startDay} through
+                year-end and then through {MONTHS_SHORT[endMonth - 1]} {endDay}
+              </div>
+            )}
+
+            {/* Visual timeline */}
+            {enabled && (
+              <div style={{ marginTop: '0.875rem' }}>
+                <div style={{
+                  fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.06em', color: 'var(--text-muted)',
+                  marginBottom: '0.4rem', fontFamily: 'var(--font-mono)',
+                }}>
+                  Year overview
+                </div>
+                <div style={{ display: 'flex', gap: 2, alignItems: 'stretch', height: 18 }}>
+                  {MONTHS_SHORT.map((m, i) => {
+                    const monthNum = i + 1
+                    // Simplified: highlight if month falls within the block
+                    let blocked = false
+                    if (!isWrapAround) {
+                      blocked = monthNum >= startMonth && monthNum <= endMonth
+                    } else {
+                      blocked = monthNum >= startMonth || monthNum <= endMonth
+                    }
+                    const isCurrentMonth = monthNum === new Date().getMonth() + 1
+                    return (
+                      <div key={m} style={{
+                        flex: 1,
+                        borderRadius: 2,
+                        background: blocked
+                          ? 'rgba(255,59,48,0.35)'
+                          : 'var(--bg-surface-2)',
+                        border: isCurrentMonth
+                          ? '1.5px solid var(--accent)'
+                          : '1px solid transparent',
+                        position: 'relative',
+                        cursor: 'default',
+                        transition: 'background 0.15s',
+                      }}
+                        title={`${m}: ${blocked ? 'blocked' : 'allowed'}`}
+                      />
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+                  {MONTHS_SHORT.map(m => (
+                    <div key={m} style={{
+                      flex: 1, textAlign: 'center',
+                      fontSize: '0.48rem', color: 'var(--text-muted)',
+                      fontFamily: 'var(--font-mono)', lineHeight: 1,
+                    }}>
+                      {m[0]}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reason text */}
+            <div style={{ marginTop: '0.875rem' }} className="field">
+              <label className="field-label">Message shown when blocked</label>
+              <input
+                className="input input--mono"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder="e.g. Boiler disabled during warm season (Apr–Sep)"
+                style={{ fontSize: '0.78rem' }}
+              />
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Save + status row */}
+          <Row style={{ justifyContent: 'space-between', padding: '0.75rem 1.25rem' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {cfg?.updated_at
+                ? `Last saved: ${new Date(cfg.updated_at).toLocaleString()}`
+                : 'Not saved yet'}
+            </div>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={save}
+              disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              {saving
+                ? <><RefreshCw size={12} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving…</>
+                : <><Save size={12} /> Save</>}
+            </button>
+          </Row>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Main Page ──────────────────────────────────────────────
 export default function TemperaturePage() {
   const { toast, showToast } = useToast()
 
-  const [isOn,          setIsOn]          = useState(null)
+  const [isOn,          setIsOn]          = useState<boolean | null>(null)
   const [thermostat,    setThermostat]    = useState(false)
-  const [currentTemp,   setCurrentTemp]   = useState(null)
+  const [currentTemp,   setCurrentTemp]   = useState<number | null>(null)
   const [targetTemp,    setTargetTemp]    = useState(20.0)
-  const [schedules,     setSchedules]     = useState([])
+  const [schedules,     setSchedules]     = useState<any[]>([])
   const [showModal,     setShowModal]     = useState(false)
+
+  // Blackout state
+  const [blackoutBanner, setBlackoutBanner] = useState<string | null>(null)
 
   const now = new Date()
   const [month,          setMonth]          = useState(now.getMonth() + 1)
@@ -216,11 +576,11 @@ export default function TemperaturePage() {
   const [compareYear,    setCompareYear]    = useState(now.getFullYear() - 1)
   const [startDate,      setStartDate]      = useState('')
   const [endDate,        setEndDate]        = useState('')
-  const [todayData,      setTodayData]      = useState([])
-  const [monthlyData,    setMonthlyData]    = useState([])
-  const [dailyData,      setDailyData]      = useState([])
-  const [compareData,    setCompareData]    = useState(null)
-  const [rangeData,      setRangeData]      = useState([])
+  const [todayData,      setTodayData]      = useState<any[]>([])
+  const [monthlyData,    setMonthlyData]    = useState<any[]>([])
+  const [dailyData,      setDailyData]      = useState<any[]>([])
+  const [compareData,    setCompareData]    = useState<any[] | null>(null)
+  const [rangeData,      setRangeData]      = useState<any[]>([])
   const [loadingCharts,  setLoadingCharts]  = useState(false)
   const [loadingRange,   setLoadingRange]   = useState(false)
 
@@ -237,60 +597,119 @@ export default function TemperaturePage() {
     return () => { clearInterval(t1); clearInterval(t2) }
   }, [])
 
-  const loadBoiler         = () => api.getBoilerStatus().then(d => setIsOn(d.is_on)).catch(() => {})
-  const loadThermostatFull = () => api.getThermostatFull().then(d => {
+  const loadBoiler         = () => api.getBoilerStatus().then((d: any) => setIsOn(d.is_on)).catch(() => {})
+  const loadThermostatFull = () => api.getThermostatFull().then((d: any) => {
     setThermostat(d.thermostat_enabled || false)
     if (d.current_temperature != null) setCurrentTemp(d.current_temperature)
     if (d.target_temperature  != null) setTargetTemp(d.target_temperature)
     if (d.boiler_on           != null) setIsOn(d.boiler_on)
   }).catch(() => {})
-  const loadSensor    = () => api.getSensors().then(d => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
-  const loadSchedules = () => api.getSchedules().then(d => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
+  const loadSensor    = () => api.getSensors().then((d: any) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
+  const loadSchedules = () => api.getSchedules().then((d: any) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
 
+  // ── Boiler toggle — checks blackout before acting ──────────────────────────
   const toggleBoiler = async () => {
-    if (thermostat && !window.confirm('Thermostat is active. Switch to manual?')) return
-    if (thermostat) { await api.thermostatOff().catch(() => {}); setThermostat(false) }
-    try {
-      const n = !isOn
-      await api.manualBoiler(n)
-      setIsOn(n)
-      showToast(`Boiler ${n ? 'ON' : 'OFF'}`)
-    } catch { showToast('Error', 'error') }
+    // Spegnimento: non serve il check blackout
+    const nextState = !isOn
+    if (nextState) {
+      // Vogliamo accendere: chiediamo al backend
+      if (thermostat && !window.confirm('Thermostat is active. Switch to manual?')) return
+      if (thermostat) { await api.thermostatOff().catch(() => {}); setThermostat(false) }
+      try {
+        const res = await fetch('/api/boiler/manual', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turn_on: true }),
+        })
+        if (res.status === 403) {
+          const err = await res.json()
+          // Mostra il banner e non cambia lo stato
+          setBlackoutBanner(err.reason || 'Boiler is blocked during this period.')
+          return
+        }
+        if (!res.ok) throw new Error('Server error')
+        setIsOn(true)
+        showToast('Boiler ON')
+        setBlackoutBanner(null)
+      } catch {
+        showToast('Error', 'error')
+      }
+    } else {
+      // Spegnimento: procediamo normalmente
+      if (thermostat && !window.confirm('Thermostat is active. Switch to manual?')) return
+      if (thermostat) { await api.thermostatOff().catch(() => {}); setThermostat(false) }
+      try {
+        await api.manualBoiler(false)
+        setIsOn(false)
+        showToast('Boiler OFF')
+        setBlackoutBanner(null)
+      } catch {
+        showToast('Error', 'error')
+      }
+    }
   }
 
   const toggleThermostat = async () => {
     const n = !thermostat
-    try {
-      await (n ? api.thermostatOn() : api.thermostatOff())
-      setThermostat(n)
-      showToast(n ? 'Thermostat enabled' : 'Thermostat disabled')
-    } catch { showToast('Error', 'error') }
+    // Se stiamo abilitando il termostato verifichiamo il blackout
+    if (n) {
+      try {
+        const res = await fetch('/api/thermostat/on', { method: 'POST' })
+        if (res.status === 403) {
+          const err = await res.json()
+          setBlackoutBanner(err.reason || 'Boiler is blocked during this period.')
+          return
+        }
+        if (!res.ok) throw new Error('Server error')
+        setThermostat(true)
+        showToast('Thermostat enabled')
+        setBlackoutBanner(null)
+      } catch (e: any) {
+        if (!e.message?.includes('403')) showToast('Error', 'error')
+      }
+    } else {
+      try {
+        await api.thermostatOff()
+        setThermostat(false)
+        showToast('Thermostat disabled')
+      } catch { showToast('Error', 'error') }
+    }
   }
 
   const sendTargetTemp = useCallback(
-    useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600),
+    useDebounce((val: number) => { api.setTargetTemp(val).catch(() => {}) }, 600),
     []
   )
 
-  const adjustTarget = (d) => {
+  const adjustTarget = (d: number) => {
     const n = Math.max(15, Math.min(30, targetTemp + d))
     setTargetTemp(n)
     sendTargetTemp(n)
   }
 
-  const applyPreset = (val) => {
+  const applyPreset = (val: number) => {
     setTargetTemp(val)
     sendTargetTemp(val)
     showToast(`Target set to ${val}°C`)
   }
 
-  const addSchedule = async ({ onTime, offTime, days }) => {
-    const td = days.split(',').map(d => d.trim()).map(d => DAY_MAP[d]).filter(d => d !== undefined)
+  const addSchedule = async ({ onTime, offTime, days }: any) => {
+    const td = days.split(',').map((d: string) => d.trim()).map((d: string) => (DAY_MAP as any)[d]).filter((d: any) => d !== undefined)
     if (!td.length) { showToast('Invalid days', 'error'); return }
     const [onH, onM]   = onTime.split(':').map(Number)
     const [offH, offM] = offTime.split(':').map(Number)
     try {
-      await api.createSchedule({ timespec: `0 ${onM} ${onH} * * ${td.join(',')}`, is_on: true })
+      // The blackout check on schedule/create is server-side; handle 403
+      const res = await fetch('/api/shelly/schedule/create', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timespec: `0 ${onM} ${onH} * * ${td.join(',')}`, is_on: true }),
+      })
+      if (res.status === 403) {
+        const err = await res.json()
+        setBlackoutBanner(err.reason || 'Cannot create schedule during blackout period.')
+        return
+      }
       await api.createSchedule({ timespec: `0 ${offM} ${offH} * * ${td.join(',')}`, is_on: false })
       showToast('Schedule created')
       setShowModal(false)
@@ -298,13 +717,13 @@ export default function TemperaturePage() {
     } catch { showToast('Error', 'error') }
   }
 
-  const deleteSchedule = async (id) => {
+  const deleteSchedule = async (id: number) => {
     if (!window.confirm('Delete?')) return
     try { await api.deleteSchedule(id); showToast('Deleted'); loadSchedules() }
     catch { showToast('Error', 'error') }
   }
 
-  const loadCharts = useCallback(async (m, y, cmp, cm, cy) => {
+  const loadCharts = useCallback(async (m: number, y: number, cmp: boolean, cm: number | null, cy: number | null) => {
     setLoadingCharts(true)
     try {
       const [today, monthly, daily] = await Promise.all([
@@ -331,7 +750,7 @@ export default function TemperaturePage() {
     setLoadingRange(true)
     try {
       const d = await api.getRangeTemp(startDate, endDate)
-      setRangeData((d || []).map(e => ({
+      setRangeData((d || []).map((e: any) => ({
         time: new Date(e.hour).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit' }),
         temp: e.avg_temperature,
       })))
@@ -340,8 +759,8 @@ export default function TemperaturePage() {
   }
 
   // Grouped schedules
-  const grouped = {}
-  schedules.filter(j => j.enable).forEach(job => {
+  const grouped: Record<string, { on: any[]; off: any[] }> = {}
+  schedules.filter((j: any) => j.enable).forEach((job: any) => {
     const p = (job.timespec || '').split(' ')
     if (p.length < 6) return
     const [, min, hour, , , dayNums] = p
@@ -353,7 +772,6 @@ export default function TemperaturePage() {
 
   const nextSchedule = getNextScheduleCountdown(schedules)
 
-  // Derive status label
   const statusLabel = currentTemp == null
     ? 'Waiting for sensor'
     : !thermostat
@@ -416,6 +834,13 @@ export default function TemperaturePage() {
         {/* ── Boiler Card ──────────────────────────────── */}
         <div className="card" style={{ overflow: 'hidden' }}>
 
+          {/* Blackout banner — shown inline when a block is triggered */}
+          {blackoutBanner && (
+            <div style={{ padding: '0.75rem 1.25rem 0' }}>
+              <BlackoutBanner reason={blackoutBanner} onDismiss={() => setBlackoutBanner(null)} />
+            </div>
+          )}
+
           {/* Header row: title + boiler toggle */}
           <Row style={{ justifyContent: 'space-between', paddingBottom: '0.875rem', paddingTop: '1rem' }}>
             <div>
@@ -426,19 +851,16 @@ export default function TemperaturePage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {/* Next schedule pill */}
               {nextSchedule && (
                 <span style={{
                   display: 'flex', alignItems: 'center', gap: '0.3rem',
-                  fontSize: '0.68rem', color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
                 }}>
                   <Clock size={11} />
                   {nextSchedule.isOn ? 'ON' : 'OFF'} in {nextSchedule.label}
                 </span>
               )}
 
-              {/* Boiler ON/OFF button */}
               <button onClick={toggleBoiler} style={{
                 padding: '0.55rem 1.25rem',
                 borderRadius: 'var(--radius-full)',
@@ -487,8 +909,6 @@ export default function TemperaturePage() {
               color="var(--card-temp-accent)"
               right
             />
-
-            {/* Target with stepper */}
             <div style={{ padding: '1.25rem' }}>
               <div style={{
                 fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
@@ -595,6 +1015,9 @@ export default function TemperaturePage() {
           </Row>
         </div>
 
+        {/* ── Blackout Period Card ──────────────────────── */}
+        <BlackoutCard showToast={showToast} />
+
         {/* ── Schedules ────────────────────────────────── */}
         <div className="card">
           <div className="card-header">
@@ -635,42 +1058,23 @@ export default function TemperaturePage() {
                   marginBottom: '0.25rem',
                   transition: 'background 0.15s',
                 }}>
-                  {/* Time range */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.9rem',
-                      fontWeight: 500,
-                      color: 'var(--text-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
+                      fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 500,
+                      color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem',
                     }}>
                       {g.on.map(s => s.time).join(', ') || '—'}
-                      <span style={{
-                        width: 16, height: 1,
-                        background: 'var(--border-strong)',
-                        display: 'inline-block', flexShrink: 0,
-                      }} />
+                      <span style={{ width: 16, height: 1, background: 'var(--border-strong)', display: 'inline-block', flexShrink: 0 }} />
                       {g.off.map(s => s.time).join(', ') || '—'}
                     </div>
                     <div style={{
-                      fontSize: '0.65rem',
-                      color: 'var(--text-muted)',
-                      marginTop: '0.2rem',
-                      fontFamily: 'var(--font-mono)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
+                      fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem',
+                      fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.5rem',
                     }}>
                       <span>{daysStr}</span>
-                      {countdown && (
-                        <span style={{ color: 'var(--accent)' }}>· in {countdown.label}</span>
-                      )}
+                      {countdown && <span style={{ color: 'var(--accent)' }}>· in {countdown.label}</span>}
                     </div>
                   </div>
-
-                  {/* Delete buttons */}
                   <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
                     {[...g.on.map(s => ({ ...s, t: 'on' })), ...g.off.map(s => ({ ...s, t: 'off' }))].map(s => (
                       <button
@@ -679,14 +1083,12 @@ export default function TemperaturePage() {
                         style={{
                           width: 28, height: 28, borderRadius: 6,
                           border: '1px solid var(--border)',
-                          background: 'transparent',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'transparent', color: 'var(--text-muted)',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.15s ease',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,59,48,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,59,48,0.3)'; e.currentTarget.style.color = 'var(--color-danger)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,59,48,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,59,48,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-danger)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -717,7 +1119,7 @@ export default function TemperaturePage() {
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-                <Tooltip {...TT} formatter={v => [v != null ? `${v}°C` : 'N/A', 'Temperature']} />
+                <Tooltip {...TT} formatter={(v: any) => [v != null ? `${v}°C` : 'N/A', 'Temperature']} />
                 <Area type="monotone" dataKey="temp" stroke="var(--card-temp-accent)" fill="url(#gt)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'var(--card-temp-accent)', strokeWidth: 0 }} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
@@ -736,7 +1138,7 @@ export default function TemperaturePage() {
               <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-              <Tooltip {...TT} formatter={v => [v != null ? `${v}°C` : 'N/A', `Avg ${year}`]} />
+              <Tooltip {...TT} formatter={(v: any) => [v != null ? `${v}°C` : 'N/A', `Avg ${year}`]} />
               <Area type="monotone" dataKey="temp" stroke="var(--accent)" fill="url(#gm)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
             </AreaChart>
           </ResponsiveContainer>
@@ -800,7 +1202,7 @@ export default function TemperaturePage() {
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="time" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-                <Tooltip {...TT} formatter={v => [`${v}°C`, 'Avg Temp']} />
+                <Tooltip {...TT} formatter={(v: any) => [`${v}°C`, 'Avg Temp']} />
                 <Area type="monotone" dataKey="temp" stroke="var(--color-danger)" fill="url(#gr)" strokeWidth={2} dot={false} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
@@ -813,9 +1215,7 @@ export default function TemperaturePage() {
       <Toast toast={toast} />
 
       <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes boiler-pulse {
           0%, 100% { box-shadow: 0 0 16px rgba(52,199,89,0.3); }
           50%       { box-shadow: 0 0 24px rgba(52,199,89,0.55); }

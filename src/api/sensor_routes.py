@@ -11,28 +11,6 @@ config = get_config()
 sensor_service = SensorService(config['DB_CONFIG'])
 
 
-# @sensor_bp.route('/')
-# def index():
-#     """Main page showing sensor charts."""
-#     data = sensor_service.get_hourly_today()
-#     last_entry = sensor_service.get_latest()
-# 
-#     labels = [f"{int(entry['hour'])}:00" for entry in data] if data else []
-#     temperatures = [entry['avg_temperature'] for entry in data] if data else []
-#     labels.reverse()
-#     temperatures.reverse()
-# 
-#     last_temperature = last_entry.get('temperature_c', 'N/A') if last_entry else 'N/A'
-#     last_humidity = last_entry.get('humidity', 'N/A') if last_entry else 'N/A'
-# 
-# #     return render_template('index.html',
-# #                            labels=labels,
-# #                            temperatures=temperatures,
-# # #                            last_temperature=last_temperature,
-# #                            last_humidity=last_humidity)
-#     return ''
-
-
 @sensor_bp.route('/api_sensors')
 @handle_db_error
 def api_sensors():
@@ -185,21 +163,6 @@ def last_temp():
         return jsonify({'error': 'Error occurred.'}), 500
 
 
-# Template pages
-# @sensor_bp.route('/temp')
-# def page_temp():
-#     """Page to display temperature data."""
-#     pass  # route disabled - served by React
-
-
-
-# @sensor_bp.route('/umid')
-# def page_umid():
-#     """Page to display humidity data."""
-#     pass  # route disabled - served by React
-
-
-
 @sensor_bp.route('/api/monthly_average_humidity/<int:month>/<int:year>', methods=['GET'])
 @handle_db_error
 def api_daily_humidity_by_month_year(month, year):
@@ -248,24 +211,33 @@ def api_set_target_temperature():
         'target_temperature': target
     }), 200
 
-# GET target temperature
+
 @sensor_bp.route('/api/target_temperature', methods=['GET'])
 @handle_db_error
 def api_get_target_temperature():
-    value = sensor_service.get_target_temperature()  # usa il metodo del service
+    value = sensor_service.get_target_temperature()
     return jsonify({'target_temperature': value}), 200
 
-SHELLY_IP = "192.168.178.165" 
+
+SHELLY_IP = "192.168.178.165"
+
 
 @sensor_bp.route('/api/thermostat/on', methods=['POST'])
 @handle_db_error
 def api_thermostat_on():
-    # Aggiorna lo stato in DB
+    # ── Blackout check ──────────────────────────────────────
+    blocked, reason = sensor_service.db.is_in_blackout_period()
+    if blocked:
+        return jsonify({
+            'blocked': True,
+            'reason': reason,
+            'error': f'Boiler is disabled during this period: {reason}'
+        }), 403
+
     success = sensor_service.set_thermostat_enabled(True)
     if not success:
         return jsonify({'error': 'Database error setting thermostat ON.'}), 500
-    
-    # Accende il relay Shelly
+
     try:
         r = requests.get(f"http://{SHELLY_IP}/relay/0?turn=on", timeout=3)
         if r.status_code != 200:
@@ -292,6 +264,7 @@ def api_thermostat_off():
 
     return jsonify({"status": "success", "message": "Thermostat disabled, caldaia spenta"}), 200
 
+
 @sensor_bp.route('/api/thermostat/status', methods=['GET'])
 @handle_db_error
 def api_thermostat_status():
@@ -302,8 +275,6 @@ def api_thermostat_status():
             return jsonify({"error": "Errore Shelly"}), 500
 
         data = r.json()
-
-        # Shelly restituisce: {"ison": true/false}
         return jsonify({"ison": data.get("ison")}), 200
 
     except requests.RequestException as e:
@@ -314,9 +285,7 @@ def api_thermostat_status():
 @handle_db_error
 def get_boiler_status_route():
     status = sensor_service.get_boiler_status()
-    # Assicuriamoci che sia un booleano corretto per JSON
     return jsonify({"is_on": bool(status)}), 200
-
 
 
 @sensor_bp.route('/api/boiler/set', methods=['POST'])
@@ -334,14 +303,14 @@ def set_boiler_status_route():
 
     return jsonify({"status": "success", "is_on": is_on}), 200
 
+
 @sensor_bp.route('/api/boiler/debug', methods=['GET'])
 def debug_boiler_status():
     try:
-        # Test query diretta
         row = sensor_service.db.execute_query(
             "SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;"
         )
-        
+
         return jsonify({
             "row": str(row),
             "row_type": str(type(row)),
@@ -354,8 +323,105 @@ def debug_boiler_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-### -------------------------------
-###  SHELLY SCHEDULE API (GEN3) - FIXED
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BOILER BLACKOUT ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@sensor_bp.route('/api/boiler/blackout', methods=['GET'])
+@handle_db_error
+def api_get_boiler_blackout():
+    """
+    Restituisce la configurazione corrente del periodo di blackout caldaia.
+
+    Response 200:
+    {
+        "enabled":     bool,
+        "start_month": int,   // 1-12
+        "start_day":   int,   // 1-31
+        "end_month":   int,
+        "end_day":     int,
+        "reason":      str,
+        "updated_at":  str | null,
+        "currently_blocked": bool   // True se oggi siamo nel periodo bloccato
+    }
+    """
+    cfg = sensor_service.db.get_boiler_blackout()
+    blocked, _ = sensor_service.db.is_in_blackout_period()
+    cfg['currently_blocked'] = blocked
+    return jsonify(cfg), 200
+
+
+@sensor_bp.route('/api/boiler/blackout', methods=['PUT'])
+@handle_db_error
+def api_set_boiler_blackout():
+    """
+    Aggiorna la configurazione del periodo di blackout caldaia.
+
+    Body JSON atteso:
+    {
+        "enabled":     bool,
+        "start_month": int,   // 1-12
+        "start_day":   int,   // 1-31
+        "end_month":   int,   // 1-12
+        "end_day":     int,   // 1-31
+        "reason":      str    // opzionale
+    }
+    """
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'Missing JSON body'}), 400
+
+    # Validazione campi obbligatori
+    required = ['enabled', 'start_month', 'start_day', 'end_month', 'end_day']
+    missing = [f for f in required if f not in data]
+    if missing:
+        return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
+
+    # Validazione valori
+    try:
+        enabled     = bool(data['enabled'])
+        start_month = int(data['start_month'])
+        start_day   = int(data['start_day'])
+        end_month   = int(data['end_month'])
+        end_day     = int(data['end_day'])
+        reason      = str(data.get('reason', 'Boiler disabled during this period')).strip()
+    except (ValueError, TypeError) as e:
+        return jsonify({'error': f'Invalid field value: {e}'}), 400
+
+    if not (1 <= start_month <= 12):
+        return jsonify({'error': 'start_month must be between 1 and 12'}), 400
+    if not (1 <= end_month <= 12):
+        return jsonify({'error': 'end_month must be between 1 and 12'}), 400
+    if not (1 <= start_day <= 31):
+        return jsonify({'error': 'start_day must be between 1 and 31'}), 400
+    if not (1 <= end_day <= 31):
+        return jsonify({'error': 'end_day must be between 1 and 31'}), 400
+    if not reason:
+        return jsonify({'error': 'reason cannot be empty'}), 400
+
+    success = sensor_service.db.set_boiler_blackout(
+        enabled, start_month, start_day, end_month, end_day, reason
+    )
+
+    if not success:
+        return jsonify({'error': 'Database error saving blackout configuration'}), 500
+
+    # Ritorna la configurazione aggiornata con lo stato corrente del blocco
+    cfg = sensor_service.db.get_boiler_blackout()
+    blocked, _ = sensor_service.db.is_in_blackout_period()
+    cfg['currently_blocked'] = blocked
+
+    return jsonify({
+        'status': 'success',
+        'message': 'Blackout configuration updated',
+        'config': cfg
+    }), 200
+
+
+### ------------------------------- ###
+#  SHELLY SCHEDULE API (GEN3)
 ### -------------------------------
 
 def shelly_rpc(method, params=None):
@@ -379,13 +445,23 @@ def api_shelly_schedules():
 
 @sensor_bp.route('/api/shelly/schedule/create', methods=['POST'])
 def api_shelly_schedule_create():
-    """Crea un nuovo schedule sullo Shelly"""
+    """Crea un nuovo schedule sullo Shelly — bloccato durante il periodo di blackout."""
     data = request.json
     timespec = data.get('timespec')
-    is_on = data.get('is_on', True)
+    is_on    = data.get('is_on', True)
 
     if not timespec:
         return jsonify({'error': 'Missing timespec parameter'}), 400
+
+    # ── Blackout check: blocca solo i nuovi schedule di accensione ──────────
+    if is_on:
+        blocked, reason = sensor_service.db.is_in_blackout_period()
+        if blocked:
+            return jsonify({
+                'blocked': True,
+                'reason': reason,
+                'error': f'Cannot create an ON schedule during blackout period: {reason}'
+            }), 403
 
     result = shelly_rpc("Schedule.Create", {
         "enable": True,
@@ -418,6 +494,7 @@ def api_shelly_schedule_delete():
 
     return jsonify(result), 200
 
+
 @sensor_bp.route('/api/thermostat/status/full', methods=['GET'])
 @handle_db_error
 def api_thermostat_status_full():
@@ -433,7 +510,6 @@ def api_thermostat_status_full():
 def api_thermostat_manual_control():
     """
     API per eseguire manualmente un ciclo di controllo del termostato.
-    Utile per testing o per forzare un controllo immediato.
     """
     result = sensor_service.thermostat_control_logic()
     return jsonify(result), 200
@@ -444,7 +520,7 @@ def api_thermostat_manual_control():
 def api_thermostat_sync():
     """API per sincronizzare manualmente lo stato con Shelly."""
     success = sensor_service.sync_boiler_with_shelly()
-    
+
     if success:
         return jsonify({
             'status': 'success',
@@ -471,36 +547,46 @@ def api_thermostat_log():
 def api_boiler_manual_control():
     """
     API per controllo manuale della caldaia (bypass del termostato).
-    ATTENZIONE: Questa operazione ignora il termostato!
+    Il blackout viene verificato solo se si tenta di ACCENDERE.
     """
     data = request.get_json()
-    
+
     if not data or 'turn_on' not in data:
         return jsonify({'error': 'Missing turn_on parameter'}), 400
-    
+
     turn_on = bool(data['turn_on'])
-    
+
+    # ── Blackout check: solo per accensione, non per spegnimento ────────────
+    if turn_on:
+        blocked, reason = sensor_service.db.is_in_blackout_period()
+        if blocked:
+            return jsonify({
+                'blocked': True,
+                'reason': reason,
+                'error': f'Boiler is disabled during this period: {reason}'
+            }), 403
+
     # Disabilita il termostato per evitare conflitti
     sensor_service.set_thermostat_enabled(False)
-    
+
     # Controlla fisicamente lo Shelly
     shelly_success = sensor_service.control_shelly_relay(turn_on)
-    
+
     if not shelly_success:
         return jsonify({
             'status': 'error',
             'message': 'Failed to control Shelly relay'
         }), 500
-    
+
     # Aggiorna stato nel DB
     sensor_service.set_boiler_status(turn_on)
-    
+
     # Log dell'azione manuale
     sensor_service.db.log_thermostat_action(
         action="MANUAL_CONTROL",
         boiler_status=turn_on
     )
-    
+
     return jsonify({
         'status': 'success',
         'message': f'Boiler turned {"on" if turn_on else "off"} manually',
