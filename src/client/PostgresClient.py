@@ -20,10 +20,9 @@ class PostgresHandler:
         self.connect_to_db()
         self.create_table_if_not_exists()
         self.create_thermostat_tables()
-    
+
     def _connect(self):
         return psycopg2.connect(**self.db_config)
-
 
     def _ensure_connection(self):
         """Verifica e ripristina la connessione se necessario."""
@@ -39,12 +38,11 @@ class PostgresHandler:
             logger.error(f"Problema di connessione rilevato: {e}")
             self.connect_to_db()
 
-    
     def connect_to_db(self):
         """Stabilisce la connessione al database con retry logic."""
         max_retries = 3
         retry_delay = 1
-        
+
         for attempt in range(max_retries):
             try:
                 self.connection = psycopg2.connect(**self.db_config)
@@ -59,7 +57,7 @@ class PostgresHandler:
                 else:
                     logger.error("Impossibile connettersi al database dopo tutti i tentativi")
                     raise
-    
+
     def create_table_if_not_exists(self):
         """Crea la tabella se non esiste già."""
         try:
@@ -76,20 +74,11 @@ class PostgresHandler:
         except Error as e:
             print(f"Errore durante la creazione della tabella: {e}")
             exit(1)
-    
+
     def save_to_db(self, temperature, humidity):
-        """Salva i dati nel database. Se è mezzanotte, cancella tutte le righe prima dell'inserimento."""
+        """Salva i dati nel database."""
         try:
             now = datetime.now()
-            # timestamp = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            
-            # Controlla se l'orario corrente è mezzanotte
-            # if now.hour == 0 and now.minute == 0:
-            #    print("È mezzanotte. Cancellazione di tutte le righe dalla tabella.")
-            #    self.cursor.execute("DELETE FROM sensor_readings")
-            #    self.connection.commit()
-            
-            # Inserisci i nuovi dati
             query = """
             INSERT INTO sensor_readings (temperature_c, humidity, timestamp) 
             VALUES (%s, %s, %s)
@@ -107,7 +96,7 @@ class PostgresHandler:
         if self.connection:
             self.connection.close()
         print("Connessione al database chiusa.")
-    
+
     def create_table_if_not_exists_devices(self):
         """Crea la tabella se non esiste già."""
         try:
@@ -124,39 +113,35 @@ class PostgresHandler:
         except Error as e:
             print(f"Errore durante la creazione della tabella: {e}")
             exit(1)
-    
+
     def save_devices_to_db(self, devices):
         """Salva le informazioni sui dispositivi di rete nel database."""
         try:
-            # Query per inserire o aggiornare il dispositivo a seconda della lunghezza dell'hostname
             query_insert_or_update = """
             INSERT INTO network_devices (ip_address, hostname, status, timestamp)
             VALUES (%s, %s, %s, %s)
             ON CONFLICT (ip_address) 
             DO UPDATE SET 
-                hostname = CASE 
-                            WHEN LENGTH(EXCLUDED.hostname) > LENGTH(network_devices.hostname) 
-                            THEN EXCLUDED.hostname 
-                            ELSE network_devices.hostname 
-                        END,
+                hostname = CASE
+                             WHEN LENGTH(EXCLUDED.hostname) > LENGTH(network_devices.hostname)
+                             THEN EXCLUDED.hostname
+                             ELSE network_devices.hostname
+                         END,
                 status = EXCLUDED.status,
                 timestamp = EXCLUDED.timestamp;
             """
-            timestamp = datetime.now()  # Ottieni il timestamp corrente
+            timestamp = datetime.now()
 
-            # Itera sui dispositivi per inserirli o aggiornarli in base alla lunghezza dell'hostname
             for ip, info in devices.items():
                 values = (ip, info['hostname'], info['status'], timestamp)
                 self.cursor.execute(query_insert_or_update, values)
 
-            # Commit delle modifiche nel database
             self.connection.commit()
             print("Dispositivi di rete inseriti o aggiornati nel database.")
-        
+
         except Error as e:
             print(f"Errore durante l'inserimento o l'aggiornamento dei dati: {e}")
 
-    
     def get_devices_from_db(self):
         """Recupera i dispositivi salvati più recentemente dal database."""
         try:
@@ -181,16 +166,14 @@ class PostgresHandler:
             return {}
 
     def save_trains_to_db(self, trains):
-        """Salva le informazioni sui treni nel database. Cancella i treni del giorno precedente."""
+        """Salva le informazioni sui treni nel database."""
         try:
             now = datetime.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            
-            # Cancella i treni del giorno precedente
+
             self.cursor.execute("DELETE FROM trains WHERE timestamp < %s", (today_start,))
             self.connection.commit()
 
-            # Query per inserire o aggiornare i treni
             query = """
             INSERT INTO trains (train_number, destination, time, delay, platform, stops, timestamp)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -217,11 +200,9 @@ class PostgresHandler:
 
             self.connection.commit()
             print("Treni inseriti o aggiornati nel database.")
-        
+
         except Error as e:
             print(f"Errore durante l'inserimento o l'aggiornamento dei dati dei treni: {e}")
-
-
 
     def create_table_if_not_exists_trains(self):
         """Crea la tabella per i treni se non esiste già."""
@@ -277,7 +258,6 @@ class PostgresHandler:
             return None
 
     def last_temp_db(self):
-
         try:
             query = """
             SELECT temperature_c, timestamp
@@ -287,16 +267,15 @@ class PostgresHandler:
             """
             self.cursor.execute(query)
             result = self.cursor.fetchone()
-            return {"last_entry" : result}
+            return {"last_entry": result}
 
         except Error as e:
             print(f"Errore durante il recupero dell'ultima temperatura: {e}")
             return None
-        
+
     def create_temp_table_and_aggregate_data(self):
-        """Crea una tabella temporanea per le medie orarie, cancella i dati esistenti e aggiorna la tabella originale."""
+        """Crea una tabella temporanea per le medie orarie."""
         try:
-            # Crea la tabella temporanea
             create_temp_table_query = """
             CREATE TEMP TABLE IF NOT EXISTS temp_sensor_averages (
                 hour TIMESTAMP PRIMARY KEY,
@@ -306,7 +285,6 @@ class PostgresHandler:
             """
             self.cursor.execute(create_temp_table_query)
 
-            # Calcola le medie per ciascuna ora e inseriscile nella tabella temporanea
             insert_averages_query = """
             INSERT INTO temp_sensor_averages (hour, avg_temperature_c, avg_humidity)
             SELECT
@@ -322,11 +300,9 @@ class PostgresHandler:
             """
             self.cursor.execute(insert_averages_query)
 
-            # Cancella i dati esistenti dalla tabella originale
             delete_original_query = "DELETE FROM sensor_readings;"
             self.cursor.execute(delete_original_query)
 
-            # Inserisci i dati aggregati dalla tabella temporanea nella tabella originale
             insert_into_original_query = """
             INSERT INTO sensor_readings (temperature_c, humidity, timestamp)
             SELECT 
@@ -338,20 +314,17 @@ class PostgresHandler:
             """
             self.cursor.execute(insert_into_original_query)
 
-
-            # Cancella i dati esistenti dalla tabella temporanea
             delete_original_query = "DROP TABLE temp_sensor_averages;"
             self.cursor.execute(delete_original_query)
 
-            # Commit per salvare tutte le operazioni
             self.connection.commit()
 
             print("Dati aggregati inseriti correttamente nella tabella originale.")
-        
+
         except Error as e:
             print(f"Errore durante l'aggregazione dei dati: {e}")
-            self.connection.rollback()  # Ripristina lo stato del database in caso di errore
-    
+            self.connection.rollback()
+
     def create_table_if_not_exists_air_quality(self):
         """Crea la tabella per i dati di qualità dell'aria se non esiste già."""
         try:
@@ -369,7 +342,6 @@ class PostgresHandler:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
             
-            -- Crea indice per migliorare le performance delle query temporali
             CREATE INDEX IF NOT EXISTS idx_air_quality_timestamp ON air_quality(timestamp);
             CREATE INDEX IF NOT EXISTS idx_air_quality_date ON air_quality(DATE(timestamp));
             """
@@ -382,48 +354,44 @@ class PostgresHandler:
                 self.connection.rollback()
             raise
 
-
-
     def save_air_quality_to_db(self, smoke_value, lpg_value, methane_value, hydrogen_value, air_quality_index, air_quality_description):
-        """Salva i dati di qualità dell'aria nel database con validazione migliorata."""
+        """Salva i dati di qualità dell'aria nel database."""
         try:
             self._ensure_connection()
-            
-            # Validazione dei dati di input
+
             if any(val is None or not isinstance(val, (int, float)) for val in [smoke_value, lpg_value, methane_value, hydrogen_value, air_quality_index]):
                 raise ValueError("Tutti i valori numerici devono essere float o int validi")
-            
+
             if not air_quality_description or not isinstance(air_quality_description, str):
                 raise ValueError("La descrizione deve essere una stringa non vuota")
-            
+
             timestamp = datetime.now()
             query = """
             INSERT INTO air_quality (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """
-            
+
             self.cursor.execute(query, (
-                float(smoke_value), 
-                float(lpg_value), 
-                float(methane_value), 
-                float(hydrogen_value), 
-                float(air_quality_index), 
-                str(air_quality_description), 
+                float(smoke_value),
+                float(lpg_value),
+                float(methane_value),
+                float(hydrogen_value),
+                float(air_quality_index),
+                str(air_quality_description),
                 timestamp
             ))
-            
+
             record_id = self.cursor.fetchone()[0]
             self.connection.commit()
             logger.info(f"Dati di qualità dell'aria salvati con ID: {record_id}")
             return record_id
-            
+
         except (Error, ValueError) as e:
             logger.error(f"Errore durante l'inserimento dei dati di qualità dell'aria: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
-
 
     def get_last_air_quality(self):
         """Recupera l'ultimo valore di qualità dell'aria dal database."""
@@ -437,7 +405,7 @@ class PostgresHandler:
             """
             self.cursor.execute(query)
             result = self.cursor.fetchone()
-            
+
             if result:
                 smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp = result
                 return {
@@ -452,35 +420,31 @@ class PostgresHandler:
             else:
                 logger.warning("Nessun dato trovato nella tabella air_quality")
                 return None
-                
+
         except Error as e:
             logger.error(f"Errore durante il recupero del valore di qualità dell'aria: {e}")
             return None
-
 
     def create_temp_table_and_aggregate_air_quality(self):
         """Versione migliorata dell'aggregazione con gestione errori e transaction sicure."""
         try:
             self._ensure_connection()
-            
-            # Inizia una transazione esplicita
+
             self.connection.autocommit = False
-            
+
             logger.info("Inizio aggregazione dati qualità dell'aria...")
-            
-            # 1. Verifica se ci sono dati da aggregare
+
             check_query = "SELECT COUNT(*) FROM air_quality WHERE timestamp >= CURRENT_DATE - INTERVAL '1 day'"
             self.cursor.execute(check_query)
             data_count = self.cursor.fetchone()[0]
-            
+
             if data_count == 0:
                 logger.warning("Nessun dato recente trovato per l'aggregazione")
                 self.connection.rollback()
                 return False
-            
+
             logger.info(f"Trovati {data_count} record da aggregare")
-            
-            # 2. Crea la tabella temporanea per le medie orarie
+
             create_temp_hourly_table_query = """
             DROP TABLE IF EXISTS temp_air_quality_hourly;
             CREATE TEMP TABLE temp_air_quality_hourly (
@@ -494,8 +458,7 @@ class PostgresHandler:
             );
             """
             self.cursor.execute(create_temp_hourly_table_query)
-            
-            # 3. Calcola le medie per ciascuna ora
+
             insert_hourly_averages_query = """
             INSERT INTO temp_air_quality_hourly (hour, avg_smoke, avg_lpg, avg_methane, avg_hydrogen, avg_air_quality_index, record_count)
             SELECT
@@ -507,35 +470,32 @@ class PostgresHandler:
                 ROUND(AVG(air_quality_index)::numeric, 2) AS avg_air_quality_index,
                 COUNT(*) as record_count
             FROM air_quality
-            WHERE timestamp >= CURRENT_DATE - INTERVAL '2 days'  -- Mantieni dati degli ultimi 2 giorni
+            WHERE timestamp >= CURRENT_DATE - INTERVAL '2 days'
             GROUP BY date_trunc('hour', timestamp)
             HAVING COUNT(*) > 0
             ORDER BY hour;
             """
             self.cursor.execute(insert_hourly_averages_query)
-            
-            # Verifica quanti record sono stati creati
+
             self.cursor.execute("SELECT COUNT(*) FROM temp_air_quality_hourly")
             hourly_count = self.cursor.fetchone()[0]
             logger.info(f"Creati {hourly_count} record orari aggregati")
-            
+
             if hourly_count == 0:
                 logger.error("Nessun record orario creato durante l'aggregazione")
                 self.connection.rollback()
                 return False
-            
-            # 4. Backup dei dati originali (opzionale, per sicurezza)
+
             backup_query = """
             CREATE TABLE IF NOT EXISTS air_quality_backup AS 
             SELECT * FROM air_quality WHERE FALSE;
             
             INSERT INTO air_quality_backup 
-            SELECT * FROM air_quality 
+            SELECT * FROM air_quality
             WHERE timestamp < date_trunc('hour', NOW()) - INTERVAL '1 hour';
             """
             self.cursor.execute(backup_query)
-            
-            # 5. Cancella solo i dati più vecchi di un'ora (mantieni i dati recenti)
+
             delete_old_query = """
             DELETE FROM air_quality 
             WHERE timestamp < date_trunc('hour', NOW()) - INTERVAL '1 hour'
@@ -544,8 +504,7 @@ class PostgresHandler:
             self.cursor.execute(delete_old_query)
             deleted_rows = self.cursor.rowcount
             logger.info(f"Cancellati {deleted_rows} record originali")
-            
-            # 6. Inserisci i dati aggregati nella tabella originale
+
             insert_into_original_query = """
             INSERT INTO air_quality (smoke, lpg, methane, hydrogen, air_quality_index, air_quality_description, timestamp)
             SELECT 
@@ -567,14 +526,13 @@ class PostgresHandler:
             self.cursor.execute(insert_into_original_query)
             inserted_rows = self.cursor.rowcount
             logger.info(f"Inseriti {inserted_rows} record aggregati nella tabella principale")
-            
-            # 7. Commit della transazione
+
             self.connection.commit()
             self.connection.autocommit = True
-            
+
             logger.info("Aggregazione completata con successo")
             return True
-            
+
         except Error as e:
             logger.error(f"Errore durante l'aggregazione dei dati: {e}")
             if self.connection:
@@ -597,7 +555,7 @@ class PostgresHandler:
             """
             self.cursor.execute(stats_query)
             result = self.cursor.fetchone()
-            
+
             if result:
                 return {
                     'total_records': result[0],
@@ -607,11 +565,11 @@ class PostgresHandler:
                     'avg_aqi': float(result[4]) if result[4] else 0
                 }
             return None
-            
+
         except Error as e:
             logger.error(f"Errore durante il recupero delle statistiche: {e}")
             return None
-    
+
     def close(self):
         """Chiudi connessione e cursor."""
         try:
@@ -622,13 +580,13 @@ class PostgresHandler:
             logger.info("Connessione database chiusa")
         except Error as e:
             logger.error(f"Errore durante la chiusura della connessione: {e}")
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-    
+
     def execute_query(self, query, params=None, fetch=False):
         with self.connection.cursor() as cur:
             cur.execute(query, params or ())
@@ -638,14 +596,13 @@ class PostgresHandler:
                 self.connection.commit()
                 return []
 
-
     @contextmanager
     def get_connection(self):
         """Context manager per la connessione al DB"""
         conn = None
         try:
             conn = psycopg2.connect(**self.db_config)
-            yield conn  # qui yield
+            yield conn
             conn.commit()
         except Exception:
             if conn:
@@ -654,7 +611,7 @@ class PostgresHandler:
         finally:
             if conn:
                 conn.close()
-    
+
     def set_target_temperature(self, value):
         query = "UPDATE target_temperature SET value=%s, updated_at=NOW() WHERE id=1;"
         try:
@@ -665,7 +622,6 @@ class PostgresHandler:
         except Exception as e:
             logger.error(f"Errore set_target_temperature: {e}")
             return False
-
 
     def get_target_temperature(self):
         query = "SELECT value FROM target_temperature ORDER BY updated_at DESC LIMIT 1;"
@@ -685,7 +641,7 @@ class PostgresHandler:
         finally:
             if cur: cur.close()
             if conn: conn.close()
-    
+
     def get_thermostat_status(self):
         """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
         query = "SELECT enabled FROM thermostat_status ORDER BY updated_at DESC LIMIT 1;"
@@ -699,7 +655,6 @@ class PostgresHandler:
         except Exception as e:
             logger.error(f"Errore get_thermostat_status: {e}")
             return False
-
 
     def set_thermostat_status(self, enabled):
         """Imposta lo stato del termostato (abilitato/disabilitato)."""
@@ -716,7 +671,6 @@ class PostgresHandler:
                 self.connection.rollback()
             return False
 
-
     def get_boiler_status(self):
         """Ottiene lo stato corrente della caldaia (accesa/spenta)."""
         query = "SELECT is_on FROM boiler_status ORDER BY updated_at DESC LIMIT 1;"
@@ -730,7 +684,6 @@ class PostgresHandler:
         except Exception as e:
             logger.error(f"Errore get_boiler_status: {e}")
             return False
-
 
     def set_boiler_status(self, is_on):
         """Imposta lo stato della caldaia (accesa/spenta)."""
@@ -752,7 +705,6 @@ class PostgresHandler:
                 self.connection.rollback()
             return False
 
-
     def get_current_temperature(self):
         """Ottiene la temperatura corrente dal sensore."""
         query = """
@@ -772,13 +724,11 @@ class PostgresHandler:
             logger.error(f"Errore get_current_temperature: {e}")
             return None
 
-
     def create_thermostat_tables(self):
         """Crea le tabelle necessarie per il termostato se non esistono."""
         try:
             self._ensure_connection()
-            
-            # Tabella per la temperatura target
+
             create_target_temp_query = """
             CREATE TABLE IF NOT EXISTS target_temperature (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -786,14 +736,11 @@ class PostgresHandler:
                 updated_at TIMESTAMP DEFAULT NOW(),
                 CONSTRAINT single_row CHECK (id = 1)
             );
-            
-            -- Inserisci valore di default se la tabella è vuota
             INSERT INTO target_temperature (id, value, updated_at)
             VALUES (1, 20.0, NOW())
             ON CONFLICT (id) DO NOTHING;
             """
-            
-            # Tabella per lo stato del termostato
+
             create_thermostat_status_query = """
             CREATE TABLE IF NOT EXISTS thermostat_status (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -801,14 +748,11 @@ class PostgresHandler:
                 updated_at TIMESTAMP DEFAULT NOW(),
                 CONSTRAINT single_row CHECK (id = 1)
             );
-            
-            -- Inserisci valore di default se la tabella è vuota
             INSERT INTO thermostat_status (id, enabled, updated_at)
             VALUES (1, FALSE, NOW())
             ON CONFLICT (id) DO NOTHING;
             """
-            
-            # Tabella per lo stato della caldaia
+
             create_boiler_status_query = """
             CREATE TABLE IF NOT EXISTS boiler_status (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -816,14 +760,11 @@ class PostgresHandler:
                 updated_at TIMESTAMP DEFAULT NOW(),
                 CONSTRAINT single_row CHECK (id = 1)
             );
-            
-            -- Inserisci valore di default se la tabella è vuota
             INSERT INTO boiler_status (id, is_on, updated_at)
             VALUES (1, FALSE, NOW())
             ON CONFLICT (id) DO NOTHING;
             """
-            
-            # Tabella per il log delle azioni del termostato
+
             create_thermostat_log_query = """
             CREATE TABLE IF NOT EXISTS thermostat_log (
                 id SERIAL PRIMARY KEY,
@@ -833,26 +774,46 @@ class PostgresHandler:
                 boiler_status BOOLEAN,
                 timestamp TIMESTAMP DEFAULT NOW()
             );
-            
-            -- Crea indice per migliorare le query
             CREATE INDEX IF NOT EXISTS idx_thermostat_log_timestamp 
             ON thermostat_log(timestamp DESC);
             """
-            
+
+            # ── Nuova tabella blackout ──────────────────────────────────────────────
+            create_boiler_blackout_query = """
+            CREATE TABLE IF NOT EXISTS boiler_blackout (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                start_month INTEGER NOT NULL DEFAULT 4,
+                start_day   INTEGER NOT NULL DEFAULT 1,
+                end_month   INTEGER NOT NULL DEFAULT 9,
+                end_day     INTEGER NOT NULL DEFAULT 30,
+                reason      TEXT NOT NULL DEFAULT 'Boiler disabled during warm season',
+                updated_at  TIMESTAMP DEFAULT NOW(),
+                CONSTRAINT single_row CHECK (id = 1),
+                CONSTRAINT valid_start_month CHECK (start_month BETWEEN 1 AND 12),
+                CONSTRAINT valid_end_month   CHECK (end_month   BETWEEN 1 AND 12),
+                CONSTRAINT valid_start_day   CHECK (start_day   BETWEEN 1 AND 31),
+                CONSTRAINT valid_end_day     CHECK (end_day     BETWEEN 1 AND 31)
+            );
+            INSERT INTO boiler_blackout (id, enabled, start_month, start_day, end_month, end_day, reason, updated_at)
+            VALUES (1, FALSE, 4, 1, 9, 30, 'Boiler disabled during warm season', NOW())
+            ON CONFLICT (id) DO NOTHING;
+            """
+
             self.cursor.execute(create_target_temp_query)
             self.cursor.execute(create_thermostat_status_query)
             self.cursor.execute(create_boiler_status_query)
             self.cursor.execute(create_thermostat_log_query)
-            
+            self.cursor.execute(create_boiler_blackout_query)
+
             self.connection.commit()
-            logger.info("Tabelle termostato create/verificate correttamente")
-            
+            logger.info("Tabelle termostato (incluso blackout) create/verificate correttamente")
+
         except Exception as e:
             logger.error(f"Errore durante la creazione delle tabelle termostato: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
-
 
     def log_thermostat_action(self, action, current_temp=None, target_temp=None, boiler_status=None):
         """Registra un'azione del termostato nel log."""
@@ -869,7 +830,6 @@ class PostgresHandler:
             if self.connection:
                 self.connection.rollback()
 
-
     def get_thermostat_log(self, limit=50):
         """Ottiene gli ultimi N record del log del termostato."""
         query = """
@@ -882,7 +842,7 @@ class PostgresHandler:
             self._ensure_connection()
             self.cursor.execute(query, (limit,))
             rows = self.cursor.fetchall()
-            
+
             return [{
                 'action': row[0],
                 'current_temp': float(row[1]) if row[1] is not None else None,
@@ -890,7 +850,138 @@ class PostgresHandler:
                 'boiler_status': bool(row[3]) if row[3] is not None else None,
                 'timestamp': row[4].isoformat() if row[4] else None
             } for row in rows]
-            
+
         except Exception as e:
             logger.error(f"Errore get_thermostat_log: {e}")
             return []
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # BOILER BLACKOUT METHODS
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def get_boiler_blackout(self) -> dict:
+        """
+        Restituisce la configurazione corrente del periodo di blackout caldaia.
+
+        Returns:
+            dict con campi: enabled, start_month, start_day, end_month, end_day,
+                            reason, updated_at
+        """
+        query = """
+        SELECT enabled, start_month, start_day, end_month, end_day, reason, updated_at
+        FROM boiler_blackout
+        WHERE id = 1;
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query)
+            row = self.cursor.fetchone()
+            if row:
+                return {
+                    'enabled':     bool(row[0]),
+                    'start_month': int(row[1]),
+                    'start_day':   int(row[2]),
+                    'end_month':   int(row[3]),
+                    'end_day':     int(row[4]),
+                    'reason':      str(row[5]),
+                    'updated_at':  row[6].isoformat() if row[6] else None,
+                }
+            # Fallback sicuro se la riga non esiste ancora
+            return {
+                'enabled': False,
+                'start_month': 4, 'start_day': 1,
+                'end_month': 9,   'end_day': 30,
+                'reason': 'Boiler disabled during warm season',
+                'updated_at': None,
+            }
+        except Exception as e:
+            logger.error(f"Errore get_boiler_blackout: {e}")
+            return {
+                'enabled': False,
+                'start_month': 4, 'start_day': 1,
+                'end_month': 9,   'end_day': 30,
+                'reason': 'Boiler disabled during warm season',
+                'updated_at': None,
+            }
+
+    def set_boiler_blackout(self, enabled: bool, start_month: int, start_day: int,
+                            end_month: int, end_day: int, reason: str) -> bool:
+        """
+        Aggiorna la configurazione del periodo di blackout caldaia.
+
+        Args:
+            enabled:     Se il blackout è attivo
+            start_month: Mese di inizio (1-12)
+            start_day:   Giorno di inizio (1-31)
+            end_month:   Mese di fine (1-12)
+            end_day:     Giorno di fine (1-31)
+            reason:      Messaggio mostrato all'utente quando bloccato
+
+        Returns:
+            True se l'aggiornamento è riuscito, False altrimenti
+        """
+        query = """
+        UPDATE boiler_blackout
+        SET enabled     = %s,
+            start_month = %s,
+            start_day   = %s,
+            end_month   = %s,
+            end_day     = %s,
+            reason      = %s,
+            updated_at  = NOW()
+        WHERE id = 1;
+        """
+        try:
+            self._ensure_connection()
+            self.cursor.execute(query, (enabled, start_month, start_day,
+                                        end_month, end_day, reason))
+            self.connection.commit()
+            logger.info(
+                f"Blackout caldaia aggiornato: enabled={enabled}, "
+                f"{start_day:02d}/{start_month:02d} → {end_day:02d}/{end_month:02d}"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Errore set_boiler_blackout: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+
+    def is_in_blackout_period(self) -> tuple[bool, str]:
+        """
+        Verifica se la data odierna cade nel periodo di blackout configurato.
+
+        Supporta sia intervalli normali (es. Aprile→Settembre) sia intervalli
+        che attraversano il cambio d'anno (es. Novembre→Febbraio).
+
+        Returns:
+            (True, reason)  se siamo nel blackout e il blackout è abilitato
+            (False, '')     altrimenti
+        """
+        try:
+            cfg = self.get_boiler_blackout()
+
+            if not cfg['enabled']:
+                return False, ''
+
+            now       = datetime.now()
+            # Rappresentiamo ogni data come (mese * 100 + giorno) per confronti semplici
+            today_val = now.month * 100 + now.day
+            start_val = cfg['start_month'] * 100 + cfg['start_day']
+            end_val   = cfg['end_month']   * 100 + cfg['end_day']
+
+            if start_val <= end_val:
+                # Intervallo normale: es. 0401 → 0930
+                in_period = start_val <= today_val <= end_val
+            else:
+                # Intervallo wrap-around: es. 1101 → 0228 (attraversa capodanno)
+                in_period = today_val >= start_val or today_val <= end_val
+
+            if in_period:
+                return True, cfg['reason']
+            return False, ''
+
+        except Exception as e:
+            logger.error(f"Errore is_in_blackout_period: {e}")
+            # In caso di errore DB non blocchiamo l'utente
+            return False, ''

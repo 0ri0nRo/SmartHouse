@@ -130,22 +130,22 @@ def port_scan_device(mac: str):
 
 @network_devices_bp.route("/devices/<mac>/osscan", methods=["POST"])
 def os_scan_device(mac: str):
-    """Trigger an nmap OS detection scan. Cached for 24 hours."""
     device = _find_device(mac)
     if not device:
         return jsonify({"error": "Device not found"}), 404
 
-    from services.network_service import NetworkService
-    os_info = NetworkService().scan_os(device["ip"])
-    r.set(f"network:os:{mac}", json.dumps(os_info), ex=86400)
+    # Controlla se già in cache
+    cached = r.get(f"network:os:{mac}")
+    if cached:
+        os_info = json.loads(cached)
+        return jsonify({"mac": mac, "ip": device["ip"], **os_info})
 
-    # patch live cache
-    devices = _get_devices()
-    patched = [{**d, **os_info} if d.get("mac") == mac else d for d in devices]
-    r.set("network:devices", json.dumps(patched), ex=300)
+    # Esegui direttamente con subprocess (richiede NET_RAW sul container Flask)
+    # oppure delega allo scanner via Redis queue
+    r.lpush("network:osscan_queue", json.dumps({"mac": mac, "ip": device["ip"]}))
 
-    return jsonify({"mac": mac, "ip": device["ip"], **os_info})
-
+    return jsonify({"mac": mac, "ip": device["ip"], "os": None, "os_detail": None, "queued": True}), 202
+    
 
 # ── Manual scan trigger ────────────────────────────────────
 

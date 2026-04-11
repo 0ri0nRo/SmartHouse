@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Wind, Activity, TrendingUp, Calendar, RefreshCw } from 'lucide-react'
+import { Wind, Activity, TrendingUp, Calendar, RefreshCw, ChevronLeft, ChevronRight, Terminal, X } from 'lucide-react'
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -31,7 +31,330 @@ function aqiLabel(v) {
   return 'Hazardous'
 }
 
-// ── Metric summary card ──────────────────────────────────────────────────────
+// ── Safe fetch helper ──────────────────────────────────────
+async function fetchJson(url) {
+  try {
+    const r = await fetch(url)
+    if (!r.ok) return null
+    return await r.json()
+  } catch {
+    return null
+  }
+}
+
+// ── Pico W Live Logs ───────────────────────────────────────
+function PicoLogsPanel() {
+  const [logs,      setLogs]      = useState([])
+  const [filter,    setFilter]    = useState('all')
+  const [paused,    setPaused]    = useState(false)
+  const [loading,   setLoading]   = useState(false)
+  const [connected, setConnected] = useState(true)
+  const termRef   = useRef(null)
+  const pausedRef = useRef(false)
+  pausedRef.current = paused
+
+  const fetchLogs = async () => {
+    if (pausedRef.current) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/pico-logs?limit=100', { cache: 'no-store' })
+      if (!r.ok) throw new Error(r.status)
+      const d = await r.json()
+      setLogs(d.logs || [])
+      setConnected(true)
+    } catch {
+      setConnected(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+    const id = setInterval(fetchLogs, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight
+  }, [logs, filter])
+
+  const LEVEL_STYLE = {
+    info:    { bg: '#0d2840', color: '#58a6ff', label: 'INFO'   },
+    success: { bg: '#0d2b1a', color: '#3fb950', label: 'OK'     },
+    warning: { bg: '#2d1e04', color: '#d29922', label: 'WARN'   },
+    warn:    { bg: '#2d1e04', color: '#d29922', label: 'WARN'   },
+    error:   { bg: '#2d0e0e', color: '#f85149', label: 'ERR'    },
+    critical:{ bg: '#3d0505', color: '#ff7b72', label: 'CRIT'   },
+    sensor:  { bg: '#1a0d2d', color: '#d2a8ff', label: 'SENSOR' },
+    system:  { bg: '#1c1c1e', color: '#8b949e', label: 'SYS'    },
+  }
+
+  const LEVELS = ['all', 'info', 'success', 'warning', 'error', 'sensor', 'system']
+
+  const filtered = filter === 'all'
+    ? logs
+    : logs.filter(l => {
+        const lv = (l.level || '').toLowerCase()
+        return lv === filter || (filter === 'warning' && lv === 'warn')
+      })
+
+  const fmtTs = (raw) => {
+    if (!raw) return '--:--:--'
+    try {
+      const d = new Date(raw)
+      return isNaN(d)
+        ? String(raw).slice(0, 8)
+        : d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    } catch { return '--:--:--' }
+  }
+
+  const lastTs = logs.length
+    ? fmtTs(logs[logs.length - 1].timestamp || logs[logs.length - 1].created_at)
+    : null
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div className="card-header-icon"
+          style={{ background: 'var(--card-air-bg)', color: 'var(--card-air-accent)' }}>
+          <Terminal size={14} />
+        </div>
+        <span className="card-header-title">Pico W — Live Logs</span>
+
+        <span className={`badge ${connected ? 'badge--success' : 'badge--danger'}`}
+          style={{ marginLeft: 'auto' }}>
+          <span className={`dot ${connected ? 'dot--green dot--pulse' : 'dot--red'}`} />
+          {connected ? 'online' : 'offline'}
+        </span>
+
+        <button onClick={() => setPaused(p => !p)} className="btn btn--ghost btn--sm"
+          style={{ marginLeft: '0.5rem', padding: '2px 8px', fontSize: '0.68rem',
+            color: paused ? 'var(--color-warning)' : undefined }}>
+          {paused ? 'resume' : 'pause'}
+        </button>
+
+        <button onClick={fetchLogs} className="btn btn--ghost btn--sm"
+          style={{ marginLeft: '0.25rem', padding: '2px 8px' }} disabled={loading}>
+          <RefreshCw size={11} style={{ animation: loading ? 'spin 0.6s linear infinite' : 'none' }} />
+        </button>
+
+        {logs.length > 0 && (
+          <button onClick={() => setLogs([])} className="btn btn--ghost btn--sm"
+            style={{ marginLeft: '0.25rem', padding: '2px 8px' }}>
+            <X size={11} />
+          </button>
+        )}
+      </div>
+
+      {/* Filter pills */}
+      <div style={{
+        display: 'flex', gap: '0.35rem', padding: '0.5rem 1rem',
+        flexWrap: 'wrap', alignItems: 'center',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-surface-2)',
+      }}>
+        {LEVELS.map(lv => {
+          const s = LEVEL_STYLE[lv] || LEVEL_STYLE.system
+          const active = filter === lv
+          return (
+            <button key={lv} onClick={() => setFilter(lv)} style={{
+              border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+              background: active ? s.bg : 'transparent',
+              borderRadius: 'var(--radius-full, 999px)',
+              padding: '2px 10px', fontSize: '0.62rem', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'var(--font-mono)',
+              color: active ? s.color : 'var(--text-muted)',
+              transition: 'all .15s', letterSpacing: '0.3px',
+            }}>
+              {lv.toUpperCase()}
+            </button>
+          )
+        })}
+        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)',
+          fontSize: '0.62rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+          {filtered.length} lines
+        </span>
+      </div>
+
+      {/* Terminal body */}
+      <div ref={termRef} style={{
+        background: 'var(--bg-code, #0d1117)',
+        padding: '0.75rem 1rem',
+        fontFamily: 'var(--font-mono)', fontSize: '0.72rem', lineHeight: 1.75,
+        maxHeight: 300, overflowY: 'auto', overflowX: 'hidden',
+      }}>
+        {filtered.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', opacity: 0.5 }}>
+            — no logs match filter —
+          </div>
+        ) : filtered.map((l, i) => {
+          const lv = (l.level || 'system').toLowerCase()
+          const s  = LEVEL_STYLE[lv] || LEVEL_STYLE.system
+          const ts = fmtTs(l.created_at || l.timestamp)
+          return (
+            <div key={i} style={{
+              display: 'grid', gridTemplateColumns: '56px 52px 1fr',
+              gap: '8px', marginBottom: '0.1rem', alignItems: 'baseline',
+            }}>
+              <span style={{ color: 'var(--text-muted)', opacity: 0.5,
+                userSelect: 'none', fontSize: '0.68rem' }}>
+                {ts}
+              </span>
+              <span style={{
+                display: 'inline-block', textAlign: 'center',
+                borderRadius: 4, padding: '0 4px',
+                fontSize: '0.6rem', fontWeight: 700,
+                background: s.bg, color: s.color,
+                lineHeight: '17px', letterSpacing: '0.3px',
+              }}>
+                {s.label}
+              </span>
+              <span style={{
+                color: 'var(--text-secondary)', whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word', minWidth: 0,
+              }}>
+                {l.message || ''}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.4rem 1rem', background: 'var(--bg-surface-2)',
+        borderTop: '1px solid var(--border)', fontFamily: 'var(--font-mono)',
+        fontSize: '0.62rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '0.25rem',
+      }}>
+        <span>pico-w-001 · 192.168.178.101:8888</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {lastTs && <span>last: {lastTs}</span>}
+          <span style={{
+            display: 'inline-block', width: 6, height: 11,
+            background: connected ? 'var(--color-success, #3fb950)' : 'var(--color-danger)',
+            borderRadius: 1,
+            animation: connected ? 'blink 1.1s step-end infinite' : 'none',
+          }} />
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Custom month/year navigator ────────────────────────────
+function PeriodNav({ month, year, onChangeMonth, onChangeYear }) {
+  const now = new Date()
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const [open, setOpen] = useState(false)
+  const [pickerYear, setPickerYear] = useState(year)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  useEffect(() => { setPickerYear(year) }, [year])
+
+  const prev = () => {
+    if (month === 1) { onChangeMonth(12); onChangeYear(year - 1) }
+    else onChangeMonth(month - 1)
+  }
+  const next = () => {
+    if (isCurrentMonth) return
+    if (month === 12) { onChangeMonth(1); onChangeYear(year + 1) }
+    else onChangeMonth(month + 1)
+  }
+
+  const selectMonth = (m) => {
+    onChangeMonth(m)
+    onChangeYear(pickerYear)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+      <button onClick={prev} className="btn btn--ghost btn--sm"
+        style={{ padding: '0.25rem 0.4rem', lineHeight: 1 }}>
+        <ChevronLeft size={13} />
+      </button>
+
+      <button onClick={() => setOpen(p => !p)} style={{
+        fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600,
+        color: 'var(--text-primary)', minWidth: 90, textAlign: 'center',
+        padding: '0.28rem 0.6rem',
+        background: open ? 'var(--bg-surface-2)' : 'var(--bg-muted)',
+        border: '1px solid var(--border)', borderRadius: 6,
+        cursor: 'pointer', transition: 'background 0.15s',
+      }}>
+        {MONTHS[month - 1]} {year}
+      </button>
+
+      <button onClick={next} className="btn btn--ghost btn--sm"
+        disabled={isCurrentMonth}
+        style={{ padding: '0.25rem 0.4rem', lineHeight: 1, opacity: isCurrentMonth ? 0.3 : 1 }}>
+        <ChevronRight size={13} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50,
+          background: 'var(--bg-surface)', border: '1px solid var(--border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+          padding: '0.75rem', width: 220,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+            <button onClick={() => setPickerYear(p => p - 1)}
+              className="btn btn--ghost btn--sm" style={{ padding: '0.2rem 0.35rem' }}>
+              <ChevronLeft size={12} />
+            </button>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              {pickerYear}
+            </span>
+            <button onClick={() => setPickerYear(p => Math.min(now.getFullYear(), p + 1))}
+              disabled={pickerYear >= now.getFullYear()}
+              className="btn btn--ghost btn--sm"
+              style={{ padding: '0.2rem 0.35rem', opacity: pickerYear >= now.getFullYear() ? 0.3 : 1 }}>
+              <ChevronRight size={12} />
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.3rem' }}>
+            {MONTHS.map((m, i) => {
+              const mNum = i + 1
+              const isFuture = pickerYear === now.getFullYear() && mNum > now.getMonth() + 1
+              const isActive = mNum === month && pickerYear === year
+              return (
+                <button key={m} onClick={() => !isFuture && selectMonth(mNum)}
+                  disabled={isFuture}
+                  style={{
+                    padding: '0.35rem 0', borderRadius: 6, border: 'none',
+                    fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: isActive ? 700 : 400,
+                    cursor: isFuture ? 'not-allowed' : 'pointer',
+                    background: isActive ? 'var(--accent)' : 'transparent',
+                    color: isActive ? '#fff' : isFuture ? 'var(--text-muted)' : 'var(--text-primary)',
+                    opacity: isFuture ? 0.35 : 1,
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => { if (!isFuture && !isActive) e.currentTarget.style.background = 'var(--bg-muted)' }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                >
+                  {m}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Metric summary card ────────────────────────────────────
 function MetricCard({ label, value, sub, color }) {
   return (
     <div style={{
@@ -53,7 +376,7 @@ function MetricCard({ label, value, sub, color }) {
   )
 }
 
-// ── Chart card wrapper ───────────────────────────────────────────────────────
+// ── Chart card wrapper ─────────────────────────────────────
 function ChartCard({ title, icon: Icon, badge, badgeLive, children, height = 220 }) {
   return (
     <div className="card">
@@ -79,7 +402,6 @@ function ChartCard({ title, icon: Icon, badge, badgeLive, children, height = 220
   )
 }
 
-// ── Loading / empty states ───────────────────────────────────────────────────
 function LoadingBox() {
   return <div className="loading-box"><span className="spinner" /></div>
 }
@@ -92,7 +414,7 @@ function EmptyState({ icon: Icon, label }) {
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
+// ── Main page ──────────────────────────────────────────────
 export default function AirQualityPage() {
   const { toast, showToast } = useToast()
   const now = new Date()
@@ -110,24 +432,24 @@ export default function AirQualityPage() {
   const [histMonth,   setHistMonth]   = useState(now.getMonth() + 1)
   const [loadingHist, setLoadingHist] = useState(false)
 
-  const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i)
-
-  // ── Load today's data ──────────────────────────────────────────────────────
+  // ── Load today's data ──────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true)
       try {
         const [aqi, gas] = await Promise.all([
-          fetch('/api/air_quality_today').then(r => r.json()).catch(() => ({})),
-          fetch('/api/gas_concentration_today').then(r => r.json()).catch(() => ({})),
+          fetchJson('/api/air_quality_today'),
+          fetchJson('/api/gas_concentration_today'),
         ])
 
-        // AQI today
         let aqiArr = []
-        if (Array.isArray(aqi)) {
+        if (aqi && Array.isArray(aqi)) {
           aqiArr = aqi.map(e => ({ hour: `${e.hour}:00`, aqi: parseFloat(e.aqi) }))
-        } else if (typeof aqi === 'object') {
-          aqiArr = Object.keys(aqi).map(Number).sort((a, b) => a - b)
+        } else if (aqi && typeof aqi === 'object') {
+          aqiArr = Object.keys(aqi)
+            .map(Number)
+            .filter(h => !isNaN(h))
+            .sort((a, b) => a - b)
             .map(h => ({ hour: `${h}:00`, aqi: parseFloat(aqi[h]) || 0 }))
         }
         setAqiData(aqiArr)
@@ -137,19 +459,31 @@ export default function AirQualityPage() {
           setLatestAQI(aqiArr[aqiArr.length - 1].aqi)
           setPeakAQI(Math.max(...values))
           setMinAQI(Math.min(...values))
+        } else {
+          setLatestAQI(null)
+          setPeakAQI(null)
+          setMinAQI(null)
         }
 
-        // Gas today
-        if (typeof gas === 'object' && !Array.isArray(gas)) {
-          setGasData(
-            Object.keys(gas).map(Number).sort((a, b) => a - b).map(h => ({
+        if (gas && typeof gas === 'object' && !Array.isArray(gas)) {
+          const gasArr = Object.keys(gas)
+            .map(Number)
+            .filter(h => !isNaN(h))
+            .sort((a, b) => a - b)
+            .map(h => ({
               hour:     `${h}:00`,
               smoke:    parseFloat(gas[h]?.avg_smoke    || 0).toFixed(2),
               lpg:      parseFloat(gas[h]?.avg_lpg      || 0).toFixed(2),
               methane:  parseFloat(gas[h]?.avg_methane  || 0).toFixed(2),
               hydrogen: parseFloat(gas[h]?.avg_hydrogen || 0).toFixed(2),
             }))
+          const hasRealData = gasArr.some(r =>
+            parseFloat(r.smoke) > 0 || parseFloat(r.lpg) > 0 ||
+            parseFloat(r.methane) > 0 || parseFloat(r.hydrogen) > 0
           )
+          setGasData(hasRealData ? gasArr : [])
+        } else {
+          setGasData([])
         }
       } catch {
         showToast('Error loading data', 'error')
@@ -163,39 +497,34 @@ export default function AirQualityPage() {
     return () => clearInterval(id)
   }, [])
 
-  // ── Load historical data ───────────────────────────────────────────────────
+  // ── Load historical data ───────────────────────────────
   useEffect(() => { loadHistory() }, [histYear, histMonth])
 
   const loadHistory = async () => {
     setLoadingHist(true)
     try {
-      // Daily averages for the selected month — endpoint now exists in Flask
-      const daily = await fetch(`/api/air_quality_monthly/${histMonth}/${histYear}`)
-        .then(r => r.json()).catch(() => ({}))
+      const daily = await fetchJson(`/api/air_quality_monthly/${histMonth}/${histYear}`)
 
-      if (typeof daily === 'object' && !Array.isArray(daily) && !daily.error) {
+      if (daily && typeof daily === 'object' && !Array.isArray(daily) && !daily.error) {
         setWeeklyData(
-          Object.keys(daily).map(Number).sort((a, b) => a - b).map(d => ({
-            day: `${d}`,
-            aqi: parseFloat(daily[d]).toFixed(1),
-          }))
+          Object.keys(daily)
+            .map(Number)
+            .filter(d => !isNaN(d))
+            .sort((a, b) => a - b)
+            .map(d => ({ day: `${d}`, aqi: parseFloat(daily[d]).toFixed(1) }))
         )
       } else {
         setWeeklyData([])
       }
 
-      // Monthly averages for the selected year — endpoint now exists in Flask
-      const yearly = await fetch(`/api/air_quality_yearly/${histYear}`)
-        .then(r => r.json()).catch(() => ({}))
+      const yearly = await fetchJson(`/api/air_quality_yearly/${histYear}`)
 
-      if (typeof yearly === 'object' && !Array.isArray(yearly) && !yearly.error) {
+      if (yearly && typeof yearly === 'object' && !Array.isArray(yearly) && !yearly.error) {
         const filled = MONTHS.map((name, i) => ({
           month: name,
           aqi:   yearly[String(i + 1)] != null ? parseFloat(yearly[String(i + 1)]).toFixed(1) : null,
         }))
         setMonthlyData(filled)
-
-        // Month average for the metric card
         const cur = yearly[String(histMonth)]
         setMonthAvg(cur != null ? parseFloat(cur).toFixed(1) : null)
       } else {
@@ -219,7 +548,7 @@ export default function AirQualityPage() {
   return (
     <div className="animate-fade">
 
-      {/* ── Page header ────────────────────────────────────────────────── */}
+      {/* Header */}
       <div className="page-header" style={{
         display: 'flex', alignItems: 'flex-start',
         justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem',
@@ -232,15 +561,11 @@ export default function AirQualityPage() {
         </div>
         {latestAQI != null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.35rem' }}>
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 500,
-              color: aqiColor(latestAQI),
-            }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 500, color: aqiColor(latestAQI) }}>
               {latestAQI.toFixed(1)}
             </span>
             <span className="badge" style={{
-              color: aqiColor(latestAQI),
-              borderColor: aqiColor(latestAQI),
+              color: aqiColor(latestAQI), borderColor: aqiColor(latestAQI),
               background: `${aqiColor(latestAQI)}18`,
             }}>
               <span className="dot" style={{ background: aqiColor(latestAQI) }} />
@@ -250,125 +575,76 @@ export default function AirQualityPage() {
         )}
       </div>
 
-      {/* ── Metric summary row ─────────────────────────────────────────── */}
+      {/* Metric cards */}
       {!loading && latestAQI != null && (
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '0.625rem',
-          marginBottom: '1rem',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: '0.625rem', marginBottom: '1rem',
         }}>
-          <MetricCard
-            label="AQI attuale"
-            value={latestAQI.toFixed(1)}
-            sub="Ultima rilevazione"
-            color={aqiColor(latestAQI)}
-          />
-          <MetricCard
-            label="Picco max"
-            value={peakAQI?.toFixed(1) ?? '—'}
-            sub="Oggi"
-            color={peakAQI != null ? aqiColor(peakAQI) : undefined}
-          />
-          <MetricCard
-            label="Picco min"
-            value={minAQI?.toFixed(1) ?? '—'}
-            sub="Oggi"
-            color={minAQI != null ? aqiColor(minAQI) : undefined}
-          />
-          <MetricCard
-            label="Media mensile"
-            value={monthAvg ?? '—'}
-            sub={`${MONTHS[histMonth - 1]} ${histYear}`}
-          />
+          <MetricCard label="AQI attuale"   value={latestAQI.toFixed(1)} sub="Ultima rilevazione" color={aqiColor(latestAQI)} />
+          <MetricCard label="Picco max"     value={peakAQI?.toFixed(1) ?? '—'} sub="Oggi" color={peakAQI != null ? aqiColor(peakAQI) : undefined} />
+          <MetricCard label="Picco min"     value={minAQI?.toFixed(1)  ?? '—'} sub="Oggi" color={minAQI  != null ? aqiColor(minAQI)  : undefined} />
+          <MetricCard label="Media mensile" value={monthAvg ?? '—'} sub={`${MONTHS[histMonth - 1]} ${histYear}`} />
         </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-        {/* ── AQI today ────────────────────────────────────────────────── */}
+        {/* AQI today */}
         <ChartCard title="Air Quality Index — Today" icon={Wind} badge="Live" badgeLive>
-          {loading
-            ? <LoadingBox />
-            : aqiData.length === 0
-              ? <EmptyState icon={Wind} label="No data today" />
-              : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={aqiData} margin={{ left: -16, right: 8 }}>
-                    <defs>
-                      <linearGradient id="gaqi" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="var(--card-air-accent)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="var(--card-air-accent)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="hour"
-                      tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                      axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                      axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
-                    <Tooltip {...TT} formatter={v => [`${v}`, 'AQI']} />
-                    <Area type="monotone" dataKey="aqi"
-                      stroke="var(--card-air-accent)" fill="url(#gaqi)"
-                      strokeWidth={2.5} dot={false}
-                      activeDot={{ r: 4, fill: 'var(--card-air-accent)', strokeWidth: 0 }}
-                      connectNulls />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )
-          }
+          {loading ? <LoadingBox /> : aqiData.length === 0 ? <EmptyState icon={Wind} label="No data today" /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={aqiData} margin={{ left: -16, right: 8 }}>
+                <defs>
+                  <linearGradient id="gaqi" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="var(--card-air-accent)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--card-air-accent)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
+                <Tooltip {...TT} formatter={v => [`${v}`, 'AQI']} />
+                <Area type="monotone" dataKey="aqi" stroke="var(--card-air-accent)" fill="url(#gaqi)" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: 'var(--card-air-accent)', strokeWidth: 0 }} connectNulls />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
 
-        {/* ── Gas concentrations ───────────────────────────────────────── */}
+        {/* Gas concentrations */}
         <ChartCard title="Gas Concentrations — Today" icon={Activity} badge="Multi-gas" height={220}>
-          {loading
-            ? <LoadingBox />
-            : gasData.length === 0
-              ? <EmptyState icon={Activity} label="No data today" />
-              : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={gasData} margin={{ left: -16, right: 8 }}>
-                    <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="hour"
-                      tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                      axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                      axisLine={false} tickLine={false} width={32} />
-                    <Tooltip {...TT} formatter={(v, name) => [`${v} ppm`, name]} />
-                    <Legend wrapperStyle={{
-                      fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-                      color: 'var(--text-secondary)',
-                    }} />
-                    {GAS_LINES.map(g => (
-                      <Line key={g.key} type="monotone" dataKey={g.key} name={g.label}
-                        stroke={g.color} strokeWidth={2}
-                        dot={false} activeDot={{ r: 4 }} connectNulls />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              )
-          }
+          {loading ? <LoadingBox /> : gasData.length === 0 ? <EmptyState icon={Activity} label="No data today" /> : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={gasData} margin={{ left: -16, right: 8 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip {...TT} formatter={(v, name) => [`${v} ppm`, name]} />
+                <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }} />
+                {GAS_LINES.map(g => (
+                  <Line key={g.key} type="monotone" dataKey={g.key} name={g.label}
+                    stroke={g.color} strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
 
-        {/* ── Historical section ───────────────────────────────────────── */}
+        {/* Historical */}
         <div className="card">
-          <div className="card-header">
+          <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             <div className="card-header-icon" style={{ background: 'var(--card-air-bg)', color: 'var(--card-air-accent)' }}>
               <TrendingUp size={14} />
             </div>
             <span className="card-header-title">Historical Analysis</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <select className="select" style={{ padding: '0.38rem 0.6rem', fontSize: '0.78rem' }}
-                value={histMonth} onChange={e => setHistMonth(+e.target.value)}>
-                {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-              </select>
-              <select className="select" style={{ padding: '0.38rem 0.6rem', fontSize: '0.78rem' }}
-                value={histYear} onChange={e => setHistYear(+e.target.value)}>
-                {years.map(y => <option key={y}>{y}</option>)}
-              </select>
-              <button className="btn btn--ghost btn--sm" onClick={loadHistory} disabled={loadingHist}>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <PeriodNav
+                month={histMonth} year={histYear}
+                onChangeMonth={setHistMonth} onChangeYear={setHistYear}
+              />
+              <button className="btn btn--ghost btn--sm" onClick={loadHistory} disabled={loadingHist}
+                style={{ padding: '0.28rem 0.4rem' }}>
                 <RefreshCw size={12} style={{ animation: loadingHist ? 'spin 0.8s linear infinite' : 'none' }} />
               </button>
             </div>
@@ -376,86 +652,61 @@ export default function AirQualityPage() {
 
           {/* Daily breakdown */}
           <div style={{ padding: '0.75rem 0.5rem 0' }}>
-            <div style={{
-              fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase',
-              letterSpacing: '0.5px', color: 'var(--text-muted)',
-              padding: '0 0.75rem', marginBottom: '0.5rem',
-            }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', padding: '0 0.75rem', marginBottom: '0.5rem' }}>
               Daily — {MONTHS[histMonth - 1]} {histYear}
             </div>
             <div style={{ height: 160 }}>
-              {loadingHist
-                ? <LoadingBox />
-                : weeklyData.length === 0
-                  ? <EmptyState icon={TrendingUp} label="No data available" />
-                  : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={weeklyData} margin={{ left: -16, right: 8 }}>
-                        <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="day"
-                          tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                          axisLine={false} tickLine={false} />
-                        <YAxis
-                          tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                          axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
-                        <Tooltip {...TT} formatter={v => [`${v}`, 'AQI']} />
-                        <Bar dataKey="aqi" fill="var(--card-air-accent)"
-                          radius={[3, 3, 0, 0]} maxBarSize={16} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  )
-              }
+              {loadingHist ? <LoadingBox /> : weeklyData.length === 0 ? <EmptyState icon={TrendingUp} label="No data available" /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyData} margin={{ left: -16, right: 8 }}>
+                    <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
+                    <Tooltip {...TT} formatter={v => [`${v}`, 'AQI']} />
+                    <Bar dataKey="aqi" fill="var(--card-air-accent)" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
           {/* Monthly averages */}
           <div style={{ padding: '0 0.5rem 0.75rem' }}>
-            <div style={{
-              fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase',
-              letterSpacing: '0.5px', color: 'var(--text-muted)',
-              padding: '0 0.75rem', marginBottom: '0.5rem',
-            }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', padding: '0 0.75rem', marginBottom: '0.5rem' }}>
               Monthly averages — {histYear}
             </div>
             <div style={{ height: 160 }}>
-              {loadingHist
-                ? <LoadingBox />
-                : monthlyData.filter(d => d.aqi != null).length === 0
-                  ? <EmptyState icon={Calendar} label="No data available" />
-                  : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={monthlyData} margin={{ left: -16, right: 8 }}>
-                        <defs>
-                          <linearGradient id="gairm" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="var(--card-air-accent)" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="var(--card-air-accent)" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="month"
-                          tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                          axisLine={false} tickLine={false} />
-                        <YAxis
-                          tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }}
-                          axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
-                        <Tooltip {...TT} formatter={v => [`${v}`, 'Avg AQI']} />
-                        <Area type="monotone" dataKey="aqi"
-                          stroke="var(--card-air-accent)" fill="url(#gairm)"
-                          strokeWidth={2} dot={false} connectNulls />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  )
-              }
+              {loadingHist ? <LoadingBox /> : monthlyData.filter(d => d.aqi != null).length === 0 ? <EmptyState icon={Calendar} label="No data available" /> : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyData} margin={{ left: -16, right: 8 }}>
+                    <defs>
+                      <linearGradient id="gairm" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="var(--card-air-accent)" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="var(--card-air-accent)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={32} domain={[0, 100]} />
+                    <Tooltip {...TT} formatter={v => [`${v}`, 'Avg AQI']} />
+                    <Area type="monotone" dataKey="aqi" stroke="var(--card-air-accent)" fill="url(#gairm)" strokeWidth={2} dot={false} connectNulls />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Pico W Live Logs */}
+        <PicoLogsPanel />
 
       </div>
 
       <Toast toast={toast} />
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes spin     { to { transform: rotate(360deg) } }
         @keyframes aq-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+        @keyframes blink    { 0%,100% { opacity:1 } 50% { opacity:0 } }
       `}</style>
     </div>
   )
