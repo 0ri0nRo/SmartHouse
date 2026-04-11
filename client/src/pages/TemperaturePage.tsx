@@ -864,7 +864,6 @@ export default function TemperaturePage() {
               <button onClick={toggleBoiler} style={{
                 padding: '0.55rem 1.25rem',
                 borderRadius: 'var(--radius-full)',
-                border: 'none',
                 background: isOn === true
                   ? 'var(--color-success)'
                   : isOn === false
