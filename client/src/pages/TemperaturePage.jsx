@@ -38,27 +38,26 @@ const TT = {
 }
 
 // ── Days per month helper ──────────────────────────────────
-function daysInMonth(month: number): number {
-  // Use a non-leap year for simplicity; day 31 is shown for months that have it
+function daysInMonth(month) {
   return new Date(2001, month, 0).getDate()
 }
 
 // ── Helpers ────────────────────────────────────────────────
-function useDebounce(fn: (...args: any[]) => void, delay: number) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  return useCallback((...args: any[]) => {
+function useDebounce(fn, delay) {
+  const timer = useRef(null)
+  return useCallback((...args) => {
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => fn(...args), delay)
   }, [fn, delay])
 }
 
-function getNextScheduleCountdown(schedules: any[]) {
+function getNextScheduleCountdown(schedules) {
   const now      = new Date()
   const todayDay = now.getDay()
   const nowMins  = now.getHours() * 60 + now.getMinutes()
-  let nearest: any = null
+  let nearest = null
 
-  schedules.filter((j: any) => j.enable).forEach((job: any) => {
+  schedules.filter((j) => j.enable).forEach((job) => {
     const p = (job.timespec || '').split(' ')
     if (p.length < 6) return
     const [, min, hour, , , dayNums] = p
@@ -66,7 +65,7 @@ function getNextScheduleCountdown(schedules: any[]) {
     const days    = dayNums.split(',').map(Number)
     const isOn    = job.calls?.[0]?.params?.on
 
-    days.forEach((d: number) => {
+    days.forEach((d) => {
       let diffDays = d - todayDay
       if (diffDays < 0) diffDays += 7
       if (diffDays === 0 && jobMins <= nowMins) diffDays = 7
@@ -90,7 +89,7 @@ function Divider() {
 }
 
 // ── Section Row ────────────────────────────────────────────
-function Row({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function Row({ children, style = {} }) {
   return (
     <div style={{
       padding: '1rem 1.25rem',
@@ -105,9 +104,7 @@ function Row({ children, style = {} }: { children: React.ReactNode; style?: Reac
 }
 
 // ── Stat Cell ──────────────────────────────────────────────
-function StatCell({ label, value, unit, color, right = false }: {
-  label: string; value: string; unit: string; color?: string; right?: boolean
-}) {
+function StatCell({ label, value, unit, color, right = false }) {
   return (
     <div style={{
       flex: 1,
@@ -133,7 +130,7 @@ function StatCell({ label, value, unit, color, right = false }: {
 }
 
 // ── Chart Card ─────────────────────────────────────────────
-function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }: any) {
+function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }) {
   return (
     <div className="card">
       <div className="card-header">
@@ -158,13 +155,13 @@ function ChartCard({ title, icon: Icon, badge, controls, height = 200, children 
 }
 
 // ── Schedule Modal ─────────────────────────────────────────
-function ScheduleModal({ onClose, onSave }: { onClose: () => void; onSave: (v: any) => void }) {
+function ScheduleModal({ onClose, onSave }) {
   const [onTime,  setOnTime]  = useState('07:00')
   const [offTime, setOffTime] = useState('22:00')
   const [days,    setDays]    = useState('Mon,Tue,Wed,Thu,Fri')
 
   return (
-    <div className="modal-overlay" onClick={(e: any) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <button className="modal-close" onClick={onClose}><X size={16} /></button>
         <div className="modal-title">New Schedule</div>
@@ -194,7 +191,7 @@ function ScheduleModal({ onClose, onSave }: { onClose: () => void; onSave: (v: a
 // ══════════════════════════════════════════════════════════════════════════════
 // BLACKOUT BANNER — shown inline when trying to turn on during blocked period
 // ══════════════════════════════════════════════════════════════════════════════
-function BlackoutBanner({ reason, onDismiss }: { reason: string; onDismiss: () => void }) {
+function BlackoutBanner({ reason, onDismiss }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
@@ -227,24 +224,14 @@ function BlackoutBanner({ reason, onDismiss }: { reason: string; onDismiss: () =
 // ══════════════════════════════════════════════════════════════════════════════
 // BLACKOUT CONFIG CARD
 // ══════════════════════════════════════════════════════════════════════════════
-interface BlackoutConfig {
-  enabled: boolean
-  start_month: number
-  start_day: number
-  end_month: number
-  end_day: number
-  reason: string
-  currently_blocked: boolean
-  updated_at: string | null
-}
-
-function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) => void }) {
-  const [cfg,     setCfg]     = useState<BlackoutConfig | null>(null)
+function BlackoutCard({ showToast, onStatusLoad }) {
+  const [cfg,     setCfg]     = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
 
   // Local editable state (only committed on Save)
-  const [enabled,     setEnabled]     = useState(false)
+  // FIX: inizializza enabled a null per distinguere "non ancora caricato" da "false"
+  const [enabled,     setEnabled]     = useState(null)
   const [startMonth,  setStartMonth]  = useState(4)
   const [startDay,    setStartDay]    = useState(1)
   const [endMonth,    setEndMonth]    = useState(9)
@@ -255,7 +242,7 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
     setLoading(true)
     try {
       const res  = await fetch('/api/boiler/blackout')
-      const data = await res.json() as BlackoutConfig
+      const data = await res.json()
       setCfg(data)
       setEnabled(data.enabled)
       setStartMonth(data.start_month)
@@ -263,6 +250,8 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
       setEndMonth(data.end_month)
       setEndDay(data.end_day)
       setReason(data.reason)
+      // FIX: notifica il parent dello stato blocked al caricamento
+      onStatusLoad?.(data.currently_blocked, data.reason)
     } catch {
       showToast('Failed to load blackout config', 'error')
     } finally {
@@ -273,11 +262,11 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
   useEffect(() => { loadCfg() }, [])
 
   // Clamp day when month changes
-  const handleStartMonthChange = (m: number) => {
+  const handleStartMonthChange = (m) => {
     setStartMonth(m)
     if (startDay > daysInMonth(m)) setStartDay(daysInMonth(m))
   }
-  const handleEndMonthChange = (m: number) => {
+  const handleEndMonthChange = (m) => {
     setEndMonth(m)
     if (endDay > daysInMonth(m)) setEndDay(daysInMonth(m))
   }
@@ -304,7 +293,7 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
       const data = await res.json()
       setCfg(data.config)
       showToast('Blackout settings saved')
-    } catch (e: any) {
+    } catch (e) {
       showToast(e.message || 'Error saving', 'error')
     } finally {
       setSaving(false)
@@ -314,7 +303,10 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
   // Is the wrap-around scenario (e.g. Nov→Feb)?
   const isWrapAround = startMonth * 100 + startDay > endMonth * 100 + endDay
 
-  const selectStyle: React.CSSProperties = {
+  // FIX: usa enabled ?? false per il rendering — mentre è null (loading) mostra false
+  const enabledDisplay = enabled ?? false
+
+  const selectStyle = {
     padding: '0.42rem 0.6rem',
     fontSize: '0.8rem',
     background: 'var(--bg-surface-2)',
@@ -331,14 +323,14 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
       {/* Header */}
       <div className="card-header">
         <div className="card-header-icon" style={{
-          background: enabled && cfg?.currently_blocked
+          background: enabledDisplay && cfg?.currently_blocked
             ? 'rgba(255,59,48,0.12)'
-            : enabled
+            : enabledDisplay
               ? 'rgba(255,149,0,0.12)'
               : 'var(--bg-surface-3)',
-          color: enabled && cfg?.currently_blocked
+          color: enabledDisplay && cfg?.currently_blocked
             ? 'var(--color-danger)'
-            : enabled
+            : enabledDisplay
               ? 'var(--color-warning)'
               : 'var(--text-muted)',
         }}>
@@ -368,25 +360,25 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
       ) : (
         <>
           {/* Enable toggle row */}
-          <Row style={{ justifyContent: 'space-between', background: enabled ? 'rgba(255,149,0,0.04)' : 'transparent' }}>
+          <Row style={{ justifyContent: 'space-between', background: enabledDisplay ? 'rgba(255,149,0,0.04)' : 'transparent' }}>
             <div>
               <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)' }}>
                 Enable blackout period
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                {enabled
+                {enabledDisplay
                   ? `Boiler blocked from ${MONTHS_SHORT[startMonth - 1]} ${startDay} to ${MONTHS_SHORT[endMonth - 1]} ${endDay}`
                   : 'No restriction active — boiler can always be turned on'}
               </div>
             </div>
             <button onClick={() => setEnabled(v => !v)} style={{
               width: 44, height: 26, borderRadius: 13, border: 'none', padding: 0,
-              background: enabled ? 'var(--color-warning)' : 'var(--toggle-off)',
+              background: enabledDisplay ? 'var(--color-warning)' : 'var(--toggle-off)',
               position: 'relative', cursor: 'pointer',
               transition: 'background 0.25s ease', flexShrink: 0,
             }}>
               <div style={{
-                position: 'absolute', top: 3, left: enabled ? 20 : 3,
+                position: 'absolute', top: 3, left: enabledDisplay ? 20 : 3,
                 width: 20, height: 20, borderRadius: '50%', background: '#fff',
                 transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.22)',
@@ -399,8 +391,8 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
           {/* Date range pickers */}
           <div style={{
             padding: '1rem 1.25rem',
-            opacity: enabled ? 1 : 0.45,
-            pointerEvents: enabled ? 'auto' : 'none',
+            opacity: enabledDisplay ? 1 : 0.45,
+            pointerEvents: enabledDisplay ? 'auto' : 'none',
             transition: 'opacity 0.2s',
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
@@ -449,7 +441,7 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
             </div>
 
             {/* Wrap-around notice */}
-            {enabled && isWrapAround && (
+            {enabledDisplay && isWrapAround && (
               <div style={{
                 marginTop: '0.75rem', fontSize: '0.72rem',
                 color: 'var(--color-warning)', fontFamily: 'var(--font-mono)',
@@ -462,7 +454,7 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
             )}
 
             {/* Visual timeline */}
-            {enabled && (
+            {enabledDisplay && (
               <div style={{ marginTop: '0.875rem' }}>
                 <div style={{
                   fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
@@ -474,7 +466,6 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
                 <div style={{ display: 'flex', gap: 2, alignItems: 'stretch', height: 18 }}>
                   {MONTHS_SHORT.map((m, i) => {
                     const monthNum = i + 1
-                    // Simplified: highlight if month falls within the block
                     let blocked = false
                     if (!isWrapAround) {
                       blocked = monthNum >= startMonth && monthNum <= endMonth
@@ -558,15 +549,15 @@ function BlackoutCard({ showToast }: { showToast: (msg: string, type?: string) =
 export default function TemperaturePage() {
   const { toast, showToast } = useToast()
 
-  const [isOn,          setIsOn]          = useState<boolean | null>(null)
+  const [isOn,          setIsOn]          = useState(null)
   const [thermostat,    setThermostat]    = useState(false)
-  const [currentTemp,   setCurrentTemp]   = useState<number | null>(null)
+  const [currentTemp,   setCurrentTemp]   = useState(null)
   const [targetTemp,    setTargetTemp]    = useState(20.0)
-  const [schedules,     setSchedules]     = useState<any[]>([])
+  const [schedules,     setSchedules]     = useState([])
   const [showModal,     setShowModal]     = useState(false)
 
   // Blackout state
-  const [blackoutBanner, setBlackoutBanner] = useState<string | null>(null)
+  const [blackoutBanner, setBlackoutBanner] = useState(null)
 
   const now = new Date()
   const [month,          setMonth]          = useState(now.getMonth() + 1)
@@ -576,11 +567,11 @@ export default function TemperaturePage() {
   const [compareYear,    setCompareYear]    = useState(now.getFullYear() - 1)
   const [startDate,      setStartDate]      = useState('')
   const [endDate,        setEndDate]        = useState('')
-  const [todayData,      setTodayData]      = useState<any[]>([])
-  const [monthlyData,    setMonthlyData]    = useState<any[]>([])
-  const [dailyData,      setDailyData]      = useState<any[]>([])
-  const [compareData,    setCompareData]    = useState<any[] | null>(null)
-  const [rangeData,      setRangeData]      = useState<any[]>([])
+  const [todayData,      setTodayData]      = useState([])
+  const [monthlyData,    setMonthlyData]    = useState([])
+  const [dailyData,      setDailyData]      = useState([])
+  const [compareData,    setCompareData]    = useState(null)
+  const [rangeData,      setRangeData]      = useState([])
   const [loadingCharts,  setLoadingCharts]  = useState(false)
   const [loadingRange,   setLoadingRange]   = useState(false)
 
@@ -597,22 +588,20 @@ export default function TemperaturePage() {
     return () => { clearInterval(t1); clearInterval(t2) }
   }, [])
 
-  const loadBoiler         = () => api.getBoilerStatus().then((d: any) => setIsOn(d.is_on)).catch(() => {})
-  const loadThermostatFull = () => api.getThermostatFull().then((d: any) => {
+  const loadBoiler         = () => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {})
+  const loadThermostatFull = () => api.getThermostatFull().then((d) => {
     setThermostat(d.thermostat_enabled || false)
     if (d.current_temperature != null) setCurrentTemp(d.current_temperature)
     if (d.target_temperature  != null) setTargetTemp(d.target_temperature)
     if (d.boiler_on           != null) setIsOn(d.boiler_on)
   }).catch(() => {})
-  const loadSensor    = () => api.getSensors().then((d: any) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
-  const loadSchedules = () => api.getSchedules().then((d: any) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
+  const loadSensor    = () => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
+  const loadSchedules = () => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
 
   // ── Boiler toggle — checks blackout before acting ──────────────────────────
   const toggleBoiler = async () => {
-    // Spegnimento: non serve il check blackout
     const nextState = !isOn
     if (nextState) {
-      // Vogliamo accendere: chiediamo al backend
       if (thermostat && !window.confirm('Thermostat is active. Switch to manual?')) return
       if (thermostat) { await api.thermostatOff().catch(() => {}); setThermostat(false) }
       try {
@@ -623,7 +612,6 @@ export default function TemperaturePage() {
         })
         if (res.status === 403) {
           const err = await res.json()
-          // Mostra il banner e non cambia lo stato
           setBlackoutBanner(err.reason || 'Boiler is blocked during this period.')
           return
         }
@@ -635,7 +623,6 @@ export default function TemperaturePage() {
         showToast('Error', 'error')
       }
     } else {
-      // Spegnimento: procediamo normalmente
       if (thermostat && !window.confirm('Thermostat is active. Switch to manual?')) return
       if (thermostat) { await api.thermostatOff().catch(() => {}); setThermostat(false) }
       try {
@@ -651,7 +638,6 @@ export default function TemperaturePage() {
 
   const toggleThermostat = async () => {
     const n = !thermostat
-    // Se stiamo abilitando il termostato verifichiamo il blackout
     if (n) {
       try {
         const res = await fetch('/api/thermostat/on', { method: 'POST' })
@@ -664,7 +650,7 @@ export default function TemperaturePage() {
         setThermostat(true)
         showToast('Thermostat enabled')
         setBlackoutBanner(null)
-      } catch (e: any) {
+      } catch (e) {
         if (!e.message?.includes('403')) showToast('Error', 'error')
       }
     } else {
@@ -677,29 +663,28 @@ export default function TemperaturePage() {
   }
 
   const sendTargetTemp = useCallback(
-    useDebounce((val: number) => { api.setTargetTemp(val).catch(() => {}) }, 600),
+    useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600),
     []
   )
 
-  const adjustTarget = (d: number) => {
+  const adjustTarget = (d) => {
     const n = Math.max(15, Math.min(30, targetTemp + d))
     setTargetTemp(n)
     sendTargetTemp(n)
   }
 
-  const applyPreset = (val: number) => {
+  const applyPreset = (val) => {
     setTargetTemp(val)
     sendTargetTemp(val)
     showToast(`Target set to ${val}°C`)
   }
 
-  const addSchedule = async ({ onTime, offTime, days }: any) => {
-    const td = days.split(',').map((d: string) => d.trim()).map((d: string) => (DAY_MAP as any)[d]).filter((d: any) => d !== undefined)
+  const addSchedule = async ({ onTime, offTime, days }) => {
+    const td = days.split(',').map((d) => d.trim()).map((d) => DAY_MAP[d]).filter((d) => d !== undefined)
     if (!td.length) { showToast('Invalid days', 'error'); return }
     const [onH, onM]   = onTime.split(':').map(Number)
     const [offH, offM] = offTime.split(':').map(Number)
     try {
-      // The blackout check on schedule/create is server-side; handle 403
       const res = await fetch('/api/shelly/schedule/create', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -717,13 +702,13 @@ export default function TemperaturePage() {
     } catch { showToast('Error', 'error') }
   }
 
-  const deleteSchedule = async (id: number) => {
+  const deleteSchedule = async (id) => {
     if (!window.confirm('Delete?')) return
     try { await api.deleteSchedule(id); showToast('Deleted'); loadSchedules() }
     catch { showToast('Error', 'error') }
   }
 
-  const loadCharts = useCallback(async (m: number, y: number, cmp: boolean, cm: number | null, cy: number | null) => {
+  const loadCharts = useCallback(async (m, y, cmp, cm, cy) => {
     setLoadingCharts(true)
     try {
       const [today, monthly, daily] = await Promise.all([
@@ -750,7 +735,7 @@ export default function TemperaturePage() {
     setLoadingRange(true)
     try {
       const d = await api.getRangeTemp(startDate, endDate)
-      setRangeData((d || []).map((e: any) => ({
+      setRangeData((d || []).map((e) => ({
         time: new Date(e.hour).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit' }),
         temp: e.avg_temperature,
       })))
@@ -759,8 +744,8 @@ export default function TemperaturePage() {
   }
 
   // Grouped schedules
-  const grouped: Record<string, { on: any[]; off: any[] }> = {}
-  schedules.filter((j: any) => j.enable).forEach((job: any) => {
+  const grouped = {}
+  schedules.filter((j) => j.enable).forEach((job) => {
     const p = (job.timespec || '').split(' ')
     if (p.length < 6) return
     const [, min, hour, , , dayNums] = p
@@ -864,6 +849,7 @@ export default function TemperaturePage() {
               <button onClick={toggleBoiler} style={{
                 padding: '0.55rem 1.25rem',
                 borderRadius: 'var(--radius-full)',
+                border: 'none',
                 background: isOn === true
                   ? 'var(--color-success)'
                   : isOn === false
@@ -1015,7 +1001,13 @@ export default function TemperaturePage() {
         </div>
 
         {/* ── Blackout Period Card ──────────────────────── */}
-        <BlackoutCard showToast={showToast} />
+        {/* FIX: onStatusLoad imposta il banner al caricamento se il blackout è attivo */}
+        <BlackoutCard
+          showToast={showToast}
+          onStatusLoad={(blocked, reason) => {
+            if (blocked) setBlackoutBanner(reason)
+          }}
+        />
 
         {/* ── Schedules ────────────────────────────────── */}
         <div className="card">
@@ -1086,8 +1078,8 @@ export default function TemperaturePage() {
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.15s ease',
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,59,48,0.08)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,59,48,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-danger)' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,59,48,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,59,48,0.3)'; e.currentTarget.style.color = 'var(--color-danger)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)' }}
                       >
                         <Trash2 size={12} />
                       </button>
@@ -1118,7 +1110,7 @@ export default function TemperaturePage() {
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-                <Tooltip {...TT} formatter={(v: any) => [v != null ? `${v}°C` : 'N/A', 'Temperature']} />
+                <Tooltip {...TT} formatter={(v) => [v != null ? `${v}°C` : 'N/A', 'Temperature']} />
                 <Area type="monotone" dataKey="temp" stroke="var(--card-temp-accent)" fill="url(#gt)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'var(--card-temp-accent)', strokeWidth: 0 }} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
@@ -1137,7 +1129,7 @@ export default function TemperaturePage() {
               <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-              <Tooltip {...TT} formatter={(v: any) => [v != null ? `${v}°C` : 'N/A', `Avg ${year}`]} />
+              <Tooltip {...TT} formatter={(v) => [v != null ? `${v}°C` : 'N/A', `Avg ${year}`]} />
               <Area type="monotone" dataKey="temp" stroke="var(--accent)" fill="url(#gm)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
             </AreaChart>
           </ResponsiveContainer>
@@ -1201,7 +1193,7 @@ export default function TemperaturePage() {
                 <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="time" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
-                <Tooltip {...TT} formatter={(v: any) => [`${v}°C`, 'Avg Temp']} />
+                <Tooltip {...TT} formatter={(v) => [`${v}°C`, 'Avg Temp']} />
                 <Area type="monotone" dataKey="temp" stroke="var(--color-danger)" fill="url(#gr)" strokeWidth={2} dot={false} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
