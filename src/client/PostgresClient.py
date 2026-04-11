@@ -644,43 +644,44 @@ class PostgresHandler:
 
     def get_thermostat_status(self):
         """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
-        query = "SELECT enabled FROM thermostat_status ORDER BY updated_at DESC LIMIT 1;"
+        query = "SELECT enabled FROM thermostat_status WHERE id = 1;"
         try:
-            self._ensure_connection()
-            self.cursor.execute(query)
-            row = self.cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    row = cur.fetchone()
+                    return bool(row[0]) if row else False
         except Exception as e:
             logger.error(f"Errore get_thermostat_status: {e}")
             return False
 
     def set_thermostat_status(self, enabled):
         """Imposta lo stato del termostato (abilitato/disabilitato)."""
-        query = "UPDATE thermostat_status SET enabled=%s, updated_at=NOW() WHERE id=1;"
+        query = """
+        INSERT INTO thermostat_status (id, enabled, updated_at)
+        VALUES (1, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET enabled = EXCLUDED.enabled, updated_at = NOW();
+        """
         try:
-            self._ensure_connection()
-            self.cursor.execute(query, (enabled,))
-            self.connection.commit()
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (enabled,))
             logger.info(f"Stato termostato impostato: {enabled}")
             return True
         except Exception as e:
             logger.error(f"Errore set_thermostat_status: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
 
     def get_boiler_status(self):
         """Ottiene lo stato corrente della caldaia (accesa/spenta)."""
-        query = "SELECT is_on FROM boiler_status ORDER BY updated_at DESC LIMIT 1;"
+        query = "SELECT is_on FROM boiler_status WHERE id = 1;"
         try:
-            self._ensure_connection()
-            self.cursor.execute(query)
-            row = self.cursor.fetchone()
-            if row:
-                return bool(row[0])
-            return False
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    row = cur.fetchone()
+                    return bool(row[0]) if row else False
         except Exception as e:
             logger.error(f"Errore get_boiler_status: {e}")
             return False
@@ -688,21 +689,19 @@ class PostgresHandler:
     def set_boiler_status(self, is_on):
         """Imposta lo stato della caldaia (accesa/spenta)."""
         query = """
-        INSERT INTO boiler_status (is_on, updated_at) 
-        VALUES (%s, NOW())
-        ON CONFLICT (id) 
-        DO UPDATE SET is_on = EXCLUDED.is_on, updated_at = EXCLUDED.updated_at;
+        INSERT INTO boiler_status (id, is_on, updated_at)
+        VALUES (1, %s, NOW())
+        ON CONFLICT (id) DO UPDATE
+        SET is_on = EXCLUDED.is_on, updated_at = NOW();
         """
         try:
-            self._ensure_connection()
-            self.cursor.execute(query, (is_on,))
-            self.connection.commit()
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (is_on,))
             logger.info(f"Stato caldaia impostato: {is_on}")
             return True
         except Exception as e:
             logger.error(f"Errore set_boiler_status: {e}")
-            if self.connection:
-                self.connection.rollback()
             return False
 
     def get_current_temperature(self):
@@ -873,7 +872,7 @@ class PostgresHandler:
             'updated_at': None,
         }
         try:
-            with self.get_connection() as conn:        # ← connessione fresca
+            with self.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(query)
                     row = cur.fetchone()
