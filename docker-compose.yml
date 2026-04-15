@@ -11,6 +11,8 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
   mongodb:
     image: mongo:4.4.18
@@ -23,6 +25,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongo-data:/data/db
+    networks:
+      - smarthouse-net
 
   main:
     build:
@@ -41,6 +45,8 @@ services:
       - DB_PASSWORD=1234
       - TZ=Europe/Rome
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
   app:
     build:
@@ -72,22 +78,23 @@ services:
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
       - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
       - /home/cowrie/cowrie/var/log/cowrie:/var/log/cowrie:ro
-
     user: "1000:1000"
     restart: unless-stopped
     env_file:
       - ./src/.env
+    networks:
+      - smarthouse-net
 
   network_scanner:
     build:
       context: ./src
       dockerfile: Dockerfile.scanner
     privileged: true
-    network_mode: host   # necessario per arp-scan
+    network_mode: host
     command: python3 scanner_service.py
     environment:
       - NETWORK_SUBNET=192.168.178.0/24
-      - DB_HOST=192.168.178.101  # IP host reale, non "db", perché usi host network
+      - DB_HOST=192.168.178.101
       - REDIS_HOST=127.0.0.1
     depends_on:
       - redis
@@ -95,7 +102,6 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-
 
   nginx:
     image: nginx:latest
@@ -111,13 +117,23 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
 volumes:
   postgres_data:
   mongo-data:
+
+networks:
+  smarthouse-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-smarthouse
