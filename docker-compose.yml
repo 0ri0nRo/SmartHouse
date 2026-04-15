@@ -71,6 +71,7 @@ services:
       - ./uploads:/app/uploads
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
       - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
+      - /home/cowrie/cowrie/var/log/cowrie:/var/log/cowrie:ro
 
     user: "1000:1000"
     restart: unless-stopped

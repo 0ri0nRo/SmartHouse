@@ -34,6 +34,7 @@ from api.calendar_routes import calendar_bp
 from api.recipe_routes          import recipe_bp
 from api.sunmoon_routes         import sunmoon_bp
 from api.news_routes import news_bp
+from api.honeypot_routes import honeypot_bp
 
 def create_app():
     """
@@ -120,7 +121,7 @@ def create_app():
     app.register_blueprint(recipe_bp)
     app.register_blueprint(sunmoon_bp)
     app.register_blueprint(news_bp)
-
+    app.register_blueprint(honeypot_bp)
     # Health check endpoint
     @app.route('/health')
     def health_check():
