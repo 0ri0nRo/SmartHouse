@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
+import { GeoIpMap } from './GeoIpMap'
 
 // ── API ────────────────────────────────────────────────────
 const api = {
@@ -35,6 +36,7 @@ const api = {
   honeypotDaily:     () => fetch('/api/honeypot/timeline/daily').then(r => r.json()),
   honeypotFiles:     () => fetch('/api/honeypot/files').then(r => r.json()),
   honeypotSummary:   () => fetch('/api/honeypot/summary').then(r => r.json()),
+  honeypotGeoip: (limit = 50) => fetch(`/api/honeypot/geoip?limit=${limit}`).then(r => r.json()),
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -165,6 +167,7 @@ function ThreatTabBar({ active, onChange }) {
     { id: 'commands',     label: 'Commands',     icon: <Terminal size={12} /> },
     { id: 'files',        label: 'Files',        icon: <FileText size={12} /> },
     { id: 'feed',         label: 'Live Feed',    icon: <Zap size={12} /> },
+    { id: 'map', label: 'Map', icon: <Globe size={12} /> },
   ]
   return (
     <div style={{
@@ -1235,7 +1238,17 @@ export default function SecurityPage() {
   const [honeypotLoading,   setHoneypotLoading]   = useState(false)
   const [attackerSearch,    setAttackerSearch]    = useState('')
   const [sessionModal,      setSessionModal]      = useState(null)
+  const [geoData, setGeoData] = useState(null)
+  const [geoLoading, setGeoLoading] = useState(false)
+  useEffect(() => {
+    if (threatTab === 'map' && !geoData) {
+      setGeoLoading(true)
 
+      api.honeypotGeoip(100)
+        .then(setGeoData)
+        .finally(() => setGeoLoading(false))
+    }
+  }, [threatTab])
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 640)
@@ -1739,6 +1752,16 @@ export default function SecurityPage() {
 
               {/* ── FILES sub-tab ── */}
               {threatTab === 'files' && <FilesView isMobile={isMobile} />}
+              
+              {/* ── GEOIP MAP sub-tab ── */}
+              {threatTab === 'map' && (
+                <GeoIpMap geoData={geoData} loading={geoLoading} isMobile={isMobile}
+                  onRefresh={() => {
+                    setGeoLoading(true)
+                    api.honeypotGeoip(100).then(setGeoData).finally(() => setGeoLoading(false))
+                  }}
+                />
+              )}
 
               {/* ── LIVE FEED sub-tab ── */}
               {threatTab === 'feed' && (

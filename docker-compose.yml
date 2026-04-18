@@ -1,4 +1,17 @@
 services:
+
+  geoipupdate:
+    image: maxmindinc/geoipupdate
+    env_file:
+      - ./src/.env
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID
+      - GEOIPUPDATE_LICENSE_KEY
+      - GEOIPUPDATE_EDITION_IDS
+      - GEOIPUPDATE_FREQUENCY
+    volumes:
+      - /opt/geoip:/usr/share/GeoIP
+
   db:
     image: postgres:16
     environment:
@@ -71,10 +84,12 @@ services:
       - TESSERACT_CMD=/usr/bin/tesseract
       - NETWORK_SUBNET=192.168.178.0/24
       - FRITZ_IP=192.168.178.1
+      - GEOIP_DB_PATH=/usr/share/GeoIP/GeoLite2-City.mmdb
     volumes:
       - ./backup:/backup
       - ./src/static:/app/static
       - ./uploads:/app/uploads
+      - ./uploads/GeoLite2-City.mmdb:/usr/share/GeoIP/GeoLite2-City.mmdb:ro
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
       - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
       - /home/cowrie/cowrie/var/log/cowrie:/var/log/cowrie:ro
