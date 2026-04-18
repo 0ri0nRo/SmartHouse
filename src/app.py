@@ -134,8 +134,8 @@ def create_app():
     # Serve React frontend for all non-API routes.
     # This must be the LAST route registered so it does not
     # shadow any of the API blueprints above.
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
+    @app.route('/', defaults={'path': ''}, methods=['GET', 'HEAD'])
+    @app.route('/<path:path>', methods=['GET', 'HEAD'])
     def serve_react(path):
         """Return the React index.html for every unknown route so that
         React Router can handle client-side navigation."""

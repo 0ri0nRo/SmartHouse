@@ -2,9 +2,10 @@ import json
 import datetime
 import redis
 from flask import Blueprint, jsonify, request
+import os
 
 network_devices_bp = Blueprint("network_devices", __name__, url_prefix="/api")
-r = redis.Redis(host="redis", port=6379, decode_responses=True)
+r = redis.Redis(host=os.environ.get("REDIS_HOST", "127.0.0.1"), port=6379, decode_responses=True)
 
 
 # ── Helper ─────────────────────────────────────────────────
