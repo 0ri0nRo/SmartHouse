@@ -16,6 +16,7 @@ import {
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
 import { GeoIpMap } from './GeoIpMap'
+import HoneypotSection from './HoneypotSection'
 
 // ── API ────────────────────────────────────────────────────
 const api = {
@@ -44,6 +45,8 @@ const api = {
   honeypotThreats:           (days = 7) => fetch(`/api/honeypot/threats?days=${days}`).then(r => r.json()),
   honeypotAttackerProfile:   (ip) => fetch(`/api/honeypot/attackers/${ip}`).then(r => r.json()),
   honeypotDownloadsAnalysis: () => fetch('/api/honeypot/downloads/analysis').then(r => r.json()),
+  honeypotRealIps: () => fetch('/api/honeypot/real_ips').then(r => r.json()),
+
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -209,6 +212,7 @@ function ThreatTabBar({ active, onChange }) {
     { id: 'honeypot_alerts', label: 'Alerts',  icon: <Siren size={12} /> },
     { id: 'threat_class',    label: 'Threats', icon: <ShieldAlert size={12} /> },
     { id: 'downloads',   label: 'Downloads',   icon: <Download size={12} /> },
+    { id: 'real_ips', label: 'Real IPs', icon: <Eye size={12} /> },
   ]
   return (
     <div style={{
@@ -1845,6 +1849,114 @@ function HistoryView({ history, devices }) {
   )
 }
 
+function RealIpsView({ isMobile }) {
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.honeypotRealIps()
+      .then(setData)
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div className="loading-box" style={{ height: 200 }}><span className="spinner" /></div>
+  if (!data || data.error) return (
+    <div className="empty-state">
+      <Eye size={28} />
+      <div>{data?.error || 'No data — ensure iptables LOG rule is active'}</div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
+        <ThreatStatCard label="Real Connections" value={data.total} icon={<Eye size={15} />} color="#22c55e" />
+        <ThreatStatCard label="Correlated Sessions"
+          value={(data.connections || []).filter(c => c.session_id).length}
+          icon={<Terminal size={15} />} color="#a78bfa" />
+        <ThreatStatCard label="Login Success"
+          value={(data.connections || []).filter(c => c.login_success).length}
+          icon={<Lock size={15} />} color="#ef4444" />
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div className="card-header-icon" style={{ background: '#22c55e18', color: '#22c55e' }}><Eye size={15} /></div>
+          <span className="card-header-title">Real Attacker IPs (last 24h)</span>
+          <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{data.total}</span>
+        </div>
+        {!data.connections?.length ? (
+          <div className="empty-state"><Eye size={24} /><div>No connections logged</div></div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Real IP</th>
+                  <th>Time</th>
+                  <th>Session</th>
+                  <th>Login</th>
+                  <th>Credentials</th>
+                  <th>Commands</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.connections.map((c, i) => (
+                  <tr key={i} style={{ background: c.login_success ? '#ef444408' : 'transparent' }}>
+                    <td>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: c.login_success ? '#ef4444' : '#22c55e' }}>
+                        {c.real_ip}
+                      </span>
+                    </td>
+                    <td className="td-mono td-muted" style={{ fontSize: '0.68rem' }}>
+                      {c.timestamp ? new Date(c.timestamp).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                    </td>
+                    <td>
+                      {c.session_id
+                        ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#a78bfa', background: '#a78bfa18', border: '1px solid #a78bfa30', borderRadius: 4, padding: '0.1rem 0.35rem' }}>
+                            {c.session_id.slice(0, 10)}…
+                          </span>
+                        : <span style={{ color: 'var(--text-secondary)', fontSize: '0.68rem', fontFamily: 'var(--font-mono)' }}>—</span>
+                      }
+                    </td>
+                    <td>
+                      {c.login_success
+                        ? <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', fontWeight: 700, color: '#ef4444', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 4, padding: '0.1rem 0.35rem' }}>SUCCESS</span>
+                        : <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>failed</span>
+                      }
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                        {(c.credentials || []).map((cr, j) => (
+                          <span key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 4, padding: '0.1rem 0.35rem' }}>
+                            <span style={{ color: '#60a5fa' }}>{cr.username}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>/</span>
+                            <span style={{ color: '#f97316' }}>{cr.password}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {(c.commands || []).map((cmd, j) => (
+                          <span key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#a78bfa' }}>
+                            <span style={{ color: '#22c55e' }}>$ </span>{cmd}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────
 export default function SecurityPage() {
   const { toast, showToast } = useToast()
@@ -2224,228 +2336,8 @@ export default function SecurityPage() {
 
       {/* ── THREATS TAB ── */}
       {tab === 'threats' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {honeypotLoading ? (
-            <div className="loading-box" style={{ height: 200 }}><span className="spinner" /></div>
-          ) : !honeypotStats ? (
-            <div className="empty-state" style={{ padding: '3rem' }}>
-              <Bug size={32} style={{ color: 'var(--text-secondary)' }} />
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: 320, textAlign: 'center', lineHeight: 1.6 }}>
-                No honeypot data found. Make sure Cowrie is running and JSON logs are mounted at{' '}
-                <code style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'var(--bg-muted)', padding: '0.1rem 0.3rem', borderRadius: 4 }}>/var/log/cowrie/cowrie.json</code>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Stat cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
-                <ThreatStatCard label="Total Events"     value={honeypotStats.total_events || 0}   icon={<Zap size={15} />}      color="#f97316" />
-                <ThreatStatCard label="Unique Attackers" value={honeypotStats.unique_ips || 0}      icon={<Target size={15} />}   color="#ef4444" />
-                <ThreatStatCard label="Login Attempts"   value={honeypotStats.login_attempts || 0}  icon={<Lock size={15} />}     color="#f59e0b"
-                  sub={honeypotStats.login_success > 0 ? `⚠ ${honeypotStats.login_success} succeeded` : 'none succeeded'} />
-                <ThreatStatCard label="Sessions"         value={honeypotStats.total_sessions || 0}  icon={<Terminal size={15} />} color="#a78bfa" />
-              </div>
-
-              <ThreatTabBar active={threatTab} onChange={setThreatTab} />
-
-              {/* ── OVERVIEW ── */}
-              {threatTab === 'overview' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
-                    <div className="card">
-                      <div className="card-header">
-                        <div className="card-header-icon" style={{ background: '#f9731618', color: '#f97316' }}><Activity size={15} /></div>
-                        <span className="card-header-title">Attack Timeline (last 24h)</span>
-                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)' }}>local time</span>
-                      </div>
-                      <div className="card-body" style={{ height: 200 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={fixedTimeline} margin={{ left: -10, right: 4, top: 4 }}>
-                            <defs>
-                              <linearGradient id="attackGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                            <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} interval={3} tickFormatter={fmtHourLabel} />
-                            <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} width={24} />
-                            <Tooltip {...TOOLTIP_STYLE}
-                              labelFormatter={v => { try { return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } catch { return v } }}
-                              formatter={(v) => [`${v} events`, 'Attacks']} />
-                            <Area type="monotone" dataKey="attacks" stroke="#ef4444" strokeWidth={1.5} fill="url(#attackGrad)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    <TopList title="Top Attacking IPs" icon={<Target size={14} />} items={honeypotStats.top_ips || []} valueKey="count" labelKey="ip" color="#ef4444" />
-                  </div>
-                  <DailyTimelineCard isMobile={isMobile} />
-                  {honeypotStats.event_types && Object.keys(honeypotStats.event_types).length > 0 && (
-                    <div className="card">
-                      <div className="card-header">
-                        <div className="card-header-icon" style={{ background: '#60a5fa18', color: '#60a5fa' }}><BarChart2 size={15} /></div>
-                        <span className="card-header-title">Event Type Breakdown</span>
-                      </div>
-                      <div style={{ padding: '0.75rem 1rem 1rem' }}>
-                        {Object.entries(honeypotStats.event_types).sort((a, b) => b[1] - a[1]).map(([eid, cnt]) => {
-                          const meta = EVENT_META[eid] || { label: eid.split('.').pop(), color: '#6b7280' }
-                          const max  = Math.max(...Object.values(honeypotStats.event_types))
-                          return (
-                            <div key={eid} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem' }}>
-                              <EventBadge eventid={eid} />
-                              <div style={{ flex: 1, height: 5, background: 'var(--bg-muted)', borderRadius: 99 }}>
-                                <div style={{ height: '100%', borderRadius: 99, width: `${(cnt / max) * 100}%`, background: meta.color }} />
-                              </div>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 36, textAlign: 'right' }}>{cnt.toLocaleString()}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {(honeypotStats.recent_commands || []).length > 0 && (
-                    <div className="card">
-                      <div className="card-header">
-                        <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><Terminal size={15} /></div>
-                        <span className="card-header-title">Recent Attacker Commands</span>
-                      </div>
-                      <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                        {honeypotStats.recent_commands.map((cmd, i) => (
-                          <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 5, padding: '0.3rem 0.65rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                            <span style={{ color: '#22c55e', flexShrink: 0 }}>$</span>
-                            <span style={{ color: '#a78bfa', wordBreak: 'break-all' }}>{cmd.input}</span>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.62rem', marginLeft: 'auto', flexShrink: 0 }}>{cmd.ip}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── ATTACKERS ── */}
-              {threatTab === 'attackers' && (
-                <div className="card">
-                  <div className="card-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div className="card-header-icon" style={{ background: '#ef444418', color: '#ef4444' }}><Bug size={15} /></div>
-                    <span className="card-header-title">Attackers</span>
-                    <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{filteredAttackers.length}</span>
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Search size={12} style={{ color: 'var(--text-secondary)' }} />
-                      <input value={attackerSearch} onChange={e => setAttackerSearch(e.target.value)} placeholder="Filter IPs…"
-                        style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.28rem 0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-primary)', outline: 'none', width: 130 }} />
-                      {attackerSearch && <button onClick={() => setAttackerSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={12} /></button>}
-                    </div>
-                  </div>
-                  {filteredAttackers.length === 0 ? (
-                    <div className="empty-state"><Target size={28} /><div>No attackers found</div></div>
-                  ) : isMobile ? (
-                    <div style={{ padding: '0.75rem' }}>
-                      {filteredAttackers.map((a, i) => (
-                        <AttackerCard key={a.ip} attacker={a} idx={i} onSessionClick={setSessionModal} onProfileClick={setProfileModal} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="table-wrap">
-                      <table>
-                        <thead><tr><th>IP Address</th><th>Attempts</th><th>Sessions</th><th>Login</th><th>Last Seen</th><th /></tr></thead>
-                        <tbody>
-                          {filteredAttackers.map((a, i) => (
-                            <AttackerRow key={a.ip} attacker={a} idx={i} onSessionClick={setSessionModal} onProfileClick={setProfileModal} />
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── CREDENTIALS ── */}
-              {threatTab === 'credentials' && <CredentialsView isMobile={isMobile} />}
-
-              {/* ── COMMANDS ── */}
-              {threatTab === 'commands' && <CommandsView isMobile={isMobile} />}
-
-              {/* ── FILES ── */}
-              {threatTab === 'files' && <FilesView isMobile={isMobile} />}
-
-              {/* ── MAP ── */}
-              {threatTab === 'map' && (
-                <GeoIpMap geoData={geoData} loading={geoLoading} isMobile={isMobile}
-                  onRefresh={() => {
-                    setGeoLoading(true)
-                    api.honeypotGeoip(100).then(setGeoData).finally(() => setGeoLoading(false))
-                  }}
-                />
-              )}
-
-              {/* ── LIVE FEED ── */}
-              {threatTab === 'feed' && (
-                <div className="card">
-                  <div className="card-header">
-                    <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><Terminal size={15} /></div>
-                    <span className="card-header-title">Live Feed</span>
-                    <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{honeypotEvents.length} events</span>
-                    <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#22c55e' }}>
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-                      live · 30s
-                    </span>
-                  </div>
-                  {!isMobile && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 90px 80px 80px', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
-                      {['Time', 'Source IP', 'Event', 'Username', 'Password / Cmd'].map(h => (
-                        <span key={h} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ maxHeight: 480, overflowY: 'auto' }}>
-                    {honeypotEvents.length === 0 ? (
-                      <div className="empty-state"><Terminal size={28} /><div>No events yet</div></div>
-                    ) : isMobile ? (
-                      <div style={{ padding: '0.5rem' }}>
-                        {honeypotEvents.map((e, i) => (
-                          <div key={i} style={{ padding: '0.5rem 0.65rem', marginBottom: '0.3rem', background: 'var(--bg-muted)', borderRadius: 6, border: `1px solid ${e.eventid === 'cowrie.login.success' ? '#ef444440' : 'transparent'}` }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                              <EventBadge eventid={e.eventid} />
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 600 }}>{e.src_ip}</span>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>
-                                {e.timestamp ? new Date(e.timestamp).toLocaleTimeString('en-GB') : ''}
-                              </span>
-                            </div>
-                            {(e.username || e.password || e.input) && (
-                              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                {e.username && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#60a5fa' }}>{e.username}</span>}
-                                {e.password && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#f97316' }}>{e.password}</span>}
-                                {e.input    && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#a78bfa' }}>$ {e.input}</span>}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      honeypotEvents.map((e, i) => <EventFeedRow key={i} event={e} />)
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ── BANNED ── (NEW) */}
-              {threatTab === 'banned' && <BannedView isMobile={isMobile} />}
-
-              {/* ── HONEYPOT ALERTS ── (NEW) */}
-              {threatTab === 'honeypot_alerts' && <HoneypotAlertsView isMobile={isMobile} />}
-
-              {/* ── THREAT CLASSIFICATION ── (NEW) */}
-              {threatTab === 'threat_class' && <ThreatClassView isMobile={isMobile} />}
-
-              {/* ── DOWNLOADS ANALYSIS ── (NEW) */}
-              {threatTab === 'downloads' && <DownloadsAnalysisView isMobile={isMobile} />}
-            </>
-          )}
-        </div>
+        <HoneypotSection isMobile={isMobile} showToast={showToast} />
       )}
-
       <Toast toast={toast} />
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }

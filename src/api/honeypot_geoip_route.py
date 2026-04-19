@@ -115,30 +115,38 @@ def _build_placeholder(ip: str) -> dict:
 
 
 # ── Log parsing ───────────────────────────────────────────────────
+import glob
+
+def _find_log_files_geo() -> list[str]:
+    log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
+    log_base = os.path.basename(COWRIE_LOG_PATH)
+    found = []
+    if os.path.exists(COWRIE_LOG_PATH):
+        found.append(COWRIE_LOG_PATH)
+    for f in sorted(glob.glob(os.path.join(log_dir, f"{log_base}.*"))):
+        if f not in found:
+            found.append(f)
+    return found
+
 
 def _parse_logs_for_geo() -> Counter:
-    """Return a Counter {ip: event_count} from the Cowrie JSON log."""
     ip_counter: Counter = Counter()
-    if not os.path.exists(COWRIE_LOG_PATH):
-        return ip_counter
-    try:
-        with open(COWRIE_LOG_PATH, "r", encoding="utf-8", errors="replace") as fh:
-            lines = fh.readlines()[-MAX_LOG_LINES:]
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                event = json.loads(line)
-                ip    = event.get("src_ip", "")
-                if ip:
-                    ip_counter[ip] += 1
-            except json.JSONDecodeError:
-                continue
-    except (IOError, PermissionError) as exc:
-        print(f"[honeypot_geoip] Cannot read log: {exc}")
+    for path in _find_log_files_geo():
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                for line in fh.readlines()[-MAX_LOG_LINES:]:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ip = json.loads(line).get("src_ip", "")
+                        if ip:
+                            ip_counter[ip] += 1
+                    except json.JSONDecodeError:
+                        continue
+        except (IOError, PermissionError):
+            pass
     return ip_counter
-
 
 # ── Geolocation ───────────────────────────────────────────────────
 

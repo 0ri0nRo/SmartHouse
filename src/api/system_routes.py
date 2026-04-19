@@ -26,6 +26,7 @@ HOST_IP   = config.get('RASPI_HOST_IP',       '127.0.0.1')
 HOST_USER = config.get('RASPI_HOST_USER',     'orion')
 HOST_PWD  = config.get('RASPI_HOST_PASSWORD', None)
 HOST_KEY  = config.get('RASPI_HOST_KEY_PATH', '/run/secrets/id_rsa')
+HOST_PORT = int(config.get('RASPI_HOST_SSH_PORT', 2244))   # ← porta di default 2244
 
 ALLOWED_SERVICES = {
     'nginx', 'ssh', 'cron', 'docker',
@@ -33,7 +34,15 @@ ALLOWED_SERVICES = {
 }
 
 
-def _ssh_exec_host(command: str) -> tuple:
+def _ssh_exec_host(command: str, port: int = None) -> tuple:
+    """Esegue un comando sul Raspberry Pi via SSH usando la chiave del server.
+    
+    Args:
+        command: Comando da eseguire
+        port:    Porta SSH (default: HOST_PORT = 2244)
+    """
+    effective_port = port if port is not None else HOST_PORT
+
     key_content = None
     if HOST_KEY and os.path.exists(HOST_KEY):
         with open(HOST_KEY) as f:
@@ -46,6 +55,7 @@ def _ssh_exec_host(command: str) -> tuple:
         username=HOST_USER,
         password=HOST_PWD,
         ip=HOST_IP,
+        port=effective_port,
     )
     return out, '', 0
 
@@ -57,7 +67,7 @@ class _SSHResult:
         self.returncode = returncode
 
 
-def _run_host_cmd(command: list) -> _SSHResult:
+def _run_host_cmd(command: list, port: int = None) -> '_SSHResult':
     binary     = command[0] if command[0] != 'sudo' else (command[1] if len(command) > 1 else '')
     needs_ssh  = binary in ('systemctl', 'journalctl', 'vcgencmd') and not shutil.which(binary)
 
@@ -70,7 +80,7 @@ def _run_host_cmd(command: list) -> _SSHResult:
 
     if needs_ssh:
         cmd_str = ' '.join(command)
-        stdout, stderr, rc = _ssh_exec_host(cmd_str)
+        stdout, stderr, rc = _ssh_exec_host(cmd_str, port=port)
         return _SSHResult(stdout or '', stderr or '', rc)
 
     raise RuntimeError(f"Cannot execute: {' '.join(command)}")
@@ -116,6 +126,17 @@ def _parse_throttle_flags(value: int) -> list:
         0x80000: 'Soft temperature limit has occurred',
     }
     return [label for bit, label in FLAGS.items() if value & bit]
+
+
+def _validate_port(value, default: int = None) -> int:
+    """Valida e converte un valore in numero di porta TCP valido."""
+    try:
+        p = int(value)
+        if 1 <= p <= 65535:
+            return p
+    except (TypeError, ValueError):
+        pass
+    return default if default is not None else HOST_PORT
 
 
 # ── Stats ──────────────────────────────────────────────────
@@ -189,13 +210,19 @@ def api_ssh_exec():
     username    = data.get('username')   or None
     password    = data.get('password')   or None
     ip          = data.get('ip')         or None
+    port        = _validate_port(data.get('port'), default=HOST_PORT)
+
     if (not private_key and not password) or not command:
         return jsonify({'error': 'Missing authentication method or command'}), 400
     try:
         out = ssh_service.exec_command(
-            command, private_key_str=private_key,
-            passphrase=passphrase, username=username,
-            password=password, ip=ip,
+            command,
+            private_key_str=private_key,
+            passphrase=passphrase,
+            username=username,
+            password=password,
+            ip=ip,
+            port=port,
         )
         return jsonify({'output': out})
     except ValueError as e:
@@ -207,13 +234,16 @@ def api_ssh_exec():
 def api_ssh_exec_host():
     data    = request.get_json() or {}
     command = data.get('command', '').strip()
+    port    = _validate_port(data.get('port'), default=HOST_PORT)
+
     if not command:
         return jsonify({'error': 'Missing command'}), 400
     try:
-        stdout, stderr, rc = _ssh_exec_host(command)
+        stdout, stderr, rc = _ssh_exec_host(command, port=port)
         return jsonify({'output': stdout or stderr or '(no output)'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 # ── Power ──────────────────────────────────────────────────
 @system_bp.route('/api/system/reboot', methods=['POST'])
@@ -276,6 +306,7 @@ def api_services():
         'services':    services + errors,
         'sshFallback': True,
         'host':        HOST_IP,
+        'sshPort':     HOST_PORT,
     })
 
 

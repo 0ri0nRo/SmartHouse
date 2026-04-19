@@ -30,7 +30,7 @@ const fmt = (bytes) => {
   return `${(bytes / 1024).toFixed(0)} KB`
 }
 
-// ── Stat card (mirrors ThreatStatCard from Security) ───────
+// ── Stat card ──────────────────────────────────────────────
 function StatCard({ label, value, icon, color, sub, unit = '' }) {
   return (
     <div style={{
@@ -87,7 +87,7 @@ function StatCard({ label, value, icon, color, sub, unit = '' }) {
   )
 }
 
-// ── Collapsible section (card-based like Security) ─────────
+// ── Collapsible section ────────────────────────────────────
 function Section({ icon: Icon, title, accent = 'var(--accent)', badge, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
@@ -172,13 +172,14 @@ function StatusDot({ active }) {
 // ── SSH Terminal ───────────────────────────────────────────
 function SshPanel() {
   const { toast, showToast } = useToast()
-  const [mode, setMode]         = useState('server') // 'server' | 'upload'
-  const [keyFile, setKeyFile]   = useState(null)
-  const [keyName, setKeyName]   = useState('')
+  const [mode, setMode]             = useState('server') // 'server' | 'upload'
+  const [port, setPort]             = useState('2244')   // ← porta configurabile
+  const [keyFile, setKeyFile]       = useState(null)
+  const [keyName, setKeyName]       = useState('')
   const [passphrase, setPassphrase] = useState('')
-  const [command, setCommand]   = useState('')
-  const [lines, setLines]       = useState([])
-  const [loading, setLoading]   = useState(false)
+  const [command, setCommand]       = useState('')
+  const [lines, setLines]           = useState([])
+  const [loading, setLoading]       = useState(false)
   const termRef = useRef(null)
   const fileRef = useRef(null)
 
@@ -195,6 +196,8 @@ function SshPanel() {
   const run = async () => {
     if (!command.trim()) { showToast('Enter command', 'error'); return }
     if (mode === 'upload' && !keyFile) { showToast('Select a private key file', 'error'); return }
+    const portNum = parseInt(port, 10)
+    if (!portNum || portNum < 1 || portNum > 65535) { showToast('Invalid port number', 'error'); return }
     setLoading(true)
     addLine('info', `$ ${command}`)
     try {
@@ -203,7 +206,7 @@ function SshPanel() {
         res = await fetch('/api/ssh_exec_host', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command }),
+          body: JSON.stringify({ command, port: portNum }),
         })
       } else {
         const keyText = await keyFile.text()
@@ -212,6 +215,7 @@ function SshPanel() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ip: '192.168.178.101',
+            port: portNum,
             username: 'orion',
             privateKey: keyText,
             passphrase: passphrase || undefined,
@@ -239,8 +243,8 @@ function SshPanel() {
     <Section icon={Terminal} title="SSH Terminal" accent="var(--accent)" defaultOpen={false}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-        {/* Mode selector */}
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
+        {/* Mode selector + Port field */}
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {[
             { id: 'server', label: '🔑 Server key' },
             { id: 'upload', label: '📂 Upload key' },
@@ -254,6 +258,29 @@ function SshPanel() {
               {m.label}
             </button>
           ))}
+
+          {/* Port input */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.65rem',
+              color: 'var(--text-secondary)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              whiteSpace: 'nowrap',
+            }}>
+              Port
+            </span>
+            <input
+              className="input input--mono"
+              type="number"
+              min="1"
+              max="65535"
+              value={port}
+              onChange={e => setPort(e.target.value)}
+              style={{ width: 72, textAlign: 'center', fontSize: '0.78rem', padding: '0.25rem 0.5rem' }}
+            />
+          </div>
         </div>
 
         {/* Server key info */}
@@ -268,6 +295,7 @@ function SshPanel() {
             color: 'var(--text-secondary)',
           }}>
             Using <span style={{ color: 'var(--accent)' }}>/run/secrets/id_rsa</span> — key already loaded on server
+            {' · '}port <span style={{ color: 'var(--accent)' }}>{port || '2244'}</span>
           </div>
         )}
 
@@ -973,7 +1001,6 @@ export default function RaspiPage() {
     finally { setBacking(false) }
   }
 
-  // Derived values
   const cpu = stats ? n(stats.cpuUsage) : null
   const temp = stats ? n(stats.temperature) : null
   const diskUsed = stats ? n(stats.diskUsed) : null
@@ -1037,54 +1064,27 @@ export default function RaspiPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-        {/* ── Stat cards row ── */}
+        {/* ── Stat cards ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
-          <StatCard
-            label="CPU Usage"
-            value={cpu}
-            unit="%"
-            icon={<Cpu size={15} />}
-            color={cpuHigh ? '#ef4444' : '#60a5fa'}
-            sub={cpuHigh ? '⚠ High load' : 'Real-time'}
-          />
-          <StatCard
-            label="Temperature"
-            value={temp}
-            unit="°C"
-            icon={<Thermometer size={15} />}
-            color={tempHigh ? '#ef4444' : '#f97316'}
-            sub={tempHigh ? '⚠ Thermal risk' : 'Normal'}
-          />
-          <StatCard
-            label="Disk Used"
-            value={diskPct != null ? diskPct.toFixed(1) : null}
-            unit="%"
-            icon={<HardDrive size={15} />}
-            color="#34d399"
-            sub={diskUsed != null ? `${diskUsed.toFixed(1)} GB used` : null}
-          />
-          <StatCard
-            label="Memory Used"
-            value={memPct != null ? memPct.toFixed(1) : null}
-            unit="%"
-            icon={<Database size={15} />}
-            color="#a78bfa"
-            sub={memUsed != null ? `${memUsed.toFixed(1)} GB used` : null}
-          />
+          <StatCard label="CPU Usage" value={cpu} unit="%" icon={<Cpu size={15} />}
+            color={cpuHigh ? '#ef4444' : '#60a5fa'} sub={cpuHigh ? '⚠ High load' : 'Real-time'} />
+          <StatCard label="Temperature" value={temp} unit="°C" icon={<Thermometer size={15} />}
+            color={tempHigh ? '#ef4444' : '#f97316'} sub={tempHigh ? '⚠ Thermal risk' : 'Normal'} />
+          <StatCard label="Disk Used" value={diskPct != null ? diskPct.toFixed(1) : null} unit="%"
+            icon={<HardDrive size={15} />} color="#34d399"
+            sub={diskUsed != null ? `${diskUsed.toFixed(1)} GB used` : null} />
+          <StatCard label="Memory Used" value={memPct != null ? memPct.toFixed(1) : null} unit="%"
+            icon={<Database size={15} />} color="#a78bfa"
+            sub={memUsed != null ? `${memUsed.toFixed(1)} GB used` : null} />
         </div>
 
         {/* ── Device info bar ── */}
         <div className="card">
-          <div style={{
-            padding: '0.75rem 1rem',
-            display: 'flex',
-            gap: '1.5rem',
-            flexWrap: 'wrap',
-            overflowX: 'auto',
-          }}>
+          <div style={{ padding: '0.75rem 1rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', overflowX: 'auto' }}>
             {[
               ['IP', '192.168.178.101'],
               ['Host', 'raspberrypi'],
+              ['SSH Port', '2244'],
               ['Disk', diskTotal != null ? `${(diskTotal / 1024).toFixed(0)} GB total` : '—'],
               ['RAM', memTotal != null ? `${(memTotal / 1024).toFixed(1)} GB total` : '—'],
               ['Load', stats?.loadAvg ? `${stats.loadAvg['1m']} / ${stats.loadAvg['5m']} / ${stats.loadAvg['15m']}` : '—'],
@@ -1092,18 +1092,10 @@ export default function RaspiPage() {
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexShrink: 0 }}>
                 <span style={{
-                  fontSize: '0.62rem',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.62rem', fontWeight: 600, color: 'var(--text-secondary)',
+                  textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)',
                 }}>{k}</span>
-                <span style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.72rem',
-                  color: 'var(--text-primary)',
-                }}>{v}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-primary)' }}>{v}</span>
               </div>
             ))}
           </div>
@@ -1117,13 +1109,8 @@ export default function RaspiPage() {
             </div>
             <span className="card-header-title">Resource Usage</span>
             <span style={{
-              marginLeft: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.65rem',
-              color: '#22c55e',
+              marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#22c55e',
             }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
               live · 5s
@@ -1152,10 +1139,7 @@ export default function RaspiPage() {
               </div>
               <span className="card-header-title">Live Performance</span>
               <div style={{ marginLeft: '0.75rem', display: 'flex', gap: '1rem' }}>
-                {[
-                  { label: 'CPU %', color: '#60a5fa' },
-                  { label: 'Temp °C', color: '#f97316' },
-                ].map(l => (
+                {[{ label: 'CPU %', color: '#60a5fa' }, { label: 'Temp °C', color: '#f97316' }].map(l => (
                   <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <div style={{ width: 18, height: 2, borderRadius: 1, background: l.color }} />
                     <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{l.label}</span>
@@ -1163,13 +1147,8 @@ export default function RaspiPage() {
                 ))}
               </div>
               <span style={{
-                marginLeft: 'auto',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.65rem',
-                color: '#22c55e',
+                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#22c55e',
               }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
                 5s
@@ -1189,27 +1168,17 @@ export default function RaspiPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="ts"
+                  <XAxis dataKey="ts"
                     tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    interval="preserveStartEnd"
-                  />
+                    axisLine={false} tickLine={false} interval="preserveStartEnd" />
                   <YAxis
                     tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-secondary)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={30}
-                    domain={[0, 'auto']}
-                  />
-                  <Tooltip
-                    {...TOOLTIP_STYLE}
+                    axisLine={false} tickLine={false} width={30} domain={[0, 'auto']} />
+                  <Tooltip {...TOOLTIP_STYLE}
                     formatter={(v, name) => [
                       `${parseFloat(v).toFixed(1)}${name === 'cpu' ? '%' : '°C'}`,
                       name === 'cpu' ? 'CPU' : 'Temp',
-                    ]}
-                  />
+                    ]} />
                   <Area type="monotone" dataKey="cpu" name="cpu" stroke="#60a5fa" fill="url(#gcpu)" strokeWidth={2} dot={false} />
                   <Area type="monotone" dataKey="temp" name="temp" stroke="#f97316" fill="url(#gtemp)" strokeWidth={2} dot={false} />
                 </AreaChart>
@@ -1237,14 +1206,9 @@ export default function RaspiPage() {
           </div>
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             <div style={{
-              padding: '0.75rem 1rem',
-              borderRadius: 8,
-              background: 'var(--bg-muted)',
-              borderLeft: '3px solid #f59e0b',
-              fontSize: '0.78rem',
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-mono)',
-              lineHeight: 1.6,
+              padding: '0.75rem 1rem', borderRadius: 8, background: 'var(--bg-muted)',
+              borderLeft: '3px solid #f59e0b', fontSize: '0.78rem',
+              color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', lineHeight: 1.6,
             }}>
               Creates a snapshot of system config, user data, installed packages, and app settings.
             </div>
@@ -1258,13 +1222,12 @@ export default function RaspiPage() {
                 ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Running…</>
                 : <><Shield size={14} /> Start Backup</>}
             </button>
-
-            {/* Summary table */}
             <div className="table-wrap" style={{ margin: 0 }}>
               <table>
                 <tbody>
                   {[
                     ['IP', '192.168.178.101'],
+                    ['SSH Port', '2244'],
                     ['CPU', cpu != null ? `${cpu.toFixed(1)}%` : '—'],
                     ['Temp', temp != null ? `${temp.toFixed(1)}°C` : '—'],
                     ['Disk', diskPct != null ? `${diskPct.toFixed(0)}% used` : '—'],

@@ -1,11 +1,5 @@
 """
-honeypot_routes.py  (aggiornato — supporto file giornalieri cowrie.json.YYYY-MM-DD)
-------------------
-Flask Blueprint che espone i dati Cowrie via REST API.
-
-Fix principale: _parse_logs() ora legge sia cowrie.json che i file
-con suffisso data (cowrie.json.2026-04-19) che Cowrie crea con
-CowrieDailyLogFile.
+honeypot_routes.py  (fix — filtra file .bak, supporta cowrie.json.YYYY-MM-DD)
 """
 
 import glob
@@ -96,52 +90,45 @@ HIGH_SEVERITY_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Regex per riconoscere un suffisso data valido: .YYYY-MM-DD
+_DATE_SUFFIX_RE = re.compile(r"\.\d{4}-\d{2}-\d{2}$")
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _find_log_files() -> list[str]:
     """
     Ritorna la lista di file di log Cowrie da leggere, in ordine cronologico.
-
-    Cowrie usa CowrieDailyLogFile che crea file tipo:
-        cowrie.json               <- file del giorno corrente (a volte)
-        cowrie.json.2026-04-18   <- file dei giorni precedenti
-        cowrie.json.2026-04-19   <- file odierno (con data)
-
-    Leggiamo TUTTI i file trovati (ultimi 7 giorni) per avere uno
-    storico completo. Il totale è comunque limitato a MAX_LOG_LINES.
+    Esclude file con suffissi non-data (.bak, .old, .1, ecc.).
     """
-    log_dir  = os.path.dirname(COWRIE_LOG_PATH)
+    log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
     log_base = os.path.basename(COWRIE_LOG_PATH)
-
-    if not log_dir:
-        log_dir = "."
 
     found: list[str] = []
 
-    # File esatto (cowrie.json)
+    # File esatto (cowrie.json) — sempre incluso se esiste
     if os.path.exists(COWRIE_LOG_PATH):
         found.append(COWRIE_LOG_PATH)
 
-    # File con suffisso data: cowrie.json.2026-04-19
+    # File con suffisso: solo quelli con formato YYYY-MM-DD
     pattern = os.path.join(log_dir, f"{log_base}.*")
-    dated   = sorted(glob.glob(pattern))  # ordinati per data (string sort funziona con YYYY-MM-DD)
-    found.extend(f for f in dated if f not in found)
+    for f in sorted(glob.glob(pattern)):
+        if f in found:
+            continue
+        # Estrai il suffisso dopo il nome base
+        suffix = f[len(os.path.join(log_dir, log_base)):]
+        if _DATE_SUFFIX_RE.match(suffix):
+            found.append(f)
+        # Altrimenti salta (.bak, .old, .1, ecc.)
 
     return found
 
 
 def _parse_logs() -> list[dict]:
-    """
-    Legge tutti i file di log Cowrie (fisso + giornalieri) e ritorna
-    gli eventi come lista di dict, ordinati per timestamp.
-    Limitato a MAX_LOG_LINES eventi totali (i più recenti).
-    """
     log_files = _find_log_files()
 
     if not log_files:
-        # Debug: stampa info utile nei log del container
         log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
-        log_base = os.path.basename(COWRIE_LOG_PATH)
         try:
             available = os.listdir(log_dir) if os.path.isdir(log_dir) else ["(directory non esiste)"]
         except PermissionError:
@@ -160,7 +147,6 @@ def _parse_logs() -> list[dict]:
         except (IOError, PermissionError) as exc:
             print(f"[honeypot] Impossibile leggere {path}: {exc}")
 
-    # Prendi solo le ultime MAX_LOG_LINES righe
     all_lines = all_lines[-MAX_LOG_LINES:]
 
     events: list[dict] = []
@@ -291,13 +277,7 @@ def _build_sessions(events: list[dict]) -> dict[str, dict]:
 
 @honeypot_bp.route("/api/honeypot/debug")
 def get_debug():
-    """
-    GET /api/honeypot/debug
-    Mostra quali file di log sono stati trovati e quanti eventi contengono.
-    Utile per diagnosticare problemi di configurazione.
-    """
     log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
-    log_base = os.path.basename(COWRIE_LOG_PATH)
 
     try:
         dir_contents = os.listdir(log_dir) if os.path.isdir(log_dir) else []
@@ -316,16 +296,20 @@ def get_debug():
 
     events = _parse_logs()
 
+    # Mostra solo eventi con IP reale (non Docker bridge)
+    real_events = [e for e in events if not (e.get("src_ip", "").startswith("172.") or e.get("src_ip", "") == "127.0.0.1")]
+
     return jsonify({
-        "cowrie_log_path":   COWRIE_LOG_PATH,
-        "log_dir":           log_dir,
-        "log_dir_exists":    os.path.isdir(log_dir),
-        "dir_contents":      sorted(dir_contents),
-        "log_files_found":   log_files,
-        "file_details":      file_info,
-        "total_events_read": len(events),
-        "sample_event":      events[-1] if events else None,
-        "server_utc":        _now_utc().isoformat(),
+        "cowrie_log_path":       COWRIE_LOG_PATH,
+        "log_dir":               log_dir,
+        "log_dir_exists":        os.path.isdir(log_dir),
+        "dir_contents":          sorted(dir_contents),
+        "log_files_found":       log_files,
+        "file_details":          file_info,
+        "total_events_read":     len(events),
+        "real_attacker_events":  len(real_events),
+        "sample_event":          real_events[-1] if real_events else (events[-1] if events else None),
+        "server_utc":            _now_utc().isoformat(),
     })
 
 
