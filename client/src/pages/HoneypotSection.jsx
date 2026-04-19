@@ -1,16 +1,12 @@
 /**
  * HoneypotSection.jsx
- * Drop-in replacement per la sezione "threats" in SecurityPage.jsx
+ * Drop-in for the "threats" section of SecurityPage.
+ * Uses all /api/honeypot/* endpoints available in the backend.
+ * Interactive map with Leaflet + OpenStreetMap (no token, no paid external dependency).
  *
- * Uso:
- *   import HoneypotSection from './HoneypotSection'
- *   // Dentro SecurityPage, sostituisci il blocco {tab === 'threats' && (...)}
- *   // con:
- *   {tab === 'threats' && (
- *     <HoneypotSection isMobile={isMobile} showToast={showToast} />
- *   )}
- *
- * Il componente gestisce autonomamente tutto il fetching e lo stato.
+ * Per attivare Leaflet aggiungere in index.html (o nel componente root):
+ *   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+ *   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -19,63 +15,37 @@ import {
   Download, Upload, Hash, Globe, Ban, Siren, ShieldAlert,
   AlertCircle, AlertTriangle, Flame, Activity, BarChart2,
   Zap, Layers, TrendingUp, FileText, Clock, Check,
-  ExternalLink, Eye, X, User, ChevronDown, ChevronUp,
+  ExternalLink, Eye, X, ChevronDown, ChevronUp, Search,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 
-// ── API ───────────────────────────────────────────────────────────────────────
+// ── API ────────────────────────────────────────────────────
 const api = {
-  stats:             () => fetch('/api/honeypot/stats').then(r => r.json()),
-  events:            (limit = 200) => fetch(`/api/honeypot/events?limit=${limit}`).then(r => r.json()),
-  attackers:         () => fetch('/api/honeypot/attackers').then(r => r.json()),
-  credentials:       () => fetch('/api/honeypot/credentials').then(r => r.json()),
-  commands:          () => fetch('/api/honeypot/commands/top').then(r => r.json()),
-  session:           (id) => fetch(`/api/honeypot/sessions/${id}`).then(r => r.json()),
-  daily:             () => fetch('/api/honeypot/timeline/daily').then(r => r.json()),
-  files:             () => fetch('/api/honeypot/files').then(r => r.json()),
-  summary:           () => fetch('/api/honeypot/summary').then(r => r.json()),
-  geoip:             (limit = 100) => fetch(`/api/honeypot/geoip?limit=${limit}`).then(r => r.json()),
-  banned:            (jail = '') => fetch(`/api/honeypot/banned${jail ? `?jail=${jail}` : ''}`).then(r => r.json()),
-  alerts:            (hours = 24) => fetch(`/api/honeypot/alerts?hours=${hours}`).then(r => r.json()),
-  threats:           (days = 7) => fetch(`/api/honeypot/threats?days=${days}`).then(r => r.json()),
-  attackerProfile:   (ip) => fetch(`/api/honeypot/attackers/${ip}`).then(r => r.json()),
-  downloadsAnalysis: () => fetch('/api/honeypot/downloads/analysis').then(r => r.json()),
+  stats:             ()      => fetch('/api/honeypot/stats').then(r => r.json()),
+  events:            (n=200) => fetch(`/api/honeypot/events?limit=${n}`).then(r => r.json()),
+  attackers:         ()      => fetch('/api/honeypot/attackers').then(r => r.json()),
+  credentials:       ()      => fetch('/api/honeypot/credentials').then(r => r.json()),
+  commands:          ()      => fetch('/api/honeypot/commands/top').then(r => r.json()),
+  session:           (id)    => fetch(`/api/honeypot/sessions/${id}`).then(r => r.json()),
+  daily:             ()      => fetch('/api/honeypot/timeline/daily').then(r => r.json()),
+  files:             ()      => fetch('/api/honeypot/files').then(r => r.json()),
+  geoip:             (n=100) => fetch(`/api/honeypot/geoip?limit=${n}`).then(r => r.json()),
+  banned:            (j='')  => fetch(`/api/honeypot/banned${j ? `?jail=${j}` : ''}`).then(r => r.json()),
+  alerts:            (h=24)  => fetch(`/api/honeypot/alerts?hours=${h}`).then(r => r.json()),
+  threats:           (d=7)   => fetch(`/api/honeypot/threats?days=${d}`).then(r => r.json()),
+  attackerProfile:   (ip)    => fetch(`/api/honeypot/attackers/${ip}`).then(r => r.json()),
+  downloadsAnalysis: ()      => fetch('/api/honeypot/downloads/analysis').then(r => r.json()),
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const ACCENT_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#22c55e',
-  '#06b6d4', '#6366f1', '#a855f7', '#ec4899',
+// ── Constants ──────────────────────────────────────────────
+const COLORS = [
+  'var(--card-hum-accent)', 'var(--card-air-accent)', 'var(--card-shop-accent)',
+  'var(--card-temp-accent)', 'var(--card-train-accent)', 'var(--card-exp-accent)',
+  'var(--card-act-accent)', 'var(--card-raspi-accent)',
 ]
-
-const SEVERITY_COLOR = { high: '#ef4444', medium: '#f97316', low: '#6b7280' }
-
-const EVENT_META = {
-  'cowrie.session.connect':       { label: 'Connect',   color: '#60a5fa' },
-  'cowrie.session.closed':        { label: 'Closed',    color: '#6b7280' },
-  'cowrie.login.failed':          { label: 'Auth Fail', color: '#f97316' },
-  'cowrie.login.success':         { label: 'Login OK',  color: '#ef4444' },
-  'cowrie.command.input':         { label: 'Command',   color: '#a78bfa' },
-  'cowrie.direct-tcpip.request':  { label: 'TCP Fwd',  color: '#f59e0b' },
-  'cowrie.session.file_download': { label: 'File DL',  color: '#ec4899' },
-  'cowrie.session.file_upload':   { label: 'File UL',  color: '#f43f5e' },
-}
-
-const THREAT_COLOR = {
-  cryptominer: '#facc15', backdoor: '#ef4444', botnet: '#f43f5e',
-  scanner: '#a78bfa', ransomware: '#dc2626', persistence: '#f97316',
-  recon: '#60a5fa', lateral_movement: '#f59e0b', other: '#6b7280',
-}
-
-const THREAT_LABEL = {
-  cryptominer: '⛏ Cryptominer', backdoor: '🚪 Backdoor', botnet: '🤖 Botnet',
-  scanner: '🔍 Scanner', ransomware: '💀 Ransomware', persistence: '📌 Persistence',
-  recon: '👁 Recon', lateral_movement: '↔ Lateral', other: '❓ Other',
-}
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -85,97 +55,74 @@ const TOOLTIP_STYLE = {
   },
 }
 
-// ── Utility ───────────────────────────────────────────────────────────────────
-function fmtTs(ts, opts = { dateStyle: 'short', timeStyle: 'short' }) {
+const SEV_COLOR = { high: '#ef4444', medium: '#f97316', low: '#6b7280' }
+
+const EVENT_META = {
+  'cowrie.session.connect':       { label: 'Connection', color: '#60a5fa' },
+  'cowrie.session.closed':        { label: 'Closed',      color: '#6b7280' },
+  'cowrie.login.failed':          { label: 'Auth fail',   color: '#f97316' },
+  'cowrie.login.success':         { label: 'LOGIN SUCCESS',    color: '#ef4444' },
+  'cowrie.command.input':         { label: 'Command',     color: '#a78bfa' },
+  'cowrie.direct-tcpip.request':  { label: 'TCP Fwd',    color: '#f59e0b' },
+  'cowrie.session.file_download': { label: 'Download',   color: '#ec4899' },
+  'cowrie.session.file_upload':   { label: 'Upload',     color: '#f43f5e' },
+}
+
+const THREAT_COLOR = {
+  cryptominer: '#facc15', backdoor: '#ef4444', botnet: '#f43f5e',
+  scanner: '#a78bfa', ransomware: '#dc2626', persistence: '#f97316',
+  recon: '#60a5fa', lateral_movement: '#f59e0b', other: '#6b7280',
+}
+
+const THREAT_LABEL = {
+  cryptominer: 'Cryptominer', backdoor: 'Backdoor', botnet: 'Botnet',
+  scanner: 'Scanner', ransomware: 'Ransomware', persistence: 'Persistence',
+  recon: 'Recon', lateral_movement: 'Lateral Move', other: 'Other',
+}
+
+// ── Utility ────────────────────────────────────────────────
+const fmtTs = (ts, opts = { dateStyle: 'short', timeStyle: 'short' }) => {
   if (!ts) return '—'
   try { return new Date(ts).toLocaleString('en-GB', opts) } catch { return ts }
 }
-
-function fmtDuration(s) {
-  if (s == null) return '—'
-  if (s < 60) return `${s}s`
-  const m = Math.floor(s / 60), sec = s % 60
-  return `${m}m ${sec}s`
-}
-
-function fmtRemaining(seconds) {
-  if (seconds <= 0) return 'expired'
-  const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60)
+const fmtDur = s => s == null ? '—' : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
+const fmtRem = s => {
+  if (s <= 0) return 'expired'
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-// ── Shared micro-components ───────────────────────────────────────────────────
-function StatCard({ label, value, icon, color, sub }) {
+// ── Shared atoms ───────────────────────────────────────────
+function SevBadge({ severity }) {
+  const color = SEV_COLOR[severity] || '#6b7280'
   return (
-    <div style={{
-      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '0.9rem 1rem',
-      display: 'flex', alignItems: 'center', gap: '0.75rem',
-    }}>
-      <span style={{
-        color, width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-        background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>{icon}</span>
-      <div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
-          {typeof value === 'number' ? value.toLocaleString() : value ?? '—'}
-        </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.67rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{label}</div>
-        {sub && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.63rem', color, marginTop: '0.15rem' }}>{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-function SeverityBadge({ severity }) {
-  const color = SEVERITY_COLOR[severity] || '#6b7280'
-  return (
-    <span style={{
-      display: 'inline-block', padding: '0.1rem 0.4rem', borderRadius: 4,
-      fontFamily: 'var(--font-mono)', fontSize: '0.63rem', fontWeight: 700,
-      color, background: `${color}18`, border: `1px solid ${color}40`,
-      textTransform: 'uppercase',
-    }}>{severity}</span>
+    <span style={{ display: 'inline-block', padding: '0.1rem 0.4rem', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: '0.63rem', fontWeight: 700, color, background: `${color}18`, border: `1px solid ${color}40`, textTransform: 'uppercase' }}>
+      {severity}
+    </span>
   )
 }
 
 function EventBadge({ eventid }) {
   const meta = EVENT_META[eventid] || { label: (eventid || '').split('.').pop(), color: '#6b7280' }
   return (
-    <span style={{
-      display: 'inline-block', padding: '0.1rem 0.42rem', borderRadius: 4,
-      fontFamily: 'var(--font-mono)', fontSize: '0.63rem', fontWeight: 600,
-      color: meta.color, background: `${meta.color}1a`, border: `1px solid ${meta.color}40`,
-      whiteSpace: 'nowrap',
-    }}>{meta.label}</span>
-  )
-}
-
-function Cmd({ cmd }) {
-  return (
-    <div style={{
-      fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
-      background: 'var(--bg-muted)', border: '1px solid var(--border)',
-      borderRadius: 4, padding: '0.25rem 0.55rem', marginBottom: '0.2rem',
-      display: 'flex', alignItems: 'baseline', gap: '0.4rem',
-    }}>
-      <span style={{ color: '#22c55e', flexShrink: 0 }}>$</span>
-      <span style={{ color: '#a78bfa', wordBreak: 'break-all' }}>{cmd}</span>
-    </div>
-  )
-}
-
-function CredBadge({ username, password }) {
-  return (
-    <span style={{
-      fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
-      background: 'var(--bg-muted)', border: '1px solid var(--border)',
-      borderRadius: 4, padding: '0.15rem 0.45rem',
-    }}>
-      <span style={{ color: '#60a5fa' }}>{username || '—'}</span>
-      <span style={{ color: 'var(--text-secondary)' }}> / </span>
-      <span style={{ color: '#f97316' }}>{password || '—'}</span>
+    <span style={{ display: 'inline-block', padding: '0.1rem 0.42rem', borderRadius: 4, fontFamily: 'var(--font-mono)', fontSize: '0.63rem', fontWeight: 600, color: meta.color, background: `${meta.color}1a`, border: `1px solid ${meta.color}40`, whiteSpace: 'nowrap' }}>
+      {meta.label}
     </span>
+  )
+}
+
+function StatCard({ label, value, icon, color, sub }) {
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1rem' }}>
+      <span style={{ color, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 8, background: `${color}18`, flexShrink: 0 }}>{icon}</span>
+      <div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+          {typeof value === 'number' ? value.toLocaleString() : value ?? '—'}
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.67rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{label}</div>
+        {sub && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color, marginTop: '0.15rem' }}>{sub}</div>}
+      </div>
+    </div>
   )
 }
 
@@ -187,28 +134,62 @@ function Empty({ icon, text }) {
   return <div className="empty-state">{icon}<div>{text}</div></div>
 }
 
-// ── Sub-tab bar ───────────────────────────────────────────────────────────────
+function Cmd({ cmd }) {
+  return (
+    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 4, padding: '0.25rem 0.55rem', marginBottom: '0.2rem', display: 'flex', gap: '0.4rem' }}>
+      <span style={{ color: '#22c55e', flexShrink: 0 }}>$</span>
+      <span style={{ color: '#a78bfa', wordBreak: 'break-all' }}>{cmd}</span>
+    </div>
+  )
+}
+
+function CredBadge({ username, password }) {
+  return (
+    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 4, padding: '0.15rem 0.45rem' }}>
+      <span style={{ color: '#60a5fa' }}>{username || '—'}</span>
+      <span style={{ color: 'var(--text-secondary)' }}> / </span>
+      <span style={{ color: '#f97316' }}>{password || '—'}</span>
+    </span>
+  )
+}
+
+function TopBar({ items, valueKey, labelKey, color, max: _max }) {
+  if (!items?.length) return null
+  const max = _max || Math.max(...items.map(i => i[valueKey] || 0)) || 1
+  return (
+    <div style={{ padding: '0 1rem 1rem' }}>
+      {items.map((item, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 14, textAlign: 'right' }}>{i + 1}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.73rem', color: 'var(--text-primary)', minWidth: 110, maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}>{item[labelKey]}</span>
+          <div style={{ flex: 1, height: 5, background: 'var(--bg-muted)', borderRadius: 99 }}>
+            <div style={{ height: '100%', borderRadius: 99, width: `${Math.round((item[valueKey] / max) * 100)}%`, background: color, transition: 'width 0.4s ease' }} />
+          </div>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 28, textAlign: 'right' }}>{item[valueKey]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Sub-tab bar ────────────────────────────────────────────
 const TABS = [
   { id: 'overview',    label: 'Overview',    icon: <Shield size={12} /> },
-  { id: 'attackers',   label: 'Attackers',   icon: <Target size={12} /> },
-  { id: 'feed',        label: 'Live Feed',   icon: <Zap size={12} /> },
+  { id: 'attackers',   label: 'Attackers',  icon: <Target size={12} /> },
+  { id: 'feed',        label: 'Feed live',   icon: <Zap size={12} /> },
   { id: 'credentials', label: 'Credentials', icon: <Key size={12} /> },
-  { id: 'commands',    label: 'Commands',    icon: <Terminal size={12} /> },
-  { id: 'files',       label: 'Files',       icon: <FileText size={12} /> },
-  { id: 'alerts',      label: 'Alerts',      icon: <Siren size={12} /> },
+  { id: 'commands',    label: 'Commands',     icon: <Terminal size={12} /> },
+  { id: 'files',       label: 'File',        icon: <FileText size={12} /> },
+  { id: 'alerts',      label: 'Alerts',       icon: <Siren size={12} /> },
   { id: 'threats',     label: 'Threats',     icon: <ShieldAlert size={12} /> },
-  { id: 'banned',      label: 'Banned',      icon: <Ban size={12} /> },
-  { id: 'downloads',   label: 'Downloads',   icon: <Download size={12} /> },
-  { id: 'map',         label: 'Map',         icon: <Globe size={12} /> },
+  { id: 'banned',      label: 'Banned',     icon: <Ban size={12} /> },
+  { id: 'downloads',   label: 'Download',    icon: <Download size={12} /> },
+  { id: 'map',         label: 'Map',       icon: <Globe size={12} /> },
 ]
 
 function SubTabBar({ active, onChange }) {
   return (
-    <div style={{
-      display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)',
-      borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem',
-      overflowX: 'auto', scrollbarWidth: 'none',
-    }}>
+    <div style={{ display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)', borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
       {TABS.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
           display: 'flex', alignItems: 'center', gap: '0.3rem',
@@ -227,7 +208,7 @@ function SubTabBar({ active, onChange }) {
   )
 }
 
-// ── Session detail modal ──────────────────────────────────────────────────────
+// ── Session modal ──────────────────────────────────────────
 function SessionModal({ sessionId, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -237,17 +218,8 @@ function SessionModal({ sessionId, onClose }) {
   }, [sessionId])
 
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, zIndex: 300,
-      background: 'rgba(0,0,0,0.55)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: '1rem',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--bg-surface)', border: '1px solid var(--border)',
-        borderRadius: 12, width: '100%', maxWidth: 600, maxHeight: '85vh',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
-      }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, width: '100%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: 600, color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Terminal size={13} /> Session {sessionId?.slice(0, 16)}…
@@ -257,13 +229,12 @@ function SessionModal({ sessionId, onClose }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
           {loading ? <Loading /> : !data ? <Empty icon={<Bug size={24} />} text="Session not found" /> : (
             <>
-              {/* Stats grid */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                 {[
                   { label: 'Source IP', value: data.src_ip },
-                  { label: 'Duration', value: fmtDuration(data.duration_s) },
+                  { label: 'Duration', value: fmtDur(data.duration_s) },
                   { label: 'Events', value: data.event_count },
-                  { label: 'Login', value: data.login_success ? '✓ SUCCESS' : '✗ Failed', danger: data.login_success },
+                  { label: 'Login', value: data.login_success ? 'SUCCESS' : 'Failed', danger: data.login_success },
                 ].map(({ label, value, danger }) => (
                   <div key={label} style={{ background: 'var(--bg-muted)', borderRadius: 6, padding: '0.5rem 0.75rem' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>{label}</div>
@@ -271,43 +242,25 @@ function SessionModal({ sessionId, onClose }) {
                   </div>
                 ))}
               </div>
-
-              {/* Timeline */}
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', display: 'flex', gap: '1rem' }}>
-                {data.first_seen && <span><Clock size={10} style={{ display: 'inline', marginRight: 3 }} />{fmtTs(data.first_seen)}</span>}
-                {data.last_seen  && <span>→ {fmtTs(data.last_seen)}</span>}
-              </div>
-
-              {/* Credentials */}
               {data.credentials?.length > 0 && (
                 <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                    Credentials ({data.credentials.length})
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Credentials ({data.credentials.length})</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: '0.75rem' }}>
                     {data.credentials.map((c, i) => <CredBadge key={i} {...c} />)}
                   </div>
                 </>
               )}
-
-              {/* Commands */}
               {data.commands?.length > 0 && (
                 <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                    Commands ({data.commands.length})
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Commands ({data.commands.length})</div>
                   <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: '0.75rem' }}>
                     {data.commands.map((cmd, i) => <Cmd key={i} cmd={cmd} />)}
                   </div>
                 </>
               )}
-
-              {/* Files */}
               {data.files?.length > 0 && (
                 <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                    Files ({data.files.length})
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File ({data.files.length})</div>
                   {data.files.map((f, i) => (
                     <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--bg-muted)', borderRadius: 4, padding: '0.3rem 0.6rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {f.type === 'download' ? <Download size={11} style={{ color: '#ec4899' }} /> : <Upload size={11} style={{ color: '#f43f5e' }} />}
@@ -316,11 +269,10 @@ function SessionModal({ sessionId, onClose }) {
                   ))}
                 </>
               )}
-
-              {/* Full event log */}
+              {/* Raw events */}
               <details style={{ marginTop: '0.75rem' }}>
                 <summary style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Raw events ({data.event_count})
+                  Raw log ({data.event_count} events)
                 </summary>
                 <div style={{ marginTop: '0.4rem', maxHeight: 200, overflowY: 'auto' }}>
                   {data.events?.map((e, i) => (
@@ -344,7 +296,7 @@ function SessionModal({ sessionId, onClose }) {
   )
 }
 
-// ── Attacker profile modal ────────────────────────────────────────────────────
+// ── Attacker profile modal ─────────────────────────────────
 function ProfileModal({ ip, onClose, onSessionClick }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -358,19 +310,10 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
     : '#6b7280'
 
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, zIndex: 300,
-      background: 'rgba(0,0,0,0.6)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', padding: '1rem',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--bg-surface)', border: '1px solid var(--border)',
-        borderRadius: 12, width: '100%', maxWidth: 660, maxHeight: '88vh',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-      }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, width: '100%', maxWidth: 660, maxHeight: '88vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: 700, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Target size={14} /> {ip}
           </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={14} /></button>
@@ -378,12 +321,11 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
           {loading ? <Loading /> : !data || data.error ? <Empty icon={<Bug size={24} />} text="No data for this IP" /> : (
             <>
-              {/* Risk + stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.6rem', marginBottom: '1rem' }}>
                 {[
-                  { label: 'RISK SCORE', value: data.risk_score, color: riskColor, big: true },
-                  { label: 'SESSIONS', value: data.total_sessions, color: 'var(--text-primary)' },
-                  { label: 'LOGINS OK', value: data.login_successes, color: data.login_successes > 0 ? '#ef4444' : 'var(--text-primary)' },
+                  { label: 'Risk Score', value: data.risk_score, color: riskColor, big: true },
+                  { label: 'Sessions',   value: data.total_sessions, color: 'var(--text-primary)' },
+                  { label: 'Login success',   value: data.login_successes, color: data.login_successes > 0 ? '#ef4444' : 'var(--text-primary)' },
                 ].map(({ label, value, color, big }) => (
                   <div key={label} style={{ background: 'var(--bg-muted)', borderRadius: 8, padding: '0.75rem', textAlign: 'center' }}>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: big ? '1.8rem' : '1.4rem', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
@@ -392,16 +334,14 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
                 ))}
               </div>
 
-              {/* Timeline */}
               <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
                 {data.first_seen && <span><Clock size={10} style={{ display: 'inline', marginRight: 3 }} />First: {fmtTs(data.first_seen)}</span>}
                 {data.last_seen  && <span><Clock size={10} style={{ display: 'inline', marginRight: 3 }} />Last: {fmtTs(data.last_seen)}</span>}
               </div>
 
-              {/* Dominant threat */}
               {data.dominant_threat && data.dominant_threat !== 'unknown' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Dominant threat:</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>Primary threat:</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 700, color: THREAT_COLOR[data.dominant_threat] || '#ef4444', background: `${THREAT_COLOR[data.dominant_threat] || '#ef4444'}18`, border: `1px solid ${THREAT_COLOR[data.dominant_threat] || '#ef4444'}40`, borderRadius: 4, padding: '0.1rem 0.4rem' }}>
                     {THREAT_LABEL[data.dominant_threat] || data.dominant_threat}
                   </span>
@@ -413,11 +353,10 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
                 </div>
               )}
 
-              {/* High severity commands */}
               {data.commands?.high_severity?.length > 0 && (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <AlertCircle size={11} /> High-severity commands
+                    <AlertCircle size={11} /> High-risk commands
                   </div>
                   <div style={{ marginBottom: '0.75rem' }}>
                     {data.commands.high_severity.map((cmd, i) => (
@@ -429,36 +368,20 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
                 </>
               )}
 
-              {/* All commands */}
-              {data.commands?.all?.length > 0 && (
-                <details style={{ marginBottom: '0.75rem' }}>
-                  <summary style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>
-                    All commands ({data.commands.total})
-                  </summary>
-                  <div style={{ marginTop: '0.4rem', maxHeight: 200, overflowY: 'auto' }}>
-                    {data.commands.all.map((c, i) => <Cmd key={i} cmd={c.cmd} />)}
-                  </div>
-                </details>
-              )}
-
-              {/* Credentials */}
               {data.credentials?.top_pairs?.length > 0 && (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
                     Credentials ({data.credentials.total_attempts} attempts, {data.credentials.unique_pairs} unique)
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: '0.75rem' }}>
-                    {data.credentials.top_pairs.slice(0, 12).map((c, i) => <CredBadge key={i} {...c} />)}
+                    {data.credentials.top_pairs.slice(0, 10).map((c, i) => <CredBadge key={i} {...c} />)}
                   </div>
                 </>
               )}
 
-              {/* Files */}
               {data.files?.list?.length > 0 && (
                 <>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                    Files ({data.files.total})
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>File ({data.files.total})</div>
                   {data.files.list.map((f, i) => (
                     <div key={i} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--bg-muted)', borderRadius: 4, padding: '0.3rem 0.6rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       {f.type === 'download' ? <Download size={11} style={{ color: '#ec4899' }} /> : <Upload size={11} style={{ color: '#f43f5e' }} />}
@@ -468,7 +391,6 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
                 </>
               )}
 
-              {/* Sessions */}
               {data.sessions?.length > 0 && (
                 <>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem', marginTop: '0.5rem' }}>
@@ -476,17 +398,13 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
                   </div>
                   {data.sessions.map((s, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0.6rem', background: 'var(--bg-muted)', borderRadius: 5, marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-                      <SeverityBadge severity={s.severity} />
+                      <SevBadge severity={s.severity} />
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{fmtTs(s.first_seen)}</span>
-                      {s.login_success && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#ef4444', fontWeight: 700 }}>LOGIN OK</span>}
-                      <button onClick={() => { onClose(); onSessionClick(s.session_id) }} style={{
-                        fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#a78bfa',
-                        background: '#a78bfa18', border: '1px solid #a78bfa30',
-                        borderRadius: 4, padding: '0.1rem 0.35rem', cursor: 'pointer', marginLeft: 'auto',
-                      }}>
+                      {s.login_success && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#ef4444', fontWeight: 700 }}>LOGIN SUCCESS</span>}
+                      <button onClick={() => { onClose(); onSessionClick(s.session_id) }} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#a78bfa', background: '#a78bfa18', border: '1px solid #a78bfa30', borderRadius: 4, padding: '0.1rem 0.35rem', cursor: 'pointer', marginLeft: 'auto' }}>
                         {s.session_id?.slice(0, 10)}…
                       </button>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{s.commands} cmds · {s.files} files</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{s.commands} cmd · {s.files} files</span>
                     </div>
                   ))}
                 </>
@@ -499,7 +417,7 @@ function ProfileModal({ ip, onClose, onSessionClick }) {
   )
 }
 
-// ── Overview tab ──────────────────────────────────────────────────────────────
+// ── Overview tab ───────────────────────────────────────────
 function OverviewTab({ stats, isMobile }) {
   const [daily, setDaily] = useState(null)
 
@@ -509,17 +427,16 @@ function OverviewTab({ stats, isMobile }) {
 
   const timeline = (stats.hourly_timeline || []).map(s => ({
     ...s,
-    label: s.label || (s.hour ? new Date(s.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : ''),
+    label: s.label || (s.hour ? new Date(s.hour).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''),
   }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Events"    value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
-        <StatCard label="Unique Attackers" value={stats.unique_ips}    icon={<Target size={15} />}   color="#ef4444" />
-        <StatCard label="Login Attempts"  value={stats.login_attempts} icon={<Lock size={15} />}     color="#f59e0b"
-          sub={stats.login_success > 0 ? `⚠ ${stats.login_success} succeeded` : 'none succeeded'} />
+        <StatCard label="Total events"    value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
+        <StatCard label="Unique IPs"      value={stats.unique_ips}     icon={<Target size={15} />}   color="#ef4444" />
+        <StatCard label="Login attempts"  value={stats.login_attempts} icon={<Lock size={15} />}     color="#f59e0b"
+          sub={stats.login_success > 0 ? `${stats.login_success} successful` : 'none successful'} />
         <StatCard label="Sessions"        value={stats.total_sessions} icon={<Terminal size={15} />} color="#a78bfa" />
       </div>
 
@@ -528,14 +445,14 @@ function OverviewTab({ stats, isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#f9731618', color: '#f97316' }}><Activity size={15} /></div>
-            <span className="card-header-title">Attack Timeline (last 24h)</span>
+            <span className="card-header-title">Attacks in the last 24h</span>
           </div>
           <div className="card-body" style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timeline} margin={{ left: -10, right: 4, top: 4 }}>
                 <defs>
                   <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -553,23 +470,9 @@ function OverviewTab({ stats, isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#ef444418', color: '#ef4444' }}><Target size={15} /></div>
-            <span className="card-header-title">Top Attacking IPs</span>
+            <span className="card-header-title">Most active IPs</span>
           </div>
-          <div style={{ padding: '0 1rem 1rem' }}>
-            {(stats.top_ips || []).map((item, i) => {
-              const max = stats.top_ips[0]?.count || 1
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: 14, textAlign: 'right' }}>{i + 1}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: '#ef4444', minWidth: 120, flexShrink: 0 }}>{item.ip}</span>
-                  <div style={{ flex: 1, height: 5, background: 'var(--bg-muted)', borderRadius: 99 }}>
-                    <div style={{ height: '100%', borderRadius: 99, width: `${Math.round((item.count / max) * 100)}%`, background: '#ef4444' }} />
-                  </div>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 28, textAlign: 'right' }}>{item.count}</span>
-                </div>
-              )
-            })}
-          </div>
+          <TopBar items={stats.top_ips || []} valueKey="count" labelKey="ip" color="#ef4444" />
         </div>
       </div>
 
@@ -578,7 +481,7 @@ function OverviewTab({ stats, isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#f9731618', color: '#f97316' }}><Activity size={15} /></div>
-            <span className="card-header-title">Attack History (last 30 days)</span>
+            <span className="card-header-title">Attack history (30 days)</span>
             {daily.peak_day && (
               <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
                 peak: <span style={{ color: '#ef4444' }}>{daily.peak_day.date} ({daily.peak_day.attacks})</span>
@@ -591,9 +494,9 @@ function OverviewTab({ stats, isMobile }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="date" tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} tickFormatter={v => v.slice(5)} interval={isMobile ? 6 : 3} />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} width={24} />
-                <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [v, n === 'attacks' ? 'Total events' : 'Login fails']} />
-                <Bar dataKey="attacks"      fill="#ef4444" opacity={0.7} radius={[2,2,0,0]} maxBarSize={16} />
-                <Bar dataKey="login_failed" fill="#f97316" opacity={0.7} radius={[2,2,0,0]} maxBarSize={16} />
+                <Tooltip {...TOOLTIP_STYLE} formatter={(v, n) => [v, n === 'attacks' ? 'Total events' : 'Login failed']} />
+                <Bar dataKey="attacks"      fill="#ef4444" opacity={0.7} radius={[2, 2, 0, 0]} maxBarSize={16} />
+                <Bar dataKey="login_failed" fill="#f97316" opacity={0.7} radius={[2, 2, 0, 0]} maxBarSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -601,11 +504,11 @@ function OverviewTab({ stats, isMobile }) {
       )}
 
       {/* Event type breakdown */}
-      {stats.event_types && Object.keys(stats.event_types).length > 0 && (
+      {stats.event_types && (
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#60a5fa18', color: '#60a5fa' }}><BarChart2 size={15} /></div>
-            <span className="card-header-title">Event Type Breakdown</span>
+            <span className="card-header-title">Event types</span>
           </div>
           <div style={{ padding: '0.75rem 1rem 1rem' }}>
             {Object.entries(stats.event_types).sort((a, b) => b[1] - a[1]).map(([eid, cnt]) => {
@@ -630,7 +533,7 @@ function OverviewTab({ stats, isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><Terminal size={15} /></div>
-            <span className="card-header-title">Recent Attacker Commands</span>
+            <span className="card-header-title">Recent attacker commands</span>
           </div>
           <div style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             {stats.recent_commands.map((cmd, i) => (
@@ -647,7 +550,7 @@ function OverviewTab({ stats, isMobile }) {
   )
 }
 
-// ── Attackers tab ─────────────────────────────────────────────────────────────
+// ── Attackers tab ──────────────────────────────────────────
 function AttackersTab({ isMobile, onSessionClick, onProfileClick }) {
   const [attackers, setAttackers] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -668,54 +571,38 @@ function AttackersTab({ isMobile, onSessionClick, onProfileClick }) {
         <div className="card-header-icon" style={{ background: '#ef444418', color: '#ef4444' }}><Bug size={15} /></div>
         <span className="card-header-title">Attackers</span>
         <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{filtered.length}</span>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter IPs…" style={{
-          marginLeft: 'auto', background: 'var(--bg-muted)', border: '1px solid var(--border)',
-          borderRadius: 6, padding: '0.28rem 0.5rem', fontFamily: 'var(--font-mono)',
-          fontSize: '0.72rem', color: 'var(--text-primary)', outline: 'none', width: 130,
-        }} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter IPs…" style={{ marginLeft: 'auto', background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.28rem 0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-primary)', outline: 'none', width: 130 }} />
       </div>
 
       {filtered.length === 0 ? <Empty icon={<Target size={28} />} text="No attackers found" /> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.75rem' }}>
           {filtered.map((a, i) => {
-            const isExpanded = expanded === a.ip
-            const hasDanger  = a.success > 0
-            const color      = ACCENT_COLORS[i % ACCENT_COLORS.length]
+            const isOpen    = expanded === a.ip
+            const hasDanger = a.success > 0
+            const color     = COLORS[i % COLORS.length]
 
             return (
-              <div key={a.ip} style={{
-                background: 'var(--bg-surface)',
-                border: `1px solid ${hasDanger ? '#ef444440' : 'var(--border)'}`,
-                borderRadius: 10, overflow: 'hidden',
-              }}>
-                {/* Header row */}
-                <div onClick={() => setExpanded(isExpanded ? null : a.ip)} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem 0.9rem', cursor: 'pointer' }}>
+              <div key={a.ip} style={{ background: 'var(--bg-surface)', border: `1px solid ${hasDanger ? '#ef444440' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden' }}>
+                <div onClick={() => setExpanded(isOpen ? null : a.ip)} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem 0.9rem', cursor: 'pointer' }}>
                   <Target size={13} style={{ color: hasDanger ? '#ef4444' : color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700, color: hasDanger ? '#ef4444' : 'var(--text-primary)' }}>
-                      {a.ip}
-                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700, color: hasDanger ? '#ef4444' : 'var(--text-primary)' }}>{a.ip}</div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
-                      {a.attempts} attempts · {a.sessions} sessions · last {fmtTs(a.last_seen, { dateStyle: 'short', timeStyle: 'short' })}
+                      {a.attempts} attempts · {a.sessions} sessions · last: {fmtTs(a.last_seen)}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    {hasDanger && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', fontWeight: 700, color: '#ef4444', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 4, padding: '0.1rem 0.35rem' }}>LOGIN OK</span>}
-                    <button onClick={e => { e.stopPropagation(); onProfileClick(a.ip) }} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#ef4444', background: '#ef444418', border: '1px solid #ef444430', borderRadius: 4, padding: '0.15rem 0.4rem', cursor: 'pointer' }}>
-                      profile
-                    </button>
-                    {isExpanded ? <ChevronUp size={13} style={{ color: 'var(--text-secondary)' }} /> : <ChevronDown size={13} style={{ color: 'var(--text-secondary)' }} />}
+                    {hasDanger && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', fontWeight: 700, color: '#ef4444', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 4, padding: '0.1rem 0.35rem' }}>LOGIN SUCCESS</span>}
+                    <button onClick={e => { e.stopPropagation(); onProfileClick(a.ip) }} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: '#ef4444', background: '#ef444418', border: '1px solid #ef444430', borderRadius: 4, padding: '0.15rem 0.4rem', cursor: 'pointer' }}>profile</button>
+                    {isOpen ? <ChevronUp size={13} style={{ color: 'var(--text-secondary)' }} /> : <ChevronDown size={13} style={{ color: 'var(--text-secondary)' }} />}
                   </div>
                 </div>
-
-                {/* Expanded detail */}
-                {isExpanded && (
+                {isOpen && (
                   <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-muted)', padding: '0.75rem 0.9rem' }}>
                     <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                      {/* Credentials */}
                       {a.usernames?.length > 0 && (
                         <div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Usernames tried</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Attempted usernames</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                             {a.usernames.map((u, j) => <span key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#60a5fa', background: '#60a5fa18', border: '1px solid #60a5fa30', borderRadius: 4, padding: '0.1rem 0.35rem' }}>{u}</span>)}
                           </div>
@@ -723,33 +610,19 @@ function AttackersTab({ isMobile, onSessionClick, onProfileClick }) {
                       )}
                       {a.passwords?.length > 0 && (
                         <div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Passwords tried</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Attempted passwords</div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                             {a.passwords.map((p, j) => <span key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#f97316', background: '#f9731618', border: '1px solid #f9731630', borderRadius: 4, padding: '0.1rem 0.35rem' }}>{p}</span>)}
                           </div>
                         </div>
                       )}
-                      {/* Commands */}
                       {a.commands?.length > 0 && (
                         <div style={{ flex: 1, minWidth: 200 }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Commands run</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Executed commands</div>
                           {a.commands.map((cmd, j) => <Cmd key={j} cmd={cmd} />)}
                         </div>
                       )}
-                      {/* Files */}
-                      {a.files?.length > 0 && (
-                        <div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>Files</div>
-                          {a.files.map((f, j) => (
-                            <div key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
-                              {f.type === 'download' ? <Download size={10} style={{ color: '#ec4899' }} /> : <Upload size={10} style={{ color: '#f43f5e' }} />}
-                              <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{f.url || '—'}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                    {/* Session links */}
                     {a.session_ids?.length > 0 && (
                       <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                         {a.session_ids.map((sid, j) => (
@@ -770,19 +643,18 @@ function AttackersTab({ isMobile, onSessionClick, onProfileClick }) {
   )
 }
 
-// ── Live feed tab ─────────────────────────────────────────────────────────────
+// ── Live feed tab ──────────────────────────────────────────
 function FeedTab({ events, isMobile }) {
   return (
     <div className="card">
       <div className="card-header">
         <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><Zap size={15} /></div>
-        <span className="card-header-title">Live Feed</span>
+        <span className="card-header-title">Live feed</span>
         <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{events.length}</span>
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: '#22c55e' }}>
           <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} /> live · 30s
         </span>
       </div>
-      {/* Column headers (desktop) */}
       {!isMobile && (
         <div style={{ display: 'grid', gridTemplateColumns: '65px 130px 90px 90px 1fr', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
           {['Time', 'Source IP', 'Event', 'Username', 'Password / Command'].map(h => (
@@ -791,7 +663,7 @@ function FeedTab({ events, isMobile }) {
         </div>
       )}
       <div style={{ maxHeight: 500, overflowY: 'auto' }}>
-        {events.length === 0 ? <Empty icon={<Terminal size={28} />} text="No events yet" /> : (
+        {events.length === 0 ? <Empty icon={<Terminal size={28} />} text="No events" /> : (
           events.map((e, i) => {
             const isSuccess = e.eventid === 'cowrie.login.success'
             const ts = e.timestamp ? new Date(e.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''
@@ -826,7 +698,7 @@ function FeedTab({ events, isMobile }) {
   )
 }
 
-// ── Credentials tab ───────────────────────────────────────────────────────────
+// ── Credentials tab ────────────────────────────────────────
 function CredentialsTab({ isMobile }) {
   const [data, setData]   = useState(null)
   const [loading, setLoading] = useState(true)
@@ -839,16 +711,16 @@ function CredentialsTab({ isMobile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Attempts"  value={data.total_attempts}  icon={<Lock size={15} />}       color="#f97316" />
-        <StatCard label="Unique Pairs"    value={data.unique_pairs}    icon={<Hash size={15} />}       color="#60a5fa" />
-        <StatCard label="Diversity Score" value={`${(data.diversity_score * 100).toFixed(1)}%`} icon={<TrendingUp size={15} />} color="#22c55e"
-          sub={data.diversity_score > 0.8 ? 'Highly varied' : data.diversity_score > 0.4 ? 'Mixed' : 'Low variety'} />
+        <StatCard label="Total attempts" value={data.total_attempts}  icon={<Lock size={15} />}      color="#f97316" />
+        <StatCard label="Unique pairs"   value={data.unique_pairs}    icon={<Hash size={15} />}      color="#60a5fa" />
+        <StatCard label="Diversity"      value={`${(data.diversity_score * 100).toFixed(1)}%`} icon={<TrendingUp size={15} />} color="#22c55e"
+          sub={data.diversity_score > 0.8 ? 'Very varied' : data.diversity_score > 0.4 ? 'Medium' : 'Low variety'} />
       </div>
 
       <div className="card">
         <div className="card-header">
           <div className="card-header-icon" style={{ background: '#60a5fa18', color: '#60a5fa' }}><Key size={15} /></div>
-          <span className="card-header-title">Top Credential Pairs</span>
+          <span className="card-header-title">Most-used credential pairs</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -869,29 +741,15 @@ function CredentialsTab({ isMobile }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
         {[
-          { title: 'Top Usernames', items: data.top_usernames, key: 'username', color: '#60a5fa' },
-          { title: 'Top Passwords', items: data.top_passwords, key: 'password', color: '#f97316' },
+          { title: 'Username più usati', items: data.top_usernames, key: 'username', color: '#60a5fa' },
+          { title: 'Password più usate', items: data.top_passwords, key: 'password', color: '#f97316' },
         ].map(({ title, items, key, color }) => (
           <div key={title} className="card">
             <div className="card-header">
               <div className="card-header-icon" style={{ background: `${color}18`, color }}><Key size={14} /></div>
               <span className="card-header-title">{title}</span>
             </div>
-            <div style={{ padding: '0 1rem 1rem' }}>
-              {(items || []).map((item, i) => {
-                const max = items[0]?.count || 1
-                return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: 14, textAlign: 'right' }}>{i + 1}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.73rem', color, minWidth: 100, maxWidth: 160, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 0 }}>{item[key]}</span>
-                    <div style={{ flex: 1, height: 5, background: 'var(--bg-muted)', borderRadius: 99 }}>
-                      <div style={{ height: '100%', borderRadius: 99, width: `${Math.round((item.count / max) * 100)}%`, background: color }} />
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 28, textAlign: 'right' }}>{item.count}</span>
-                  </div>
-                )
-              })}
-            </div>
+            <TopBar items={items || []} valueKey="count" labelKey={key} color={color} />
           </div>
         ))}
       </div>
@@ -899,9 +757,9 @@ function CredentialsTab({ isMobile }) {
   )
 }
 
-// ── Commands tab ──────────────────────────────────────────────────────────────
+// ── Commands tab ───────────────────────────────────────────
 function CommandsTab({ isMobile }) {
-  const [data, setData]       = useState(null)
+  const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { api.commands().then(setData).catch(() => setData(null)).finally(() => setLoading(false)) }, [])
@@ -914,8 +772,8 @@ function CommandsTab({ isMobile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Commands"  value={data.total_commands}  icon={<Terminal size={15} />} color="#a78bfa" />
-        <StatCard label="Unique Commands" value={data.unique_commands} icon={<Hash size={15} />}    color="#60a5fa" />
+        <StatCard label="Total commands"  value={data.total_commands}  icon={<Terminal size={15} />} color="#a78bfa" />
+        <StatCard label="Unique commands" value={data.unique_commands} icon={<Hash size={15} />}    color="#60a5fa" />
         {Object.entries(data.categories || {}).slice(0, 2).map(([cat, cnt]) => (
           <StatCard key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={cnt} icon={<Layers size={15} />} color={THREAT_COLOR[cat] || '#6b7280'} />
         ))}
@@ -924,13 +782,13 @@ function CommandsTab({ isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><BarChart2 size={15} /></div>
-            <span className="card-header-title">Command Categories</span>
+            <span className="card-header-title">Command categories</span>
           </div>
           <div className="card-body" style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={catData} cx="50%" cy="45%" innerRadius="38%" outerRadius="62%" paddingAngle={3} dataKey="value">
-                  {catData.map((entry, i) => <Cell key={i} fill={THREAT_COLOR[entry.name] || ACCENT_COLORS[i % ACCENT_COLORS.length]} />)}
+                  {catData.map((entry, i) => <Cell key={i} fill={THREAT_COLOR[entry.name] || COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip {...TOOLTIP_STYLE} />
                 <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', color: 'var(--text-secondary)' }} />
@@ -941,7 +799,7 @@ function CommandsTab({ isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><Terminal size={15} /></div>
-            <span className="card-header-title">Top Commands</span>
+            <span className="card-header-title">Most executed commands</span>
           </div>
           <div style={{ padding: '0 1rem 1rem', maxHeight: 240, overflowY: 'auto' }}>
             {(data.top_commands || []).slice(0, 20).map((cmd, i) => {
@@ -964,7 +822,7 @@ function CommandsTab({ isMobile }) {
   )
 }
 
-// ── Files tab ─────────────────────────────────────────────────────────────────
+// ── Files tab ──────────────────────────────────────────────
 function FilesTab() {
   const [files, setFiles]     = useState([])
   const [loading, setLoading] = useState(true)
@@ -972,13 +830,13 @@ function FilesTab() {
   useEffect(() => { api.files().then(setFiles).catch(() => setFiles([])).finally(() => setLoading(false)) }, [])
 
   if (loading) return <Loading />
-  if (!files.length) return <Empty icon={<FileText size={28} />} text="No file activity recorded" />
+  if (!files.length) return <Empty icon={<FileText size={28} />} text="No file activity" />
 
   return (
     <div className="card">
       <div className="card-header">
         <div className="card-header-icon" style={{ background: '#ec489918', color: '#ec4899' }}><FileText size={15} /></div>
-        <span className="card-header-title">File Activity</span>
+        <span className="card-header-title">File activity</span>
         <span className="badge badge--muted" style={{ marginLeft: '0.5rem' }}>{files.length}</span>
       </div>
       <div className="table-wrap">
@@ -1013,11 +871,11 @@ function FilesTab() {
   )
 }
 
-// ── Alerts tab ────────────────────────────────────────────────────────────────
+// ── Alerts tab ─────────────────────────────────────────────
 function AlertsTab({ isMobile }) {
-  const [data, setData]       = useState(null)
+  const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
-  const [hours, setHours]     = useState(24)
+  const [hours, setHours]   = useState(24)
 
   useEffect(() => {
     setLoading(true)
@@ -1033,26 +891,28 @@ function AlertsTab({ isMobile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Alerts"  value={data.total} icon={<Siren size={15} />}        color="#ef4444" />
-        <StatCard label="High Severity" value={high}       icon={<AlertCircle size={15} />}  color="#ef4444" />
-        <StatCard label="Medium"        value={med}        icon={<AlertTriangle size={15} />} color="#f97316" />
+        <StatCard label="Total alerts"  value={data.total} icon={<Siren size={15} />}        color="#ef4444" />
+        <StatCard label="High severity"  value={high}       icon={<AlertCircle size={15} />}  color="#ef4444" />
+        <StatCard label="Medium severity" value={med}        icon={<AlertTriangle size={15} />} color="#f97316" />
       </div>
+
       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Window:</span>
         {[6, 24, 48, 168].map(h => (
           <button key={h} onClick={() => setHours(h)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', padding: '0.25rem 0.6rem', border: `1px solid ${hours === h ? '#ef4444' : 'var(--border)'}`, borderRadius: 6, background: hours === h ? '#ef444418' : 'var(--bg-muted)', color: hours === h ? '#ef4444' : 'var(--text-secondary)', cursor: 'pointer' }}>
-            {h === 168 ? '7d' : `${h}h`}
+            {h === 168 ? '7g' : `${h}h`}
           </button>
         ))}
       </div>
+
       {!data.alerts?.length
-        ? <Empty icon={<Check size={28} />} text="No anomalous activity in this window" />
+        ? <div className="empty-state"><Check size={28} style={{ color: '#22c55e' }} /><div>No anomalous activity in this window</div></div>
         : data.alerts.map((alert, i) => (
           <div key={i} style={{ background: 'var(--bg-surface)', border: `1px solid ${alert.severity === 'high' ? '#ef444440' : '#f9731640'}`, borderLeft: `3px solid ${alert.severity === 'high' ? '#ef4444' : '#f97316'}`, borderRadius: 8, padding: '0.85rem 1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-              <SeverityBadge severity={alert.severity} />
+              <SevBadge severity={alert.severity} />
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700, color: alert.severity === 'high' ? '#ef4444' : '#f97316' }}>{alert.src_ip}</span>
-              {alert.login_success && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', fontWeight: 700, color: '#ef4444', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 4, padding: '0.1rem 0.4rem' }}>⚠ LOGIN SUCCESS</span>}
+              {alert.login_success && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', fontWeight: 700, color: '#ef4444', background: '#ef444418', border: '1px solid #ef444440', borderRadius: 4, padding: '0.1rem 0.4rem' }}>LOGIN SUCCESS</span>}
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>{fmtTs(alert.first_seen)}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: '0.4rem' }}>
@@ -1082,11 +942,11 @@ function AlertsTab({ isMobile }) {
   )
 }
 
-// ── Threats tab ───────────────────────────────────────────────────────────────
+// ── Threats tab ────────────────────────────────────────────
 function ThreatsTab({ isMobile }) {
-  const [data, setData]       = useState(null)
+  const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
-  const [days, setDays]       = useState(7)
+  const [days, setDays]     = useState(7)
 
   useEffect(() => {
     setLoading(true)
@@ -1101,27 +961,29 @@ function ThreatsTab({ isMobile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Sessions" value={data.total_sessions}       icon={<Terminal size={15} />}    color="#a78bfa" />
-        <StatCard label="High Severity"  value={data.severity?.high || 0}  icon={<Flame size={15} />}       color="#ef4444" />
-        <StatCard label="Medium"         value={data.severity?.medium || 0} icon={<AlertTriangle size={15} />} color="#f97316" />
+        <StatCard label="Total sessions" value={data.total_sessions}       icon={<Terminal size={15} />}    color="#a78bfa" />
+        <StatCard label="High severity"  value={data.severity?.high || 0}  icon={<Flame size={15} />}       color="#ef4444" />
+        <StatCard label="Medium severity" value={data.severity?.medium || 0} icon={<AlertTriangle size={15} />} color="#f97316" />
       </div>
+
       <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Period:</span>
         {[1, 7, 14, 30].map(d => (
-          <button key={d} onClick={() => setDays(d)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', padding: '0.25rem 0.6rem', border: `1px solid ${days === d ? '#a78bfa' : 'var(--border)'}`, borderRadius: 6, background: days === d ? '#a78bfa18' : 'var(--bg-muted)', color: days === d ? '#a78bfa' : 'var(--text-secondary)', cursor: 'pointer' }}>{d}d</button>
+          <button key={d} onClick={() => setDays(d)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', padding: '0.25rem 0.6rem', border: `1px solid ${days === d ? '#a78bfa' : 'var(--border)'}`, borderRadius: 6, background: days === d ? '#a78bfa18' : 'var(--bg-muted)', color: days === d ? '#a78bfa' : 'var(--text-secondary)', cursor: 'pointer' }}>{d}g</button>
         ))}
       </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#a78bfa18', color: '#a78bfa' }}><ShieldAlert size={15} /></div>
-            <span className="card-header-title">Threat Categories</span>
+            <span className="card-header-title">Threat categories</span>
           </div>
           <div className="card-body" style={{ height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={catData} cx="50%" cy="45%" innerRadius="35%" outerRadius="62%" paddingAngle={3} dataKey="value">
-                  {catData.map((entry, i) => <Cell key={i} fill={THREAT_COLOR[entry.name] || ACCENT_COLORS[i % ACCENT_COLORS.length]} />)}
+                  {catData.map((entry, i) => <Cell key={i} fill={THREAT_COLOR[entry.name] || COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip {...TOOLTIP_STYLE} />
                 <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }} formatter={v => THREAT_LABEL[v] || v} />
@@ -1132,7 +994,7 @@ function ThreatsTab({ isMobile }) {
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon" style={{ background: '#ef444418', color: '#ef4444' }}><Activity size={15} /></div>
-            <span className="card-header-title">Daily Threats</span>
+            <span className="card-header-title">Daily threats</span>
           </div>
           <div className="card-body" style={{ height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -1141,12 +1003,13 @@ function ThreatsTab({ isMobile }) {
                 <XAxis dataKey="date" tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} tickFormatter={v => v.slice(5)} />
                 <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 8, fill: 'var(--text-secondary)' }} width={24} />
                 <Tooltip {...TOOLTIP_STYLE} />
-                <Bar dataKey="total" fill="#ef4444" opacity={0.7} radius={[2,2,0,0]} maxBarSize={20} />
+                <Bar dataKey="total" fill="#ef4444" opacity={0.7} radius={[2, 2, 0, 0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
+
       {(data.categories || []).map((cat, i) => (
         <div key={i} className="card">
           <div className="card-header">
@@ -1175,11 +1038,11 @@ function ThreatsTab({ isMobile }) {
   )
 }
 
-// ── Banned tab ────────────────────────────────────────────────────────────────
+// ── Banned tab ─────────────────────────────────────────────
 function BannedTab({ isMobile }) {
-  const [data, setData]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [jail, setJail]         = useState('')
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [jail, setJail]       = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -1189,7 +1052,7 @@ function BannedTab({ isMobile }) {
   useEffect(() => { load() }, [load])
 
   if (loading) return <Loading />
-  if (!data || data.error) return <Empty icon={<Ban size={28} />} text={data?.error || 'Cannot connect to Fail2ban database'} />
+  if (!data || data.error) return <Empty icon={<Ban size={28} />} text={data?.error || 'Unable to connect to the Fail2ban database'} />
 
   const jails = Object.keys(data.by_jail || {})
 
@@ -1197,9 +1060,10 @@ function BannedTab({ isMobile }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
         <StatCard label="Banned IPs"   value={data.total}   icon={<Ban size={15} />}    color="#f97316" />
-        <StatCard label="Active Jails" value={jails.length} icon={<Shield size={15} />} color="#60a5fa" />
+        <StatCard label="Active jails" value={jails.length} icon={<Shield size={15} />} color="#60a5fa" />
         {jails.slice(0, 2).map(j => <StatCard key={j} label={`Jail: ${j}`} value={data.by_jail[j]} icon={<Lock size={15} />} color="#a78bfa" />)}
       </div>
+
       {jails.length > 1 && (
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {['', ...jails].map(j => (
@@ -1209,6 +1073,7 @@ function BannedTab({ isMobile }) {
           ))}
         </div>
       )}
+
       <div className="card">
         <div className="card-header">
           <div className="card-header-icon" style={{ background: '#f9731618', color: '#f97316' }}><Ban size={15} /></div>
@@ -1219,7 +1084,7 @@ function BannedTab({ isMobile }) {
         {!data.banned?.length ? <Empty icon={<Ban size={24} />} text="No banned IPs" /> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>IP</th><th>Jail</th><th>Banned At</th><th>Expires</th><th>Remaining</th></tr></thead>
+              <thead><tr><th>IP</th><th>Jail</th><th>Banned at</th><th>Expires at</th><th>Remaining</th></tr></thead>
               <tbody>
                 {data.banned.map((b, i) => (
                   <tr key={i}>
@@ -1227,7 +1092,7 @@ function BannedTab({ isMobile }) {
                     <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: '#a78bfa', background: '#a78bfa18', border: '1px solid #a78bfa30', borderRadius: 4, padding: '0.1rem 0.35rem' }}>{b.jail}</span></td>
                     <td className="td-mono td-muted" style={{ fontSize: '0.68rem' }}>{fmtTs(b.banned_at)}</td>
                     <td className="td-mono td-muted" style={{ fontSize: '0.68rem' }}>{fmtTs(b.expires_at)}</td>
-                    <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 600, color: b.remaining_s > 3600 ? '#ef4444' : b.remaining_s > 0 ? '#f97316' : '#6b7280' }}>{fmtRemaining(b.remaining_s)}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 600, color: b.remaining_s > 3600 ? '#ef4444' : b.remaining_s > 0 ? '#f97316' : '#6b7280' }}>{fmtRem(b.remaining_s)}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -1239,9 +1104,9 @@ function BannedTab({ isMobile }) {
   )
 }
 
-// ── Downloads tab ─────────────────────────────────────────────────────────────
+// ── Downloads tab ──────────────────────────────────────────
 function DownloadsTab({ isMobile }) {
-  const [data, setData]       = useState(null)
+  const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { api.downloadsAnalysis().then(setData).catch(() => setData(null)).finally(() => setLoading(false)) }, [])
@@ -1252,11 +1117,11 @@ function DownloadsTab({ isMobile }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Unique Files"    value={data.total_unique_files || 0}                                       icon={<Hash size={15} />}     color="#ec4899" />
-        <StatCard label="With Hash"       value={(data.files || []).filter(f => f.sha256).length}                   icon={<Shield size={15} />}   color="#22c55e" />
-        <StatCard label="Total Downloads" value={(data.files || []).reduce((s, f) => s + f.count, 0)} icon={<Download size={15} />} color="#f97316" />
+        <StatCard label="Unique files"    value={data.total_unique_files || 0}                                    icon={<Hash size={15} />}     color="#ec4899" />
+        <StatCard label="Has hash"        value={(data.files || []).filter(f => f.sha256).length}                 icon={<Shield size={15} />}   color="#22c55e" />
+        <StatCard label="Total downloads" value={(data.files || []).reduce((s, f) => s + f.count, 0)} icon={<Download size={15} />} color="#f97316" />
       </div>
-      {!data.files?.length ? <Empty icon={<Download size={28} />} text="No files recorded" /> : (
+      {!data.files?.length ? <Empty icon={<Download size={28} />} text="No recorded files" /> : (
         data.files.map((f, i) => (
           <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.85rem 1rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -1276,7 +1141,7 @@ function DownloadsTab({ isMobile }) {
                 )}
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
                   <span>Seen <strong style={{ color: 'var(--text-primary)' }}>{f.count}</strong>×</span>
-                  <span><strong style={{ color: 'var(--text-primary)' }}>{f.unique_ips}</strong> IPs</span>
+                  <span><strong style={{ color: 'var(--text-primary)' }}>{f.unique_ips}</strong> IP</span>
                   {f.first_seen && <span>First: {fmtTs(f.first_seen)}</span>}
                   {f.last_seen  && <span>Last: {fmtTs(f.last_seen)}</span>}
                 </div>
@@ -1299,65 +1164,176 @@ function DownloadsTab({ isMobile }) {
   )
 }
 
-// ── Simple geo map (SVG world) ────────────────────────────────────────────────
+// ── Map tab — Leaflet reale ────────────────────────────────
 function MapTab({ isMobile }) {
-  const [data, setData]       = useState(null)
+  const [data, setData]     = useState(null)
   const [loading, setLoading] = useState(true)
+  const mapRef              = useRef(null)
+  const mapInstanceRef      = useRef(null)
+  const markersRef          = useRef([])
 
   useEffect(() => {
     api.geoip(100).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <Loading />
-  if (!data || data.error) return <Empty icon={<Globe size={28} />} text={data?.error || 'GeoIP database not available'} />
+  // Init Leaflet map quando il container è pronto e i dati ci sono
+  useEffect(() => {
+    if (!data || !mapRef.current) return
+    if (typeof window.L === 'undefined') return
 
-  const attackers = data.attackers || []
+    const L = window.L
+
+    // Destroy previous instance
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove()
+      mapInstanceRef.current = null
+    }
+
+    // Detect dark mode from CSS variable
+    const isDark = getComputedStyle(document.documentElement)
+      .getPropertyValue('--bg-surface').trim().startsWith('#0') ||
+      getComputedStyle(document.documentElement)
+      .getPropertyValue('--bg-surface').trim().startsWith('#1') ||
+      document.documentElement.classList.contains('dark')
+
+    const tileUrl = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+
+    const map = L.map(mapRef.current, {
+      center: [20, 0],
+      zoom: 2,
+      minZoom: 1,
+      maxZoom: 12,
+      zoomControl: true,
+    })
+
+    L.tileLayer(tileUrl, {
+      attribution: '© <a href="https://carto.com/">CARTO</a> © <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map)
+
+    mapInstanceRef.current = map
+
+    // Clear old markers
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = []
+
+    // Add markers for each attacker
+    const attackers = data.attackers || []
+    attackers.forEach(a => {
+      if (!a.lat || !a.lon || (a.lat === 0 && a.lon === 0)) return
+
+      // Red pulsing circle marker
+      const radius = Math.max(4, Math.min(18, Math.log2(a.count + 1) * 3))
+      const circle = L.circleMarker([a.lat, a.lon], {
+        radius,
+        fillColor: '#ef4444',
+        color: '#ef444480',
+        weight: 1.5,
+        opacity: 0.85,
+        fillOpacity: 0.65,
+      })
+
+      circle.bindPopup(`
+        <div style="font-family: var(--font-mono, monospace); font-size: 0.75rem; min-width: 180px;">
+          <div style="font-weight: 700; color: #ef4444; margin-bottom: 6px; font-size: 0.88rem;">${a.ip}</div>
+          <div style="color: #666; margin-bottom: 3px;">
+            ${[a.city, a.region, a.country].filter(Boolean).join(', ') || 'Unknown location'}
+          </div>
+          <div style="font-weight: 600; margin-top: 4px;">${a.count.toLocaleString()} events</div>
+        </div>
+      `, { maxWidth: 240 })
+
+      circle.addTo(map)
+      markersRef.current.push(circle)
+    })
+
+    // Fit bounds if we have markers
+    if (markersRef.current.length > 0) {
+      const group = L.featureGroup(markersRef.current)
+      map.fitBounds(group.getBounds().pad(0.3), { maxZoom: 6 })
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+      }
+    }
+  }, [data])
+
+  if (loading) return <Loading height={400} />
+
+  if (!data || data.error) {
+    return (
+      <div className="empty-state" style={{ height: 300 }}>
+        <Globe size={28} />
+        <div>{data?.error || 'GeoIP database not available'}</div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', maxWidth: 320, textAlign: 'center', marginTop: '0.5rem' }}>
+          Download GeoLite2-City.mmdb from MaxMind and set GEOIP_DB_PATH
+        </div>
+      </div>
+    )
+  }
+
+  // Check Leaflet available
+  const leafletAvailable = typeof window !== 'undefined' && typeof window.L !== 'undefined'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(3,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Geolocated IPs" value={data.total_ips}     icon={<Globe size={15} />}  color="#60a5fa" />
-        <StatCard label="Countries"      value={data.countries?.length || 0} icon={<Eye size={15} />}  color="#22c55e" />
-        <StatCard label="Top Country"    value={data.countries?.[0]?.country || '—'} icon={<Target size={15} />} color="#ef4444" />
+        <StatCard label="Geolocated IPs" value={data.total_ips}              icon={<Globe size={15} />}  color="#60a5fa" />
+        <StatCard label="Countries"      value={data.countries?.length || 0} icon={<Eye size={15} />}    color="#22c55e" />
+        <StatCard label="Top country"    value={data.countries?.[0]?.country || '—'} icon={<Target size={15} />} color="#ef4444" />
       </div>
+
+      {/* Leaflet map container */}
+      {!leafletAvailable ? (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ background: 'var(--bg-muted)', borderRadius: 8, padding: '1rem', fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            To enable the interactive map, add this to <code style={{ color: 'var(--accent)' }}>index.html</code>:
+            <pre style={{ marginTop: '0.75rem', background: 'var(--bg-surface)', padding: '0.75rem', borderRadius: 6, border: '1px solid var(--border)', overflowX: 'auto', fontSize: '0.72rem' }}>{`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>`}</pre>
+          </div>
+        </div>
+      ) : (
+        <div className="card">
+          <div className="card-header">
+            <div className="card-header-icon" style={{ background: '#60a5fa18', color: '#60a5fa' }}><Globe size={15} /></div>
+            <span className="card-header-title">Attack origin - interactive map</span>
+            <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{data.total_ips} IP</span>
+          </div>
+          {/* The map div — Leaflet takes it over */}
+          <div ref={mapRef} style={{ height: isMobile ? 320 : 480, width: '100%', zIndex: 0 }} />
+        </div>
+      )}
 
       {/* Country leaderboard */}
       <div className="card">
         <div className="card-header">
           <div className="card-header-icon" style={{ background: '#60a5fa18', color: '#60a5fa' }}><Globe size={15} /></div>
-          <span className="card-header-title">Attacks by Country</span>
+          <span className="card-header-title">Attacks by country</span>
         </div>
-        <div style={{ padding: '0 1rem 1rem' }}>
-          {(data.countries || []).slice(0, 15).map((c, i) => {
-            const max = data.countries[0]?.count || 1
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: 'var(--text-secondary)', minWidth: 14, textAlign: 'right' }}>{i + 1}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-primary)', minWidth: 130, flexShrink: 0 }}>
-                  {c.countryCode !== 'XX' ? `${c.countryCode} ` : ''}{c.country || 'Unknown'}
-                </span>
-                <div style={{ flex: 1, height: 5, background: 'var(--bg-muted)', borderRadius: 99 }}>
-                  <div style={{ height: '100%', borderRadius: 99, width: `${Math.round((c.count / max) * 100)}%`, background: '#60a5fa' }} />
-                </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', minWidth: 28, textAlign: 'right' }}>{c.count}</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)', minWidth: 44 }}>{c.ips} IPs</span>
-              </div>
-            )
-          })}
-        </div>
+        <TopBar
+          items={(data.countries || []).slice(0, 15).map(c => ({ ...c, label: `${c.countryCode !== 'XX' ? c.countryCode + ' ' : ''}${c.country || 'Unknown'}` }))}
+          valueKey="count" labelKey="label" color="#60a5fa"
+        />
       </div>
 
-      {/* Attacker table with geo */}
+      {/* Attacker geo table */}
       <div className="card">
         <div className="card-header">
           <div className="card-header-icon" style={{ background: '#ef444418', color: '#ef4444' }}><Target size={15} /></div>
-          <span className="card-header-title">Attacker Locations</span>
+          <span className="card-header-title">Attacker locations</span>
         </div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>#</th><th>IP</th><th>Country</th><th>City</th><th>Events</th></tr></thead>
             <tbody>
-              {attackers.slice(0, 30).map((a, i) => (
+              {(data.attackers || []).slice(0, 30).map((a, i) => (
                 <tr key={i}>
                   <td className="td-mono td-muted" style={{ fontSize: '0.72rem' }}>{i + 1}</td>
                   <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>{a.ip}</span></td>
@@ -1374,13 +1350,13 @@ function MapTab({ isMobile }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-export default function HoneypotSection({ isMobile, showToast }) {
-  const [subTab,    setSubTab]    = useState('overview')
-  const [stats,     setStats]     = useState(null)
-  const [events,    setEvents]    = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [refreshing,setRefreshing]= useState(false)
+// ── Main component ─────────────────────────────────────────
+export default function HoneypotSection({ isMobile }) {
+  const [subTab,     setSubTab]     = useState('overview')
+  const [stats,      setStats]      = useState(null)
+  const [events,     setEvents]     = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [sessionModal, setSessionModal] = useState(null)
   const [profileModal, setProfileModal] = useState(null)
 
@@ -1394,8 +1370,6 @@ export default function HoneypotSection({ isMobile, showToast }) {
       ])
       if (s) setStats(s)
       if (e) setEvents(e)
-    } catch {
-      showToast?.('Error loading honeypot data', 'error')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -1414,7 +1388,7 @@ export default function HoneypotSection({ isMobile, showToast }) {
     <div className="empty-state" style={{ padding: '3rem' }}>
       <Bug size={32} style={{ color: 'var(--text-secondary)' }} />
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: 320, textAlign: 'center', lineHeight: 1.6 }}>
-        No honeypot data found. Make sure Cowrie is running and JSON logs are mounted at{' '}
+        No honeypot data. Verify that Cowrie is running and that the JSON logs are mounted at{' '}
         <code style={{ fontSize: '0.75rem', color: 'var(--accent)', background: 'var(--bg-muted)', padding: '0.1rem 0.3rem', borderRadius: 4 }}>/var/log/cowrie/cowrie.json</code>
       </div>
     </div>
@@ -1428,16 +1402,16 @@ export default function HoneypotSection({ isMobile, showToast }) {
       {sessionModal && <SessionModal sessionId={sessionModal} onClose={() => setSessionModal(null)} />}
       {profileModal && <ProfileModal ip={profileModal} onClose={() => setProfileModal(null)} onSessionClick={setSessionModal} />}
 
-      {/* Header stats */}
+      {/* Top stats summary */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
-        <StatCard label="Total Events"     value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
-        <StatCard label="Unique Attackers" value={stats.unique_ips}     icon={<Target size={15} />}   color="#ef4444" />
-        <StatCard label="Login Attempts"   value={stats.login_attempts} icon={<Lock size={15} />}     color="#f59e0b"
-          sub={hasLoginSuccess ? `⚠ ${stats.login_success} succeeded` : 'none succeeded'} />
-        <StatCard label="Sessions"         value={stats.total_sessions} icon={<Terminal size={15} />} color="#a78bfa" />
+        <StatCard label="Total events"    value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
+        <StatCard label="Unique IPs"      value={stats.unique_ips}     icon={<Target size={15} />}   color="#ef4444" />
+        <StatCard label="Login attempts"  value={stats.login_attempts} icon={<Lock size={15} />}     color="#f59e0b"
+          sub={hasLoginSuccess ? `${stats.login_success} successful` : 'none successful'} />
+        <StatCard label="Sessions"        value={stats.total_sessions} icon={<Terminal size={15} />} color="#a78bfa" />
       </div>
 
-      {/* Refresh button */}
+      {/* Refresh */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button className="btn btn--ghost btn--sm" onClick={() => loadCore(true)} disabled={refreshing} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
@@ -1461,7 +1435,7 @@ export default function HoneypotSection({ isMobile, showToast }) {
 
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
       `}</style>
     </div>
   )
