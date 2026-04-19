@@ -1,25 +1,21 @@
 import { useState, useEffect } from 'react'
 
 export function useTheme() {
-  // Read saved preference from localStorage, default to 'light'
   const [theme, setTheme] = useState(
-    () => localStorage.getItem('sh-theme') || 'light'
+    () => localStorage.getItem('sh-theme') ?? 'dark'
   )
 
   useEffect(() => {
     const root = document.documentElement
-
-    if (theme === 'dark') {
-      root.classList.add('dark')
+    if (theme === 'light') {
+      root.classList.add('light')
     } else {
-      root.classList.remove('dark')
+      root.classList.remove('light')
     }
-
-    // Save preference so it persists on reload
     localStorage.setItem('sh-theme', theme)
   }, [theme])
 
-  const toggle = () => setTheme(t => t === 'light' ? 'dark' : 'light')
+  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
   return { theme, toggle }
 }
