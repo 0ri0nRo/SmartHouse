@@ -1,47 +1,14 @@
 """
-honeypot_routes.py
+honeypot_routes.py  (aggiornato — supporto file giornalieri cowrie.json.YYYY-MM-DD)
 ------------------
-Flask Blueprint that exposes Cowrie honeypot data via REST API.
+Flask Blueprint che espone i dati Cowrie via REST API.
 
-Setup
------
-1. Register in app.py:
-       from routes.honeypot_routes import honeypot_bp
-       app.register_blueprint(honeypot_bp)
-
-2. Mount volumes in docker-compose.yml (service: app):
-       volumes:
-         - /home/cowrie/cowrie/var/log/cowrie:/var/log/cowrie:ro
-         - /var/lib/fail2ban/fail2ban.sqlite3:/var/lib/fail2ban/fail2ban.sqlite3:ro
-
-3. Optional env var overrides:
-       COWRIE_LOG_PATH=/custom/path/cowrie.json
-       FAIL2BAN_DB_PATH=/custom/path/fail2ban.sqlite3
-
-Cowrie must be configured to write JSON logs.
-Enable in cowrie.cfg:
-       [output_jsonlog]
-       enabled = true
-       logfile = ${honeypot:state_path}/log/cowrie.json
-
-Routes
-------
-  GET /api/honeypot/events                - latest 200 events feed
-  GET /api/honeypot/stats                 - aggregated stats + fixed 24h timeline
-  GET /api/honeypot/attackers             - per-IP aggregated stats (top 50)
-  GET /api/honeypot/attackers/<ip>        - full profile for a single attacker IP
-  GET /api/honeypot/credentials           - top credential pairs + distribution
-  GET /api/honeypot/commands/top          - top commands run by attackers
-  GET /api/honeypot/sessions/<id>         - full detail for a specific session
-  GET /api/honeypot/timeline/daily        - per-day event count (last 30 days)
-  GET /api/honeypot/files                 - uploaded/downloaded files list
-  GET /api/honeypot/summary               - lightweight summary for header badges
-  GET /api/honeypot/banned                - IPs currently banned by Fail2ban
-  GET /api/honeypot/alerts                - anomalous sessions (successful logins, dangerous commands)
-  GET /api/honeypot/threats               - sessions classified by threat type
-  GET /api/honeypot/downloads/analysis    - downloaded files with SHA256 + VirusTotal links
+Fix principale: _parse_logs() ora legge sia cowrie.json che i file
+con suffisso data (cowrie.json.2026-04-19) che Cowrie crea con
+CowrieDailyLogFile.
 """
 
+import glob
 import json
 import os
 import re
@@ -131,35 +98,85 @@ HIGH_SEVERITY_PATTERNS = re.compile(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _find_log_files() -> list[str]:
+    """
+    Ritorna la lista di file di log Cowrie da leggere, in ordine cronologico.
+
+    Cowrie usa CowrieDailyLogFile che crea file tipo:
+        cowrie.json               <- file del giorno corrente (a volte)
+        cowrie.json.2026-04-18   <- file dei giorni precedenti
+        cowrie.json.2026-04-19   <- file odierno (con data)
+
+    Leggiamo TUTTI i file trovati (ultimi 7 giorni) per avere uno
+    storico completo. Il totale è comunque limitato a MAX_LOG_LINES.
+    """
+    log_dir  = os.path.dirname(COWRIE_LOG_PATH)
+    log_base = os.path.basename(COWRIE_LOG_PATH)
+
+    if not log_dir:
+        log_dir = "."
+
+    found: list[str] = []
+
+    # File esatto (cowrie.json)
+    if os.path.exists(COWRIE_LOG_PATH):
+        found.append(COWRIE_LOG_PATH)
+
+    # File con suffisso data: cowrie.json.2026-04-19
+    pattern = os.path.join(log_dir, f"{log_base}.*")
+    dated   = sorted(glob.glob(pattern))  # ordinati per data (string sort funziona con YYYY-MM-DD)
+    found.extend(f for f in dated if f not in found)
+
+    return found
+
+
 def _parse_logs() -> list[dict]:
-    """Read and parse the Cowrie JSON log. Returns a list of event dicts."""
+    """
+    Legge tutti i file di log Cowrie (fisso + giornalieri) e ritorna
+    gli eventi come lista di dict, ordinati per timestamp.
+    Limitato a MAX_LOG_LINES eventi totali (i più recenti).
+    """
+    log_files = _find_log_files()
+
+    if not log_files:
+        # Debug: stampa info utile nei log del container
+        log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
+        log_base = os.path.basename(COWRIE_LOG_PATH)
+        try:
+            available = os.listdir(log_dir) if os.path.isdir(log_dir) else ["(directory non esiste)"]
+        except PermissionError:
+            available = ["(permesso negato)"]
+        print(f"[honeypot] Nessun log trovato. Cercavo: {COWRIE_LOG_PATH}")
+        print(f"[honeypot] Contenuto di {log_dir}: {available}")
+        return []
+
+    all_lines: list[str] = []
+    for path in log_files:
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as fh:
+                lines = fh.readlines()
+            all_lines.extend(lines)
+            print(f"[honeypot] Letto {len(lines)} righe da {path}")
+        except (IOError, PermissionError) as exc:
+            print(f"[honeypot] Impossibile leggere {path}: {exc}")
+
+    # Prendi solo le ultime MAX_LOG_LINES righe
+    all_lines = all_lines[-MAX_LOG_LINES:]
+
     events: list[dict] = []
-    if not os.path.exists(COWRIE_LOG_PATH):
-        return events
-    try:
-        with open(COWRIE_LOG_PATH, "r", encoding="utf-8", errors="replace") as fh:
-            lines = fh.readlines()[-MAX_LOG_LINES:]
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    except (IOError, PermissionError) as exc:
-        print(f"[honeypot] Cannot read log: {exc}")
+    for line in all_lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+
     return events
 
 
 def _parse_ts(ts_str: str) -> datetime | None:
-    """
-    Parse an ISO-8601 timestamp string into a UTC-aware datetime.
-    Handles:
-      - 2024-01-15T14:30:00.123456Z
-      - 2024-01-15T14:30:00+00:00
-      - 2024-01-15T14:30:00          (assumed UTC)
-    """
     if not ts_str:
         return None
     try:
@@ -179,13 +196,11 @@ def _now_utc() -> datetime:
 
 
 def _classify_command(cmd: str) -> list[str]:
-    """Return a list of threat categories matching the command."""
     matched = [cat for cat, pattern in THREAT_PATTERNS.items() if pattern.search(cmd)]
     return matched if matched else ["other"]
 
 
 def _severity(cmd: str) -> str:
-    """Return 'high', 'medium', or 'low' severity for a command."""
     if HIGH_SEVERITY_PATTERNS.search(cmd):
         return "high"
     cats = _classify_command(cmd)
@@ -197,7 +212,6 @@ def _severity(cmd: str) -> str:
 
 
 def _build_sessions(events: list[dict]) -> dict[str, dict]:
-    """Aggregate all events into per-session dicts with threat classification."""
     sessions: dict[str, dict] = defaultdict(lambda: {
         "session_id":    "",
         "src_ip":        "",
@@ -273,18 +287,52 @@ def _build_sessions(events: list[dict]) -> dict[str, dict]:
     return sessions
 
 
-# ── Routes — original ─────────────────────────────────────────────────────────
+# ── Route di debug ────────────────────────────────────────────────────────────
+
+@honeypot_bp.route("/api/honeypot/debug")
+def get_debug():
+    """
+    GET /api/honeypot/debug
+    Mostra quali file di log sono stati trovati e quanti eventi contengono.
+    Utile per diagnosticare problemi di configurazione.
+    """
+    log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
+    log_base = os.path.basename(COWRIE_LOG_PATH)
+
+    try:
+        dir_contents = os.listdir(log_dir) if os.path.isdir(log_dir) else []
+    except PermissionError as e:
+        dir_contents = [f"ERRORE: {e}"]
+
+    log_files = _find_log_files()
+    file_info = []
+    for f in log_files:
+        try:
+            size  = os.path.getsize(f)
+            lines = sum(1 for _ in open(f, encoding="utf-8", errors="replace"))
+            file_info.append({"path": f, "size_bytes": size, "lines": lines})
+        except Exception as e:
+            file_info.append({"path": f, "error": str(e)})
+
+    events = _parse_logs()
+
+    return jsonify({
+        "cowrie_log_path":   COWRIE_LOG_PATH,
+        "log_dir":           log_dir,
+        "log_dir_exists":    os.path.isdir(log_dir),
+        "dir_contents":      sorted(dir_contents),
+        "log_files_found":   log_files,
+        "file_details":      file_info,
+        "total_events_read": len(events),
+        "sample_event":      events[-1] if events else None,
+        "server_utc":        _now_utc().isoformat(),
+    })
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 @honeypot_bp.route("/api/honeypot/events")
 def get_events():
-    """
-    GET /api/honeypot/events
-    Returns the 200 most recent honeypot events (most recent first).
-
-    Query params:
-      limit  (int, default 200, max 500)
-      type   (str) — filter by eventid substring, e.g. "login"
-    """
     limit       = min(int(request.args.get("limit", 200)), 500)
     type_filter = request.args.get("type", "").lower()
 
@@ -317,10 +365,6 @@ def get_events():
 
 @honeypot_bp.route("/api/honeypot/stats")
 def get_stats():
-    """
-    GET /api/honeypot/stats
-    Returns aggregated statistics + 24h hourly timeline.
-    """
     events       = _parse_logs()
     ip_counter   = Counter()
     user_counter = Counter()
@@ -398,10 +442,6 @@ def get_stats():
 
 @honeypot_bp.route("/api/honeypot/attackers")
 def get_attackers():
-    """
-    GET /api/honeypot/attackers
-    Returns up to 50 unique attacker IPs with per-IP aggregated stats.
-    """
     events = _parse_logs()
 
     attackers: dict[str, dict] = defaultdict(lambda: {
@@ -484,10 +524,6 @@ def get_attackers():
 
 @honeypot_bp.route("/api/honeypot/credentials")
 def get_credentials():
-    """
-    GET /api/honeypot/credentials
-    Returns top credential pairs + diversity score.
-    """
     events       = _parse_logs()
     pair_counter = Counter()
     user_counter = Counter()
@@ -522,10 +558,6 @@ def get_credentials():
 
 @honeypot_bp.route("/api/honeypot/commands/top")
 def get_top_commands():
-    """
-    GET /api/honeypot/commands/top
-    Returns top 30 commands + category breakdown.
-    """
     events      = _parse_logs()
     cmd_counter = Counter()
     total       = 0
@@ -567,10 +599,6 @@ def get_top_commands():
 
 @honeypot_bp.route("/api/honeypot/sessions/<session_id>")
 def get_session(session_id: str):
-    """
-    GET /api/honeypot/sessions/<session_id>
-    Returns the full chronological event log for a specific Cowrie session.
-    """
     events         = _parse_logs()
     session_events = [e for e in events if e.get("session") == session_id]
 
@@ -632,20 +660,13 @@ def get_session(session_id: str):
 
 @honeypot_bp.route("/api/honeypot/timeline/daily")
 def get_daily_timeline():
-    """
-    GET /api/honeypot/timeline/daily
-    Returns per-day event counts for the last 30 days (UTC).
-
-    Query params:
-      days  (int, default 30, max 90)
-    """
     days   = min(int(request.args.get("days", 30)), 90)
     events = _parse_logs()
     now    = _now_utc()
     cutoff = now - timedelta(days=days)
 
-    daily: dict[str, int]       = defaultdict(int)
-    daily_logins: dict[str, int]= defaultdict(int)
+    daily: dict[str, int]        = defaultdict(int)
+    daily_logins: dict[str, int] = defaultdict(int)
 
     for e in events:
         ts_str = e.get("timestamp", "")
@@ -679,10 +700,6 @@ def get_daily_timeline():
 
 @honeypot_bp.route("/api/honeypot/files")
 def get_files():
-    """
-    GET /api/honeypot/files
-    Returns all file download/upload events, most recent first.
-    """
     events      = _parse_logs()
     FILE_EVENTS = {"cowrie.session.file_download", "cowrie.session.file_upload"}
     files       = []
@@ -707,11 +724,6 @@ def get_files():
 
 @honeypot_bp.route("/api/honeypot/summary")
 def get_summary():
-    """
-    GET /api/honeypot/summary
-    Lightweight endpoint for header badges.
-    Returns counts for the last 1h, 24h, and all-time.
-    """
     events  = _parse_logs()
     now     = _now_utc()
     cut_1h  = now - timedelta(hours=1)
@@ -748,24 +760,14 @@ def get_summary():
     })
 
 
-# ── Routes — new ──────────────────────────────────────────────────────────────
-
 @honeypot_bp.route("/api/honeypot/banned")
 def get_banned():
-    """
-    GET /api/honeypot/banned
-    Returns IPs currently banned by Fail2ban from the SQLite database.
-
-    Query params:
-        jail    (str)            filter by jail name, e.g. "cowrie" or "sshd"
-        active  (bool, default true)  if false, include expired bans too
-    """
     jail_filter = request.args.get("jail", "").strip()
     active_only = request.args.get("active", "true").lower() != "false"
 
     if not os.path.exists(FAIL2BAN_DB_PATH):
         return jsonify({
-            "error":   f"Fail2ban database not found at {FAIL2BAN_DB_PATH}",
+            "error":   f"Fail2ban database non trovato: {FAIL2BAN_DB_PATH}",
             "db_path": FAIL2BAN_DB_PATH,
         }), 503
 
@@ -825,14 +827,6 @@ def get_banned():
 
 @honeypot_bp.route("/api/honeypot/alerts")
 def get_alerts():
-    """
-    GET /api/honeypot/alerts
-    Returns anomalous sessions ordered by severity.
-
-    Query params:
-        hours   (int, default 24, max 720)
-        limit   (int, default 50, max 500)
-    """
     hours    = min(int(request.args.get("hours", 24)), 720)
     limit    = min(int(request.args.get("limit", 50)), 500)
     events   = _parse_logs()
@@ -896,21 +890,14 @@ def get_alerts():
 
 @honeypot_bp.route("/api/honeypot/threats")
 def get_threats():
-    """
-    GET /api/honeypot/threats
-    Classifies sessions by threat type with daily timeline.
-
-    Query params:
-        days    (int, default 7, max 90)
-    """
     days     = min(int(request.args.get("days", 7)), 90)
     events   = _parse_logs()
     cutoff   = _now_utc() - timedelta(days=days)
     sessions = _build_sessions(events)
 
-    categories: dict[str, list]       = defaultdict(list)
-    severity_counts                    = Counter({"high": 0, "medium": 0, "low": 0})
-    daily_threats: dict[str, Counter]  = defaultdict(Counter)
+    categories: dict[str, list]      = defaultdict(list)
+    severity_counts                   = Counter({"high": 0, "medium": 0, "low": 0})
+    daily_threats: dict[str, Counter] = defaultdict(Counter)
 
     for sid, s in sessions.items():
         ts = _parse_ts(s["first_seen"] or "")
@@ -979,16 +966,12 @@ def get_threats():
 
 @honeypot_bp.route("/api/honeypot/attackers/<ip>")
 def get_attacker_profile(ip: str):
-    """
-    GET /api/honeypot/attackers/<ip>
-    Full profile for a single attacker IP with risk score 0-100.
-    """
     events      = _parse_logs()
     sessions    = _build_sessions(events)
     ip_sessions = [s for s in sessions.values() if s["src_ip"] == ip]
 
     if not ip_sessions:
-        return jsonify({"error": f"No activity found for IP {ip}"}), 404
+        return jsonify({"error": f"Nessuna attività trovata per IP {ip}"}), 404
 
     all_commands:    list[dict] = []
     all_credentials: list[dict] = []
@@ -1060,13 +1043,6 @@ def get_attacker_profile(ip: str):
 
 @honeypot_bp.route("/api/honeypot/downloads/analysis")
 def get_downloads_analysis():
-    """
-    GET /api/honeypot/downloads/analysis
-    Files with SHA256 hash + VirusTotal link. Deduplicated by hash.
-
-    Query params:
-        limit   (int, default 100, max 500)
-    """
     limit       = min(int(request.args.get("limit", 100)), 500)
     events      = _parse_logs()
     FILE_EVENTS = {"cowrie.session.file_download", "cowrie.session.file_upload"}
@@ -1088,15 +1064,15 @@ def get_downloads_analysis():
 
         if key not in seen:
             seen[key] = {
-                "sha256":          sha or None,
-                "url":             url,
-                "outfile":         e.get("outfile", ""),
-                "type":            "download" if e.get("eventid", "").endswith("download") else "upload",
-                "first_seen":      e.get("timestamp", ""),
-                "last_seen":       e.get("timestamp", ""),
-                "session":         e.get("session", ""),
-                "count":           0,
-                "virustotal_url":  f"https://www.virustotal.com/gui/file/{sha}" if sha else None,
+                "sha256":         sha or None,
+                "url":            url,
+                "outfile":        e.get("outfile", ""),
+                "type":           "download" if e.get("eventid", "").endswith("download") else "upload",
+                "first_seen":     e.get("timestamp", ""),
+                "last_seen":      e.get("timestamp", ""),
+                "session":        e.get("session", ""),
+                "count":          0,
+                "virustotal_url": f"https://www.virustotal.com/gui/file/{sha}" if sha else None,
             }
         else:
             ts = e.get("timestamp", "")

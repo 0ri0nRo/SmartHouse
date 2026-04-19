@@ -12,6 +12,21 @@ services:
     volumes:
       - /opt/geoip:/usr/share/GeoIP
 
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie
+    ports:
+      - "2222:2222"
+    volumes:
+      # Config (volume named esistente — non toccare)
+      - cowrie_etc:/cowrie/cowrie-git/etc
+      # Stato interno (volume named esistente — non toccare)
+      - cowrie_var:/cowrie/cowrie-git/var
+      # Log JSON condivisi con l'app — sovrascrive la sottocartella del volume named
+      # Cowrie scrive in var/log/cowrie (relativo a cowrie-git/) → /cowrie/cowrie-git/var/log/cowrie
+      - /home/orion/cowrie-logs:/cowrie/cowrie-git/var/log/cowrie
+    restart: unless-stopped
+
   db:
     image: postgres:16
     environment:
@@ -66,7 +81,6 @@ services:
       context: ./src
       dockerfile: Dockerfile
     command: python3 app.py
-    # NON serve ports con network_mode host, la porta 5000 è già esposta
     depends_on:
       - db
       - main
@@ -87,6 +101,7 @@ services:
       - RASPI_HOST_IP=127.0.0.1
       - RASPI_HOST_USER=orion
       - RASPI_HOST_KEY_PATH=/run/secrets/id_rsa
+      - COWRIE_LOG_PATH=/var/log/cowrie/cowrie.json
     volumes:
       - ./backup:/backup
       - ./src/static:/app/static
@@ -94,7 +109,8 @@ services:
       - ./uploads/GeoLite2-City.mmdb:/usr/share/GeoIP/GeoLite2-City.mmdb:ro
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
       - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
-      - /home/cowrie/cowrie/var/log/cowrie:/var/log/cowrie:ro
+      # Stessa cartella host che Cowrie usa per scrivere i log
+      - /home/orion/cowrie-logs:/var/log/cowrie:ro
       - /var/lib/fail2ban/fail2ban.sqlite3:/var/lib/fail2ban/fail2ban.sqlite3:ro
       - /home/orion/.ssh/id_rsa_dashboard:/run/secrets/id_rsa:ro
     network_mode: host
@@ -102,7 +118,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./src/.env
-  
+
   network_scanner:
     build:
       context: ./src
@@ -151,6 +167,14 @@ services:
 volumes:
   postgres_data:
   mongo-data:
+  # Volumi named esistenti di Cowrie — Docker li riutilizzerà automaticamente
+  # tramite i loro ID completi. Se vuoi usare nomi leggibili, vedi nota sotto.
+  cowrie_etc:
+    external: true
+    name: cf40368c7793532af755632bc8a767fda6d334d0a305c4fa188ccf9d46687c7a
+  cowrie_var:
+    external: true
+    name: d14a9c5a74dff5a247bc5d8abdf099bf22a1ca4d4d9bd992303d98d85cfc4a0e
 
 networks:
   smarthouse-net:

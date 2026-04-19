@@ -172,13 +172,13 @@ function StatusDot({ active }) {
 // ── SSH Terminal ───────────────────────────────────────────
 function SshPanel() {
   const { toast, showToast } = useToast()
-  const [username, setUsername] = useState('')
-  const [keyFile, setKeyFile] = useState(null)
-  const [keyName, setKeyName] = useState('')
+  const [mode, setMode]         = useState('server') // 'server' | 'upload'
+  const [keyFile, setKeyFile]   = useState(null)
+  const [keyName, setKeyName]   = useState('')
   const [passphrase, setPassphrase] = useState('')
-  const [command, setCommand] = useState('')
-  const [lines, setLines] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [command, setCommand]   = useState('')
+  const [lines, setLines]       = useState([])
+  const [loading, setLoading]   = useState(false)
   const termRef = useRef(null)
   const fileRef = useRef(null)
 
@@ -192,33 +192,34 @@ function SshPanel() {
       ts: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     }])
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setKeyFile(file)
-    setKeyName(file.name)
-  }
-
   const run = async () => {
-    if (!username.trim()) { showToast('Enter username', 'error'); return }
-    if (!keyFile) { showToast('Select a private key file', 'error'); return }
     if (!command.trim()) { showToast('Enter command', 'error'); return }
+    if (mode === 'upload' && !keyFile) { showToast('Select a private key file', 'error'); return }
     setLoading(true)
     addLine('info', `$ ${command}`)
     try {
-      const keyText = await keyFile.text()
-      const res = await fetch('/api/ssh_exec', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ip: '192.168.178.101',
-          username,
-          privateKey: keyText,
-          passphrase: passphrase || undefined,
-          command,
-        }),
-      })
-      const data = await res.json()
+      let res, data
+      if (mode === 'server') {
+        res = await fetch('/api/ssh_exec_host', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command }),
+        })
+      } else {
+        const keyText = await keyFile.text()
+        res = await fetch('/api/ssh_exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ip: '192.168.178.101',
+            username: 'orion',
+            privateKey: keyText,
+            passphrase: passphrase || undefined,
+            command,
+          }),
+        })
+      }
+      data = await res.json()
       if (!res.ok) throw new Error(data.error || 'SSH error')
       addLine('output', data.output || '(no output)')
     } catch (e) {
@@ -237,85 +238,115 @@ function SshPanel() {
   return (
     <Section icon={Terminal} title="SSH Terminal" accent="var(--accent)" defaultOpen={false}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {/* Username */}
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.65rem',
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '0.3rem',
-          }}>Username</div>
-          <input
-            className="input input--mono"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            placeholder="pi"
-          />
-        </div>
 
-        {/* Key file */}
-        <div>
-          <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.65rem',
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '0.3rem',
-          }}>Private Key File</div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input ref={fileRef} type="file" style={{ display: 'none' }} accept=".pem,.key,*" onChange={handleFileChange} />
-            <button className="btn btn--ghost btn--sm" onClick={() => fileRef.current?.click()} style={{ fontSize: '0.72rem', flexShrink: 0 }}>
-              Choose file
+        {/* Mode selector */}
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          {[
+            { id: 'server', label: '🔑 Server key' },
+            { id: 'upload', label: '📂 Upload key' },
+          ].map(m => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={`btn btn--sm ${mode === m.id ? 'btn--primary' : 'btn--ghost'}`}
+              style={{ fontSize: '0.72rem' }}
+            >
+              {m.label}
             </button>
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.72rem',
-              color: keyName ? 'var(--text-secondary)' : 'var(--text-muted, var(--text-secondary))',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-            }}>
-              {keyName || 'No file selected (e.g. id_rsa)'}
-            </span>
-            {keyFile && (
-              <button className="btn btn--ghost btn--sm" onClick={() => { setKeyFile(null); setKeyName(''); fileRef.current.value = '' }}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
+          ))}
         </div>
 
-        {/* Passphrase */}
-        <div>
+        {/* Server key info */}
+        {mode === 'server' && (
           <div style={{
+            padding: '0.6rem 0.75rem',
+            borderRadius: 8,
+            background: 'var(--bg-muted)',
+            borderLeft: '3px solid var(--accent)',
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.65rem',
+            fontSize: '0.72rem',
             color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '0.3rem',
           }}>
-            Passphrase <span style={{ color: 'var(--text-muted, var(--text-secondary))', fontWeight: 400, textTransform: 'none' }}>(optional)</span>
+            Using <span style={{ color: 'var(--accent)' }}>/run/secrets/id_rsa</span> — key already loaded on server
           </div>
-          <input
-            type="password"
-            className="input input--mono"
-            value={passphrase}
-            onChange={e => setPassphrase(e.target.value)}
-            placeholder="Leave empty if key has no passphrase"
-          />
-        </div>
+        )}
+
+        {/* Upload key fields */}
+        {mode === 'upload' && (
+          <>
+            <div>
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+                color: 'var(--text-secondary)', textTransform: 'uppercase',
+                letterSpacing: '0.05em', marginBottom: '0.3rem',
+              }}>
+                Private Key File
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 400, textTransform: 'none', marginLeft: '0.4rem' }}>
+                  (.pem / id_rsa / id_ed25519)
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  ref={fileRef} type="file" style={{ display: 'none' }}
+                  accept=".pem,.key,*"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    setKeyFile(f)
+                    setKeyName(f.name)
+                  }}
+                />
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => fileRef.current?.click()}
+                  style={{ fontSize: '0.72rem', flexShrink: 0 }}
+                >
+                  Choose file
+                </button>
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '0.72rem',
+                  color: keyName ? 'var(--text-secondary)' : 'var(--text-muted, var(--text-secondary))',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                }}>
+                  {keyName || 'No file selected'}
+                </span>
+                {keyFile && (
+                  <button
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => { setKeyFile(null); setKeyName(''); fileRef.current.value = '' }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+                color: 'var(--text-secondary)', textTransform: 'uppercase',
+                letterSpacing: '0.05em', marginBottom: '0.3rem',
+              }}>
+                Passphrase
+                <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: '0.4rem' }}>(optional)</span>
+              </div>
+              <input
+                type="password"
+                className="input input--mono"
+                value={passphrase}
+                onChange={e => setPassphrase(e.target.value)}
+                placeholder="Leave empty if key has no passphrase"
+              />
+            </div>
+          </>
+        )}
 
         {/* Command */}
         <div>
           <div style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '0.65rem',
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginBottom: '0.3rem',
+            fontFamily: 'var(--font-mono)', fontSize: '0.65rem',
+            color: 'var(--text-secondary)', textTransform: 'uppercase',
+            letterSpacing: '0.05em', marginBottom: '0.3rem',
           }}>Command</div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <input
@@ -337,12 +368,9 @@ function SshPanel() {
         {/* Quick commands */}
         <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
           {QUICK_CMDS.map(cmd => (
-            <button
-              key={cmd}
-              onClick={() => setCommand(cmd)}
+            <button key={cmd} onClick={() => setCommand(cmd)}
               className="btn btn--ghost btn--sm"
-              style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', padding: '3px 8px' }}
-            >
+              style={{ fontSize: '0.68rem', fontFamily: 'var(--font-mono)', padding: '3px 8px' }}>
               {cmd}
             </button>
           ))}
@@ -352,20 +380,16 @@ function SshPanel() {
         {lines.length > 0 && (
           <>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setLines([])} className="btn btn--ghost btn--sm" style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <button onClick={() => setLines([])} className="btn btn--ghost btn--sm"
+                style={{ fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <X size={11} /> Clear
               </button>
             </div>
             <div ref={termRef} style={{
-              background: '#0d1117',
-              borderRadius: 8,
-              padding: '0.875rem 1rem',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.75rem',
-              lineHeight: 1.7,
-              maxHeight: 220,
-              overflowY: 'auto',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: '#0d1117', borderRadius: 8,
+              padding: '0.875rem 1rem', fontFamily: 'var(--font-mono)',
+              fontSize: '0.75rem', lineHeight: 1.7, maxHeight: 220,
+              overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)',
             }}>
               {lines.map((l, i) => (
                 <div key={i} style={{ marginBottom: '0.1rem' }}>

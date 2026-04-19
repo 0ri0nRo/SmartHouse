@@ -202,6 +202,19 @@ def api_ssh_exec():
         return jsonify({'error': str(e)}), 400
 
 
+@system_bp.route('/api/ssh_exec_host', methods=['POST'])
+@handle_db_error
+def api_ssh_exec_host():
+    data    = request.get_json() or {}
+    command = data.get('command', '').strip()
+    if not command:
+        return jsonify({'error': 'Missing command'}), 400
+    try:
+        stdout, stderr, rc = _ssh_exec_host(command)
+        return jsonify({'output': stdout or stderr or '(no output)'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ── Power ──────────────────────────────────────────────────
 @system_bp.route('/api/system/reboot', methods=['POST'])
 @handle_db_error
