@@ -101,7 +101,7 @@ export default function OnThisDayWidget() {
             justifyContent: 'center', gap: '0.4rem', color: 'var(--text-muted)', minHeight: 90 }}>
             <BookOpen size={20}/>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
-              Errore caricamento
+              Error loading
             </span>
           </div>
         ) : event ? (

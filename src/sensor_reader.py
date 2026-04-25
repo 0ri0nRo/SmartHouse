@@ -6,15 +6,15 @@ import psutil
 from send_email import EmailSender, invia_allarme_email
 import os
 
-# Definizione delle variabili di connessione al database
+# Database connection variables
 db_host = os.getenv('DB_HOST')
 db_database = os.getenv('DB_DATABASE')
 db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
 
-# Connessione al database
+# Database connection
 def get_db_connection():
-    """Crea e ritorna una connessione al database."""
+    """Create and return a database connection."""
     return psycopg2.connect(
         dbname=db_database,
         user=db_user,
@@ -24,7 +24,7 @@ def get_db_connection():
 
 class SensorReader:
     def __init__(self, port, baud_rate, timeout):
-        """Inizializza la connessione seriale e la connessione al database."""
+        """Initialize the serial connection and the database connection."""
         self.ser = serial.Serial(port, baud_rate, timeout=timeout)
         self.db_config = {
             'dbname': db_database,
@@ -34,10 +34,10 @@ class SensorReader:
         }
         self.last_temperature = None
         self.last_humidity = None
-        self.last_record_time = datetime.now()  # Timestamp dell'ultima registrazione
+        self.last_record_time = datetime.now()  # Timestamp of the last record
         self.db = PostgresHandler(self.db_config)
         
-        # Configurazione dell'email
+        # Email configuration
         self.smtp_server = os.getenv('SMTP_SERVER')
         self.smtp_port = os.getenv('SMTP_PORT')
         self.username = os.getenv('EMAIL_USERNAME')
@@ -50,18 +50,18 @@ class SensorReader:
 
 
     def read_data(self):
-        """Legge e processa i dati dalla porta seriale e ritorna una lista con temperatura e umidità."""
+        """Read and process data from the serial port and return temperature and humidity."""
         try:
             while True:
                 line = self.ser.readline().decode('utf-8').strip()
                 temperature, humidity, distance = line.split(",")
 
-                # Converte i valori in float per una comparazione accurata
-                temperature = float(temperature) - 1.7  # Sottrai 1.7 gradi per compensare il calore residuo della ciabatta e allineare la lettura al termostato della caldaia
+                # Convert values to float for accurate comparisons
+                temperature = float(temperature) - 1.7  # Subtract 1.7 degrees to compensate for residual heat from the power strip and align the reading with the boiler thermostat
                 humidity = float(humidity)
                 distance = int(distance)
                 #print("Eseguo script di backup")
-                # Esegui il backup se è passato più di 24 ore dall'ultima esecuzione
+                # Run the backup if more than 24 hours have passed since the last execution
                 #if datetime.now() - self.last_backup_time >= timedelta(minutes=1):
                 #    os.system('./backup.sh')
                 #    print("Eseguito script di backup")
@@ -70,28 +70,28 @@ class SensorReader:
 
                 last_alarm = self.db.get_last_alarm_status()
                 status = last_alarm["status"]
-                 # Ottieni il timestamp corrente come oggetto datetime
+                 # Get the current timestamp as a datetime object
                 check_timestamp = datetime.now()
                 print(f"status: {status}, distance: {distance}")
-                # Verifica se è passato abbastanza tempo dall'ultimo allarme
+                # Check whether enough time has passed since the last alarm
                 if status == "true" and distance < 80:
-                    print(f"pre - invio allarme, {check_timestamp} \n")
+                    print(f"pre-alarm send, {check_timestamp} \n")
 
-                    # Verifica se è passato abbastanza tempo dall'ultimo allarme
-                    if (check_timestamp - self.last_alarm_time) >= timedelta(seconds=10):  # Intervallo di 10 secondi
+                    # Check whether enough time has passed since the last alarm
+                    if (check_timestamp - self.last_alarm_time) >= timedelta(seconds=10):  # 10-second interval
                         invia_allarme_email(self.email_sender)
                         #print("invio allarme")
 
-                        # Aggiorna il timestamp dell'ultimo allarme
+                        # Update the timestamp of the last alarm
                         self.last_alarm_time = check_timestamp
 
                 if temperature <= 45 and temperature >=8 and humidity <= 90:
-                    # Controlla se i valori sono cambiati
+                    # Check whether the values have changed
                     if temperature != self.last_temperature or humidity != self.last_humidity:
-                        # Salva i nuovi valori nel database
+                        # Save the new values in the database
                         self.db.save_to_db(temperature, humidity)
                         
-                        # Aggiorna gli ultimi valori salvati
+                        # Update the last saved values
                         self.last_temperature = temperature
                         self.last_humidity = humidity
                         self.db.create_temp_table_and_aggregate_data()
@@ -105,28 +105,28 @@ class SensorReader:
 
 
     def get_raspberry_pi_stats():
-        """Legge e ritorna la temperatura della CPU, l'uso della CPU, e le statistiche di memoria e archiviazione del Raspberry Pi."""
+        """Read and return CPU temperature, CPU usage, and Raspberry Pi memory and storage statistics."""
         try:
-            # Leggi la temperatura della CPU
+            # Read CPU temperature
             with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
                 temp_str = temp_file.read().strip()
                 temperature = float(temp_str) / 1000.0
             
-            # Ottieni l'uso della CPU
+            # Get CPU usage
             cpu_usage = psutil.cpu_percent(interval=1)
             
-            # Ottieni le statistiche di memoria RAM
+            # Get RAM statistics
             memory = psutil.virtual_memory()
-            memory_used = memory.used / (1024 ** 3)  # Converti in GB
-            memory_total = memory.total / (1024 ** 3)  # Converti in GB
+            memory_used = memory.used / (1024 ** 3)  # Convert to GB
+            memory_total = memory.total / (1024 ** 3)  # Convert to GB
             
-            # Ottieni le statistiche di memoria di archiviazione (SD)
+            # Get storage (SD) statistics
             disk = psutil.disk_usage('/')
-            disk_used = disk.used / (1024 ** 3)  # Converti in GB
-            disk_total = disk.total / (1024 ** 3)  # Converti in GB
-            disk_free = disk.free / (1024 ** 3)   # Converti in GB
+            disk_used = disk.used / (1024 ** 3)  # Convert to GB
+            disk_total = disk.total / (1024 ** 3)  # Convert to GB
+            disk_free = disk.free / (1024 ** 3)   # Convert to GB
             
-            # Costruisci il dizionario con i dati
+            # Build the data dictionary
             stats = {
                 'temperature': temperature,
                 'cpuUsage': cpu_usage,
@@ -139,11 +139,11 @@ class SensorReader:
             return stats
 
         except FileNotFoundError:
-            print("File di temperatura non trovato.")
+            print("Temperature file not found.")
             return None
         except PermissionError:
-            print("Permessi insufficienti per accedere al file di temperatura.")
+            print("Insufficient permissions to access the temperature file.")
             return None
         except Exception as e:
-            print(f"Errore durante la lettura delle statistiche: {e}")
+            print(f"Error reading statistics: {e}")
             return None

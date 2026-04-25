@@ -46,7 +46,7 @@ def receive_pico_log():
         logger.info(f"Content-Type: {request.content_type}")
         logger.info(f"Raw data: {request.data}")
 
-        # Prova a parsare in modo più permissivo
+        # Try to parse it more permissively
         log_data = request.get_json(force=True, silent=True)
         
         logger.info(f"Parsed JSON: {log_data}")

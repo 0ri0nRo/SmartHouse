@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class PostgresHandler:
     def __init__(self, db_config):
-        """Inizializza la connessione al database PostgreSQL e crea la tabella se non esiste."""
+        """Initialize the PostgreSQL database connection and create the table if it does not exist."""
         self.db_config = db_config
         self.connection = None
         self.cursor = None
@@ -25,21 +25,21 @@ class PostgresHandler:
         return psycopg2.connect(**self.db_config)
 
     def _ensure_connection(self):
-        """Verifica e ripristina la connessione se necessario."""
+        """Check and restore the connection if necessary."""
         try:
             if self.connection is None or self.connection.closed:
-                logger.warning("Connessione chiusa, riconnessione in corso...")
+                logger.warning("Connection closed, reconnecting...")
                 self.connect_to_db()
             else:
-                # Test della connessione con una query semplice
+                # Test the connection with a simple query
                 self.cursor.execute("SELECT 1")
                 self.cursor.fetchone()
         except (Error, psycopg2.OperationalError) as e:
-            logger.error(f"Problema di connessione rilevato: {e}")
+            logger.error(f"Connection problem detected: {e}")
             self.connect_to_db()
 
     def connect_to_db(self):
-        """Stabilisce la connessione al database con retry logic."""
+        """Establish the database connection with retry logic."""
         max_retries = 3
         retry_delay = 1
 
@@ -47,7 +47,7 @@ class PostgresHandler:
             try:
                 self.connection = psycopg2.connect(**self.db_config)
                 self.cursor = self.connection.cursor()
-                logger.info("Connessione al database stabilita con successo")
+                logger.info("Database connection established successfully")
                 return
             except Error as e:
                 logger.error(f"Tentativo {attempt + 1}/{max_retries} fallito: {e}")
@@ -55,11 +55,11 @@ class PostgresHandler:
                     time.sleep(retry_delay)
                     retry_delay *= 2
                 else:
-                    logger.error("Impossibile connettersi al database dopo tutti i tentativi")
+                    logger.error("Unable to connect to the database after all attempts")
                     raise
 
     def create_table_if_not_exists(self):
-        """Crea la tabella se non esiste già."""
+        """Create the table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS sensor_readings (
@@ -72,11 +72,11 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella: {e}")
+            print(f"Error creating table: {e}")
             exit(1)
 
     def save_to_db(self, temperature, humidity):
-        """Salva i dati nel database."""
+        """Save data to the database."""
         try:
             now = datetime.now()
             query = """
@@ -87,18 +87,18 @@ class PostgresHandler:
             self.cursor.execute(query, values)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante l'inserimento dei dati: {e}")
+            print(f"Error inserting data: {e}")
 
     def close(self):
-        """Chiude la connessione al database e il cursore."""
+        """Close the database connection and cursor."""
         if self.cursor:
             self.cursor.close()
         if self.connection:
             self.connection.close()
-        print("Connessione al database chiusa.")
+        print("Database connection closed.")
 
     def create_table_if_not_exists_devices(self):
-        """Crea la tabella se non esiste già."""
+        """Create the table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS network_devices (
@@ -111,11 +111,11 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella: {e}")
+            print(f"Error creating table: {e}")
             exit(1)
 
     def save_devices_to_db(self, devices):
-        """Salva le informazioni sui dispositivi di rete nel database."""
+        """Save network device information to the database."""
         try:
             query_insert_or_update = """
             INSERT INTO network_devices (ip_address, hostname, status, timestamp)
@@ -137,13 +137,13 @@ class PostgresHandler:
                 self.cursor.execute(query_insert_or_update, values)
 
             self.connection.commit()
-            print("Dispositivi di rete inseriti o aggiornati nel database.")
+            print("Network devices inserted or updated in the database.")
 
         except Error as e:
-            print(f"Errore durante l'inserimento o l'aggiornamento dei dati: {e}")
+            print(f"Error inserting or updating data: {e}")
 
     def get_devices_from_db(self):
-        """Recupera i dispositivi salvati più recentemente dal database."""
+        """Retrieve the most recently saved devices from the database."""
         try:
             query = """
             SELECT ip_address, hostname, status, timestamp 
@@ -162,11 +162,11 @@ class PostgresHandler:
                 }
             return devices
         except Error as e:
-            print(f"Errore durante il recupero dei dispositivi: {e}")
+            print(f"Error retrieving devices: {e}")
             return {}
 
     def save_trains_to_db(self, trains):
-        """Salva le informazioni sui treni nel database."""
+        """Save train information to the database."""
         try:
             now = datetime.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -199,13 +199,13 @@ class PostgresHandler:
                 self.cursor.execute(query, values)
 
             self.connection.commit()
-            print("Treni inseriti o aggiornati nel database.")
+            print("Trains inserted or updated in the database.")
 
         except Error as e:
-            print(f"Errore durante l'inserimento o l'aggiornamento dei dati dei treni: {e}")
+            print(f"Error inserting or updating train data: {e}")
 
     def create_table_if_not_exists_trains(self):
-        """Crea la tabella per i treni se non esiste già."""
+        """Create the trains table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS trains (
@@ -221,7 +221,7 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella trains: {e}")
+            print(f"Error creating trains table: {e}")
             exit(1)
 
     def save_alarm_status_to_db(self, status):
@@ -274,7 +274,7 @@ class PostgresHandler:
             return None
 
     def create_temp_table_and_aggregate_data(self):
-        """Crea una tabella temporanea per le medie orarie."""
+        """Create a temporary table for hourly averages."""
         try:
             create_temp_table_query = """
             CREATE TEMP TABLE IF NOT EXISTS temp_sensor_averages (
@@ -322,11 +322,11 @@ class PostgresHandler:
             print("Dati aggregati inseriti correttamente nella tabella originale.")
 
         except Error as e:
-            print(f"Errore durante l'aggregazione dei dati: {e}")
+            print(f"Error aggregating data: {e}")
             self.connection.rollback()
 
     def create_table_if_not_exists_air_quality(self):
-        """Crea la tabella per i dati di qualità dell'aria se non esiste già."""
+        """Create the table for air quality data if it does not already exist."""
         try:
             self._ensure_connection()
             create_table_query = """
@@ -349,13 +349,13 @@ class PostgresHandler:
             self.connection.commit()
             logger.info("Tabella air_quality creata/verificata correttamente.")
         except Error as e:
-            logger.error(f"Errore durante la creazione della tabella air_quality: {e}")
+            logger.error(f"Error creating air_quality table: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def save_air_quality_to_db(self, smoke_value, lpg_value, methane_value, hydrogen_value, air_quality_index, air_quality_description):
-        """Salva i dati di qualità dell'aria nel database."""
+        """Save air quality data to the database."""
         try:
             self._ensure_connection()
 
@@ -384,17 +384,17 @@ class PostgresHandler:
 
             record_id = self.cursor.fetchone()[0]
             self.connection.commit()
-            logger.info(f"Dati di qualità dell'aria salvati con ID: {record_id}")
+            logger.info(f"Air quality data saved with ID: {record_id}")
             return record_id
 
         except (Error, ValueError) as e:
-            logger.error(f"Errore durante l'inserimento dei dati di qualità dell'aria: {e}")
+            logger.error(f"Error inserting air quality data: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def get_last_air_quality(self):
-        """Recupera l'ultimo valore di qualità dell'aria dal database."""
+        """Retrieve the latest air quality value from the database."""
         try:
             self._ensure_connection()
             query = """
@@ -422,7 +422,7 @@ class PostgresHandler:
                 return None
 
         except Error as e:
-            logger.error(f"Errore durante il recupero del valore di qualità dell'aria: {e}")
+            logger.error(f"Error retrieving air quality value: {e}")
             return None
 
     def create_temp_table_and_aggregate_air_quality(self):
@@ -432,7 +432,7 @@ class PostgresHandler:
 
             self.connection.autocommit = False
 
-            logger.info("Inizio aggregazione dati qualità dell'aria...")
+            logger.info("Starting air quality data aggregation...")
 
             check_query = "SELECT COUNT(*) FROM air_quality WHERE timestamp >= CURRENT_DATE - INTERVAL '1 day'"
             self.cursor.execute(check_query)
@@ -534,14 +534,14 @@ class PostgresHandler:
             return True
 
         except Error as e:
-            logger.error(f"Errore durante l'aggregazione dei dati: {e}")
+            logger.error(f"Error aggregating data: {e}")
             if self.connection:
                 self.connection.rollback()
                 self.connection.autocommit = True
             return False
 
     def get_data_stats(self):
-        """Ottieni statistiche sui dati per debugging."""
+        """Get statistics on the data for debugging."""
         try:
             self._ensure_connection()
             stats_query = """
@@ -567,19 +567,19 @@ class PostgresHandler:
             return None
 
         except Error as e:
-            logger.error(f"Errore durante il recupero delle statistiche: {e}")
+            logger.error(f"Error retrieving statistics: {e}")
             return None
 
     def close(self):
-        """Chiudi connessione e cursor."""
+        """Close the connection and cursor."""
         try:
             if self.cursor:
                 self.cursor.close()
             if self.connection and not self.connection.closed:
                 self.connection.close()
-            logger.info("Connessione database chiusa")
+            logger.info("Database connection closed")
         except Error as e:
-            logger.error(f"Errore durante la chiusura della connessione: {e}")
+            logger.error(f"Error closing the connection: {e}")
 
     def __enter__(self):
         return self
@@ -598,7 +598,7 @@ class PostgresHandler:
 
     @contextmanager
     def get_connection(self):
-        """Context manager per la connessione al DB"""
+        """Context manager for the DB connection"""
         conn = None
         try:
             conn = psycopg2.connect(**self.db_config)
@@ -620,7 +620,7 @@ class PostgresHandler:
                     cur.execute(query, (value,))
             return True
         except Exception as e:
-            logger.error(f"Errore set_target_temperature: {e}")
+            logger.error(f"Error set_target_temperature: {e}")
             return False
 
     def get_target_temperature(self):
@@ -636,14 +636,14 @@ class PostgresHandler:
                 return float(row['value'])
             return None
         except Exception as e:
-            logger.error(f"Errore get_target_temperature: {e}")
+            logger.error(f"Error get_target_temperature: {e}")
             return None
         finally:
             if cur: cur.close()
             if conn: conn.close()
 
     def get_thermostat_status(self):
-        """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
+        """Get the current thermostat state (enabled/disabled)."""
         query = "SELECT enabled FROM thermostat_status WHERE id = 1;"
         try:
             with self.get_connection() as conn:
@@ -652,11 +652,11 @@ class PostgresHandler:
                     row = cur.fetchone()
                     return bool(row[0]) if row else False
         except Exception as e:
-            logger.error(f"Errore get_thermostat_status: {e}")
+            logger.error(f"Error get_thermostat_status: {e}")
             return False
 
     def set_thermostat_status(self, enabled):
-        """Imposta lo stato del termostato (abilitato/disabilitato)."""
+        """Set the thermostat state (enabled/disabled)."""
         query = """
         INSERT INTO thermostat_status (id, enabled, updated_at)
         VALUES (1, %s, NOW())
@@ -667,10 +667,10 @@ class PostgresHandler:
             with self.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(query, (enabled,))
-            logger.info(f"Stato termostato impostato: {enabled}")
+            logger.info(f"Thermostat state set: {enabled}")
             return True
         except Exception as e:
-            logger.error(f"Errore set_thermostat_status: {e}")
+            logger.error(f"Error set_thermostat_status: {e}")
             return False
 
     def get_boiler_status(self):
@@ -683,7 +683,7 @@ class PostgresHandler:
                     row = cur.fetchone()
                     return bool(row[0]) if row else False
         except Exception as e:
-            logger.error(f"Errore get_boiler_status: {e}")
+            logger.error(f"Error get_boiler_status: {e}")
             return False
 
     def set_boiler_status(self, is_on):
@@ -701,7 +701,7 @@ class PostgresHandler:
             logger.info(f"Stato caldaia impostato: {is_on}")
             return True
         except Exception as e:
-            logger.error(f"Errore set_boiler_status: {e}")
+            logger.error(f"Error set_boiler_status: {e}")
             return False
 
     def get_current_temperature(self):
@@ -720,11 +720,11 @@ class PostgresHandler:
                 return float(row[0])
             return None
         except Exception as e:
-            logger.error(f"Errore get_current_temperature: {e}")
+            logger.error(f"Error get_current_temperature: {e}")
             return None
 
     def create_thermostat_tables(self):
-        """Crea le tabelle necessarie per il termostato se non esistono."""
+        """Create the thermostat tables if they do not exist."""
         try:
             self._ensure_connection()
 
@@ -806,16 +806,16 @@ class PostgresHandler:
             self.cursor.execute(create_boiler_blackout_query)
 
             self.connection.commit()
-            logger.info("Tabelle termostato (incluso blackout) create/verificate correttamente")
+            logger.info("Thermostat tables (including blackout) created/verified successfully")
 
         except Exception as e:
-            logger.error(f"Errore durante la creazione delle tabelle termostato: {e}")
+            logger.error(f"Error creating thermostat tables: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def log_thermostat_action(self, action, current_temp=None, target_temp=None, boiler_status=None):
-        """Registra un'azione del termostato nel log."""
+        """Log a thermostat action."""
         query = """
         INSERT INTO thermostat_log (action, current_temp, target_temp, boiler_status, timestamp)
         VALUES (%s, %s, %s, %s, NOW())
@@ -825,12 +825,12 @@ class PostgresHandler:
             self.cursor.execute(query, (action, current_temp, target_temp, boiler_status))
             self.connection.commit()
         except Exception as e:
-            logger.error(f"Errore log_thermostat_action: {e}")
+            logger.error(f"Error log_thermostat_action: {e}")
             if self.connection:
                 self.connection.rollback()
 
     def get_thermostat_log(self, limit=50):
-        """Ottiene gli ultimi N record del log del termostato."""
+        """Get the latest N records from the thermostat log."""
         query = """
         SELECT action, current_temp, target_temp, boiler_status, timestamp
         FROM thermostat_log
@@ -851,7 +851,7 @@ class PostgresHandler:
             } for row in rows]
 
         except Exception as e:
-            logger.error(f"Errore get_thermostat_log: {e}")
+            logger.error(f"Error get_thermostat_log: {e}")
             return []
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -888,7 +888,7 @@ class PostgresHandler:
                         }
             return fallback
         except Exception as e:
-            logger.error(f"Errore get_boiler_blackout: {e}")
+            logger.error(f"Error get_boiler_blackout: {e}")
             return fallback
 
     def set_boiler_blackout(self, enabled, start_month, start_day,
@@ -912,7 +912,7 @@ class PostgresHandler:
                                         end_month, end_day, reason))
             return True
         except Exception as e:
-            logger.error(f"Errore set_boiler_blackout: {e}")
+            logger.error(f"Error set_boiler_blackout: {e}")
             return False
 
     def is_in_blackout_period(self) -> tuple[bool, str]:
@@ -950,6 +950,6 @@ class PostgresHandler:
             return False, ''
 
         except Exception as e:
-            logger.error(f"Errore is_in_blackout_period: {e}")
-            # In caso di errore DB non blocchiamo l'utente
+            logger.error(f"Error is_in_blackout_period: {e}")
+            # Do not block the user in case of a DB error
             return False, ''

@@ -239,7 +239,7 @@ function NewsWidget() {
         {loading ? (
           <div style={{ display:'flex', alignItems:'center', gap:'0.5rem',
             color:'var(--text-muted)', fontSize:'0.75rem' }}>
-            <RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> Caricamento...
+            <RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> Loading...
           </div>
         ) : error ? (
           <div style={{ color:'var(--color-danger)', fontSize:'0.72rem',
@@ -313,7 +313,7 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
 
         if (data?.logs?.length) {
 
-          // 🔥 prendi ultimo log SENSOR (non l'ultimo generico)
+          // 🔥 take the latest SENSOR log (not the latest generic one)
           const sensorLog = [...data.logs]
             .reverse()
             .find((l: PicoLog) => l.level === 'SENSOR')
@@ -322,7 +322,7 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
 
           setLog(entry)
 
-          // AQI solo se è SENSOR
+          // AQI only if it is SENSOR
           if (entry.level === 'SENSOR') {
             setAqi(parseAqi(entry.message))
           } else {
@@ -463,7 +463,7 @@ function BackupWidget() {
   }
 
   const statusColor = { idle:'var(--text-muted)', running:'var(--color-warning)', done:'var(--color-success)', error:'var(--color-danger)' }[status]
-  const statusLabel = { idle: lastDate ? `Ultimo: ${lastDate}` : 'Nessun backup', running:'In corso…', done:'Completato', error:'Errore' }[status]
+  const statusLabel = { idle: lastDate ? `Last: ${lastDate}` : 'No backup', running:'In progress…', done:'Completed', error:'Error' }[status]
 
   return (
     <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border)',
@@ -486,8 +486,8 @@ function BackupWidget() {
         <button onClick={runBackup} disabled={backing} className="btn btn--primary"
           style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem', fontSize:'clamp(0.68rem,2vw,0.78rem)', padding:'0.5rem' }}>
           {backing
-            ? <><RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> In corso…</>
-            : <><Shield size={12}/> Avvia backup</>}
+            ? <><RefreshCw size={12} style={{ animation:'spin 0.8s linear infinite' }}/> In progress…</>
+            : <><Shield size={12}/> Start backup</>}
         </button>
       </div>
     </div>

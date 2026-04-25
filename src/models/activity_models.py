@@ -1,6 +1,6 @@
 """
 Activity Monitor - Database Models
-Gestisce le tabelle per categorie, eventi e statistiche
+Manages the tables for categories, events, and statistics
 """
 
 from datetime import datetime
@@ -10,7 +10,7 @@ from enum import Enum
 
 
 class MacroCategory(str, Enum):
-    """Enumerazione delle macrocategorie"""
+    """Enumeration of macro categories"""
     SLEEP = "Sonno e Riposo"
     FOOD = "Alimentazione"
     WORK = "Lavoro e Produttività"
@@ -27,7 +27,7 @@ class MacroCategory(str, Enum):
 
 @dataclass
 class Category:
-    """Modello per una categoria di attività"""
+    """Model for an activity category"""
     id: Optional[int]
     code: str  # Es: "L.1", "SP.2"
     macro_category: str
@@ -37,7 +37,7 @@ class Category:
     
     @staticmethod
     def from_db_row(row: tuple):
-        """Crea un oggetto Category da una riga del database"""
+        """Create a Category object from a database row"""
         return Category(
             id=row[0],
             code=row[1],
@@ -50,7 +50,7 @@ class Category:
 
 @dataclass
 class Event:
-    """Modello per un evento del calendario"""
+    """Model for a calendar event"""
     id: Optional[int]
     google_event_id: str
     title: str
@@ -65,14 +65,14 @@ class Event:
     
     @property
     def category_code(self) -> Optional[str]:
-        """Estrae il codice categoria dal titolo se presente"""
+        """Extract the category code from the title if present"""
         import re
         match = re.match(r'\[([A-Z]+\.\d+)\]', self.title)
         return match.group(1) if match else None
     
     @staticmethod
     def from_db_row(row: tuple):
-        """Crea un oggetto Event da una riga del database"""
+        """Create an Event object from a database row"""
         return Event(
             id=row[0],
             google_event_id=row[1],
@@ -89,7 +89,7 @@ class Event:
     
     @staticmethod
     def from_google_event(google_event: dict, calendar_name: str):
-        """Crea un oggetto Event da un evento Google Calendar"""
+        """Create an Event object from a Google Calendar event"""
         start = google_event['start'].get('dateTime', google_event['start'].get('date'))
         end = google_event['end'].get('dateTime', google_event['end'].get('date'))
         is_all_day = 'date' in google_event['start']
@@ -120,7 +120,7 @@ class Event:
 
 @dataclass
 class DailyStat:
-    """Modello per le statistiche giornaliere"""
+    """Model for daily statistics"""
     id: Optional[int]
     date: datetime.date
     category_id: int
@@ -135,7 +135,7 @@ class DailyStat:
     
     @staticmethod
     def from_db_row(row: tuple):
-        """Crea un oggetto DailyStat da una riga del database"""
+        """Create a DailyStat object from a database row"""
         return DailyStat(
             id=row[0],
             date=row[1],
@@ -148,7 +148,7 @@ class DailyStat:
 
 @dataclass
 class WeeklyStat:
-    """Modello per le statistiche settimanali"""
+    """Model for weekly statistics"""
     week_number: int
     year: int
     category_id: int
@@ -167,7 +167,7 @@ class WeeklyStat:
 
 @dataclass
 class MonthlyStat:
-    """Modello per le statistiche mensili"""
+    """Model for monthly statistics"""
     month: int
     year: int
     category_id: int

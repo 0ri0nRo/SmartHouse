@@ -135,7 +135,7 @@ def os_scan_device(mac: str):
     if not device:
         return jsonify({"error": "Device not found"}), 404
 
-    # Controlla se già in cache
+    # Check whether it's already in cache
     cached = r.get(f"network:os:{mac}")
     if cached:
         os_info = json.loads(cached)

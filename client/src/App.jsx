@@ -11,6 +11,7 @@ import ShoppingPage    from './pages/ShoppingPage'
 import SecurityPage    from './pages/SecurityPage'
 import RaspiPage       from './pages/RaspiPage'
 import AirQualityPage  from './pages/AirQualityPage'
+import FloorPlanPage   from './pages/Floorplanpage'
 import NotFoundPage    from './pages/NotFoundPage'
 import CalendarPage     from './pages/CalendarPage'
 
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="security"    element={<SecurityPage />} />
             <Route path="raspi"       element={<RaspiPage />} />
             <Route path="air-quality" element={<AirQualityPage />} />
+            <Route path="floorplan"   element={<FloorPlanPage />} />
             <Route path="*"           element={<NotFoundPage />} />
             <Route path="calendar"      element={<CalendarPage />} />
           </Route>

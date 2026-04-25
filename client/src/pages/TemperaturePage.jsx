@@ -250,7 +250,7 @@ function BlackoutCard({ showToast, onStatusLoad }) {
       setEndMonth(data.end_month)
       setEndDay(data.end_day)
       setReason(data.reason)
-      // FIX: notifica il parent dello stato blocked al caricamento
+      // FIX: notify the parent about the blocked state on load
       onStatusLoad?.(data.currently_blocked, data.reason)
     } catch {
       showToast('Failed to load blackout config', 'error')
@@ -303,7 +303,7 @@ function BlackoutCard({ showToast, onStatusLoad }) {
   // Is the wrap-around scenario (e.g. Nov→Feb)?
   const isWrapAround = startMonth * 100 + startDay > endMonth * 100 + endDay
 
-  // FIX: usa enabled ?? false per il rendering — mentre è null (loading) mostra false
+  // FIX: use enabled ?? false for rendering - while it is null (loading), show false
   const enabledDisplay = enabled ?? false
 
   const selectStyle = {
@@ -1001,7 +1001,7 @@ export default function TemperaturePage() {
         </div>
 
         {/* ── Blackout Period Card ──────────────────────── */}
-        {/* FIX: onStatusLoad imposta il banner al caricamento se il blackout è attivo */}
+        {/* FIX: onStatusLoad sets the banner on load if blackout is active */}
         <BlackoutCard
           showToast={showToast}
           onStatusLoad={(blocked, reason) => {

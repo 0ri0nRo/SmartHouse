@@ -55,7 +55,7 @@ self.addEventListener('activate', event => {
           })
         );
       }),
-      // Prendi il controllo di tutte le pagine
+      // Take control of all pages
       self.clients.claim()
     ]).then(() => {
       console.log('✅ Service Worker: Activation complete');
@@ -72,7 +72,7 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // Controlla se è una delle nostre API
+  // Check whether this is one of our APIs
   const isAPI = API_PATTERNS.some(pattern => url.pathname.includes(pattern));
   
   if (isAPI) {
@@ -94,7 +94,7 @@ async function handleAPIRequest(request) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      // Salva la risposta in cache con timestamp
+      // Save the response in cache with a timestamp
       const responseClone = networkResponse.clone();
       const responseWithTimestamp = await addTimestampToResponse(responseClone);
       await cache.put(request, responseWithTimestamp);
@@ -122,7 +122,7 @@ async function handleAPIRequest(request) {
       }
     }
     
-    // Fallback: risposta di errore personalizzata
+    // Fallback: custom error response
     return createFallbackResponse(request.url);
   }
 }
@@ -161,13 +161,13 @@ async function addTimestampToResponse(response) {
   });
 }
 
-// Controlla se i dati in cache sono scaduti
+// Check whether cached data is expired
 function isCacheExpired(timestamp) {
   if (!timestamp) return true;
   return Date.now() - timestamp > CACHE_EXPIRY;
 }
 
-// Crea una risposta di fallback quando tutto fallisce
+// Create a fallback response when everything fails
 function createFallbackResponse(url) {
   let fallbackData = {
     error: true,
@@ -219,7 +219,7 @@ self.addEventListener('message', event => {
   }
 });
 
-// Log quando il Service Worker è pronto
+// Log when the Service Worker is ready
 self.addEventListener('activate', () => {
   console.log('🏠 Smart Home Service Worker is ready!');
 });

@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from thermostat_daemon import ThermostatDaemon
 import threading
 
-# Carica le variabili d'ambiente dal file .env
+# Load environment variables from the .env file
 load_dotenv()
 
 def main():

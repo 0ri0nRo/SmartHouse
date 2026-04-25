@@ -741,8 +741,8 @@ function CredentialsTab({ isMobile }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
         {[
-          { title: 'Username più usati', items: data.top_usernames, key: 'username', color: '#60a5fa' },
-          { title: 'Password più usate', items: data.top_passwords, key: 'password', color: '#f97316' },
+          { title: 'Most used usernames', items: data.top_usernames, key: 'username', color: '#60a5fa' },
+          { title: 'Most used passwords', items: data.top_passwords, key: 'password', color: '#f97316' },
         ].map(({ title, items, key, color }) => (
           <div key={title} className="card">
             <div className="card-header">
@@ -1176,7 +1176,7 @@ function MapTab({ isMobile }) {
     api.geoip(100).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }, [])
 
-  // Init Leaflet map quando il container è pronto e i dati ci sono
+  // Initialize the Leaflet map when the container is ready and data is available
   useEffect(() => {
     if (!data || !mapRef.current) return
     if (typeof window.L === 'undefined') return

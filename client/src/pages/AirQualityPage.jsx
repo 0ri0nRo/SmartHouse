@@ -581,10 +581,10 @@ export default function AirQualityPage() {
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '0.625rem', marginBottom: '1rem',
         }}>
-          <MetricCard label="AQI attuale"   value={latestAQI.toFixed(1)} sub="Ultima rilevazione" color={aqiColor(latestAQI)} />
-          <MetricCard label="Picco max"     value={peakAQI?.toFixed(1) ?? '—'} sub="Oggi" color={peakAQI != null ? aqiColor(peakAQI) : undefined} />
-          <MetricCard label="Picco min"     value={minAQI?.toFixed(1)  ?? '—'} sub="Oggi" color={minAQI  != null ? aqiColor(minAQI)  : undefined} />
-          <MetricCard label="Media mensile" value={monthAvg ?? '—'} sub={`${MONTHS[histMonth - 1]} ${histYear}`} />
+          <MetricCard label="Current AQI"   value={latestAQI.toFixed(1)} sub="Latest reading" color={aqiColor(latestAQI)} />
+          <MetricCard label="Peak max"      value={peakAQI?.toFixed(1) ?? '—'} sub="Today" color={peakAQI != null ? aqiColor(peakAQI) : undefined} />
+          <MetricCard label="Peak min"      value={minAQI?.toFixed(1)  ?? '—'} sub="Today" color={minAQI  != null ? aqiColor(minAQI)  : undefined} />
+          <MetricCard label="Monthly avg"   value={monthAvg ?? '—'} sub={`${MONTHS[histMonth - 1]} ${histYear}`} />
         </div>
       )}
 

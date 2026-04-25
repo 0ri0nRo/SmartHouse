@@ -20,24 +20,24 @@ class TrainScraper:
         if response.status_code == 200:
             return response.text
         else:
-            raise Exception(f"Errore nella richiesta: {response.status_code}")
+            raise Exception(f"Request error: {response.status_code}")
 
     def parse_trains(self, station_name):
         """
-        Estrae i treni che fermano in una determinata stazione.
+        Extracts the trains that stop at a given station.
 
         Args:
         station_name (str): Il nome della stazione di interesse.
 
         Returns:
-        dict: Un dizionario contenente i numeri dei treni come chiavi e le informazioni sui treni come valori.
+        dict: A dictionary containing train numbers as keys and train information as values.
         """
         html_content = self.fetch_data()
         soup = BeautifulSoup(html_content, 'html.parser')
 
         trains = {}
 
-        # Selezioniamo tutte le righe che contengono i treni
+        # Select all rows containing trains
         rows = soup.select('tbody tr')
 
         for row in rows:
@@ -73,20 +73,20 @@ class TrainScraper:
         return trains
 
     def save_trains_to_db(self, trains):
-        """Salva i treni nel database."""
+        """Save trains to the database."""
         try:
-            # Connessione al database
+            # Database connection
             connection = psycopg2.connect(**self.db_config)
             cursor = connection.cursor()
 
             now = datetime.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-            # Cancella i treni del giorno precedente
+            # Delete the previous day's trains
             cursor.execute("DELETE FROM trains WHERE timestamp < %s", (today_start,))
             connection.commit()
 
-            # Query per inserire i treni
+            # Query to insert trains
             query = """
             INSERT INTO trains (train_number, destination, time, delay, platform, stops, timestamp)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -104,9 +104,9 @@ class TrainScraper:
                 cursor.execute(query, values)
 
             connection.commit()
-            print("Treni inseriti nel database.")
+            print("Trains inserted into the database.")
             cursor.close()
             connection.close()
         
         except Error as e:
-            print(f"Errore durante l'inserimento dei dati dei treni: {e}")
+            print(f"Error inserting train data: {e}")

@@ -955,7 +955,7 @@ def get_attacker_profile(ip: str):
     ip_sessions = [s for s in sessions.values() if s["src_ip"] == ip]
 
     if not ip_sessions:
-        return jsonify({"error": f"Nessuna attività trovata per IP {ip}"}), 404
+        return jsonify({"error": f"No activity found for IP {ip}"}), 404
 
     all_commands:    list[dict] = []
     all_credentials: list[dict] = []

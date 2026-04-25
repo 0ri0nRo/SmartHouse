@@ -18,10 +18,10 @@ class TodolistService:
                 'store': store,
                 'timestamp': timestamp,
                 'priority': priority,
-                'purchased': False,  # Inizialmente non acquistato
+                'purchased': False,  # Initially not purchased
                 'date_added': datetime.now().isoformat(),
-                'purchase_date': None,  # Sarà impostato quando acquistato
-                'inCart': False  # Compatibilità con il frontend
+                'purchase_date': None,  # Will be set when purchased
+                'inCart': False  # Frontend compatibility
             }
             
             return self.mongo.add_document(item_doc)
@@ -33,11 +33,11 @@ class TodolistService:
     def read_current_items(self):
         """Reads current (not purchased) items"""
         try:
-            # Filtra solo gli item non ancora acquistati
+            # Filter only items that have not been purchased yet
             filter_query = {'purchased': {'$ne': True}}
             items = self.mongo.read_documents(filter_query)
             
-            # Converti ObjectId a stringa per il frontend
+            # Convert ObjectId to string for the frontend
             for item in items:
                 if '_id' in item:
                     item['id'] = str(item['_id'])
@@ -99,7 +99,7 @@ class TodolistService:
             update_data = {
                 'purchased': True,
                 'purchase_date': datetime.now().isoformat(),
-                'inCart': True  # Compatibilità frontend
+                'inCart': True  # Frontend compatibility
             }
             
             # Aggiungi dati aggiuntivi se presenti
@@ -127,7 +127,7 @@ class TodolistService:
             update_data = {
                 'purchased': False,
                 'purchase_date': None,
-                'inCart': False  # Compatibilità frontend
+                'inCart': False  # Frontend compatibility
             }
             
             result = self.mongo.update_document(
@@ -254,7 +254,7 @@ class TodolistService:
     def get_frequent_items(self, limit=10):
         """Get most frequently purchased items"""
         try:
-            # Usa aggregation per contare gli item più frequenti
+            # Use aggregation to count the most frequent items
             pipeline = [
                 {'$match': {'purchased': True}},
                 {'$group': {

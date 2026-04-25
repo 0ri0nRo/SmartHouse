@@ -1,6 +1,6 @@
 """
 Activity Routes
-API endpoints per il sistema di monitoraggio attività
+API endpoints for the activity monitoring system
 """
 
 from flask import Blueprint, jsonify, request, render_template

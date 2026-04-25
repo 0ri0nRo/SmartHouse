@@ -1,14 +1,95 @@
 from flask import Blueprint, jsonify, render_template, request
-from datetime import datetime
+from datetime import datetime, timezone
+from contextlib import contextmanager
+import json
 from models.database import handle_db_error
 from services.sensor_service import SensorService
 from config.settings import get_config
 from client.PostgresClient import PostgresHandler
+import psycopg2
+import psycopg2.extras
 import requests
+import logging
 
 sensor_bp = Blueprint('sensor', __name__)
 config = get_config()
 sensor_service = SensorService(config['DB_CONFIG'])
+logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def get_conn():
+    """Open a DB connection for sensor map CRUD APIs."""
+    conn = psycopg2.connect(
+        **config['DB_CONFIG'],
+        cursor_factory=psycopg2.extras.RealDictCursor,
+    )
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def ensure_sensor_map_tables():
+    """Create tables needed by the sensor floorplan APIs if they are missing."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sensors (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(120) NOT NULL,
+                    type VARCHAR(40) NOT NULL DEFAULT 'temp_hum',
+                    room_id VARCHAR(40) DEFAULT '',
+                    room_name VARCHAR(120) DEFAULT '',
+                    topic VARCHAR(255) DEFAULT '',
+                    x DOUBLE PRECISION NOT NULL DEFAULT 50,
+                    y DOUBLE PRECISION NOT NULL DEFAULT 50,
+                    temperature DOUBLE PRECISION,
+                    humidity DOUBLE PRECISION,
+                    last_seen TIMESTAMPTZ,
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+
+            # Keep compatibility with existing installations where the table already exists.
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_id VARCHAR(40) DEFAULT '';")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_name VARCHAR(120) DEFAULT '';")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS topic VARCHAR(255) DEFAULT '';")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS x DOUBLE PRECISION DEFAULT 50;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS y DOUBLE PRECISION DEFAULT 50;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS temperature DOUBLE PRECISION;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS humidity DOUBLE PRECISION;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;")
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sensor_readings (
+                    id SERIAL PRIMARY KEY,
+                    sensor_id INTEGER REFERENCES sensors(id) ON DELETE CASCADE,
+                    temperature DOUBLE PRECISION,
+                    humidity DOUBLE PRECISION,
+                    extra JSONB DEFAULT '{}'::jsonb,
+                    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                );
+            """)
+
+            cur.execute("ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS sensor_id INTEGER REFERENCES sensors(id) ON DELETE CASCADE;")
+            cur.execute("ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS temperature DOUBLE PRECISION;")
+            cur.execute("ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS humidity DOUBLE PRECISION;")
+            cur.execute("ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS extra JSONB DEFAULT '{}'::jsonb;")
+            cur.execute("ALTER TABLE sensor_readings ADD COLUMN IF NOT EXISTS recorded_at TIMESTAMPTZ DEFAULT NOW();")
+
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sensors_active ON sensors(active);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_sensor_readings_sensor_time ON sensor_readings(sensor_id, recorded_at DESC);")
+        conn.commit()
+
+
+try:
+    ensure_sensor_map_tables()
+except Exception as e:
+    logger.exception(f"Unable to initialize sensor map tables: {e}")
 
 
 @sensor_bp.route('/api_sensors')
@@ -241,7 +322,7 @@ def api_thermostat_on():
     try:
         r = requests.get(f"http://{SHELLY_IP}/relay/0?turn=on", timeout=3)
         if r.status_code != 200:
-            return jsonify({"status": "error", "message": "Errore Shelly"}), 500
+            return jsonify({"status": "error", "message": "Shelly error"}), 500
     except requests.RequestException as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -258,7 +339,7 @@ def api_thermostat_off():
     try:
         r = requests.get(f"http://{SHELLY_IP}/relay/0?turn=off", timeout=3)
         if r.status_code != 200:
-            return jsonify({"status": "error", "message": "Errore Shelly"}), 500
+            return jsonify({"status": "error", "message": "Shelly error"}), 500
     except requests.RequestException as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -272,7 +353,7 @@ def api_thermostat_status():
         r = requests.get(f"http://{SHELLY_IP}/relay/0", timeout=3)
 
         if r.status_code != 200:
-            return jsonify({"error": "Errore Shelly"}), 500
+            return jsonify({"error": "Shelly error"}), 500
 
         data = r.json()
         return jsonify({"ison": data.get("ison")}), 200
@@ -332,7 +413,7 @@ def debug_boiler_status():
 @handle_db_error
 def api_get_boiler_blackout():
     """
-    Restituisce la configurazione corrente del periodo di blackout caldaia.
+    Returns the current boiler blackout period configuration.
 
     Response 200:
     {
@@ -343,7 +424,7 @@ def api_get_boiler_blackout():
         "end_day":     int,
         "reason":      str,
         "updated_at":  str | null,
-        "currently_blocked": bool   // True se oggi siamo nel periodo bloccato
+        "currently_blocked": bool   // True if today is within the blocked period
     }
     """
     cfg = sensor_service.db.get_boiler_blackout()
@@ -356,7 +437,7 @@ def api_get_boiler_blackout():
 @handle_db_error
 def api_set_boiler_blackout():
     """
-    Aggiorna la configurazione del periodo di blackout caldaia.
+    Updates the boiler blackout period configuration.
 
     Body JSON atteso:
     {
@@ -365,7 +446,7 @@ def api_set_boiler_blackout():
         "start_day":   int,   // 1-31
         "end_month":   int,   // 1-12
         "end_day":     int,   // 1-31
-        "reason":      str    // opzionale
+        "reason":      str    // optional
     }
     """
     data = request.get_json()
@@ -373,13 +454,13 @@ def api_set_boiler_blackout():
     if not data:
         return jsonify({'error': 'Missing JSON body'}), 400
 
-    # Validazione campi obbligatori
+    # Validate required fields
     required = ['enabled', 'start_month', 'start_day', 'end_month', 'end_day']
     missing = [f for f in required if f not in data]
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
-    # Validazione valori
+    # Validate values
     try:
         enabled     = bool(data['enabled'])
         start_month = int(data['start_month'])
@@ -408,7 +489,7 @@ def api_set_boiler_blackout():
     if not success:
         return jsonify({'error': 'Database error saving blackout configuration'}), 500
 
-    # Ritorna la configurazione aggiornata con lo stato corrente del blocco
+    # Return the updated configuration with the current block state
     cfg = sensor_service.db.get_boiler_blackout()
     blocked, _ = sensor_service.db.is_in_blackout_period()
     cfg['currently_blocked'] = blocked
@@ -445,7 +526,7 @@ def api_shelly_schedules():
 
 @sensor_bp.route('/api/shelly/schedule/create', methods=['POST'])
 def api_shelly_schedule_create():
-    """Crea un nuovo schedule sullo Shelly — bloccato durante il periodo di blackout."""
+    """Create a new Shelly schedule - blocked during the blackout period."""
     data = request.json
     timespec = data.get('timespec')
     is_on    = data.get('is_on', True)
@@ -453,7 +534,7 @@ def api_shelly_schedule_create():
     if not timespec:
         return jsonify({'error': 'Missing timespec parameter'}), 400
 
-    # ── Blackout check: blocca solo i nuovi schedule di accensione ──────────
+    # ── Blackout check: only block new ON schedules ──────────
     if is_on:
         blocked, reason = sensor_service.db.is_in_blackout_period()
         if blocked:
@@ -480,7 +561,7 @@ def api_shelly_schedule_create():
 
 @sensor_bp.route('/api/shelly/schedule/delete', methods=['POST'])
 def api_shelly_schedule_delete():
-    """Elimina uno schedule dallo Shelly"""
+    """Delete a schedule from Shelly"""
     data = request.json
     schedule_id = data.get("id")
 
@@ -498,7 +579,7 @@ def api_shelly_schedule_delete():
 @sensor_bp.route('/api/thermostat/status/full', methods=['GET'])
 @handle_db_error
 def api_thermostat_status_full():
-    """API per ottenere lo stato completo del termostato."""
+    """API to get the full thermostat status."""
     status = sensor_service.get_thermostat_status_full()
     if status is None:
         return jsonify({'error': 'Error retrieving thermostat status'}), 500
@@ -509,7 +590,7 @@ def api_thermostat_status_full():
 @handle_db_error
 def api_thermostat_manual_control():
     """
-    API per eseguire manualmente un ciclo di controllo del termostato.
+    API to manually run a thermostat control cycle.
     """
     result = sensor_service.thermostat_control_logic()
     return jsonify(result), 200
@@ -518,7 +599,7 @@ def api_thermostat_manual_control():
 @sensor_bp.route('/api/thermostat/sync', methods=['POST'])
 @handle_db_error
 def api_thermostat_sync():
-    """API per sincronizzare manualmente lo stato con Shelly."""
+    """API to manually sync the state with Shelly."""
     success = sensor_service.sync_boiler_with_shelly()
 
     if success:
@@ -536,7 +617,7 @@ def api_thermostat_sync():
 @sensor_bp.route('/api/thermostat/log', methods=['GET'])
 @handle_db_error
 def api_thermostat_log():
-    """API per ottenere il log delle azioni del termostato."""
+    """API to get the thermostat action log."""
     limit = request.args.get('limit', 50, type=int)
     log_entries = sensor_service.db.get_thermostat_log(limit)
     return jsonify(log_entries), 200
@@ -546,8 +627,8 @@ def api_thermostat_log():
 @handle_db_error
 def api_boiler_manual_control():
     """
-    API per controllo manuale della caldaia (bypass del termostato).
-    Il blackout viene verificato solo se si tenta di ACCENDERE.
+    API for manual boiler control (thermostat bypass).
+    The blackout is checked only when attempting to TURN ON.
     """
     data = request.get_json()
 
@@ -566,10 +647,10 @@ def api_boiler_manual_control():
                 'error': f'Boiler is disabled during this period: {reason}'
             }), 403
 
-    # Disabilita il termostato per evitare conflitti
+    # Disable the thermostat to avoid conflicts
     sensor_service.set_thermostat_enabled(False)
 
-    # Controlla fisicamente lo Shelly
+    # Physically control the Shelly
     shelly_success = sensor_service.control_shelly_relay(turn_on)
 
     if not shelly_success:
@@ -578,10 +659,10 @@ def api_boiler_manual_control():
             'message': 'Failed to control Shelly relay'
         }), 500
 
-    # Aggiorna stato nel DB
+    # Update state in the DB
     sensor_service.set_boiler_status(turn_on)
 
-    # Log dell'azione manuale
+    # Log the manual action
     sensor_service.db.log_thermostat_action(
         action="MANUAL_CONTROL",
         boiler_status=turn_on
@@ -592,3 +673,269 @@ def api_boiler_manual_control():
         'message': f'Boiler turned {"on" if turn_on else "off"} manually',
         'thermostat_disabled': True
     }), 200
+
+# ── Helper ────────────────────────────────────────────────────
+def row_to_dict(row):
+    if row is None:
+        return None
+    d = dict(row)
+    for k, v in d.items():
+        if isinstance(v, datetime):
+            d[k] = v.isoformat()
+    return d
+ 
+ 
+# ── GET /api/sensors ──────────────────────────────────────────
+@sensor_bp.route('/sensors', methods=['GET'])
+@sensor_bp.route('/api/sensors', methods=['GET'])
+def list_sensors():
+    """Return all sensors with their latest reading."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT * FROM sensors
+                WHERE active = TRUE
+                ORDER BY id
+            """)
+            rows = cur.fetchall()
+    return jsonify([row_to_dict(r) for r in rows])
+ 
+ 
+# ── POST /api/sensors ─────────────────────────────────────────
+@sensor_bp.route('/sensors', methods=['POST'])
+@sensor_bp.route('/api/sensors', methods=['POST'])
+def create_sensor():
+    """Create a new sensor with a position on the map."""
+    body = request.get_json(silent=True) or {}
+    name     = body.get('name', '').strip()
+    type_    = body.get('type', 'temp_hum')
+    room_id  = body.get('room_id', '')
+    topic    = body.get('topic', '')
+
+    try:
+        x = float(body.get('x', 50))
+        y = float(body.get('y', 50))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'x e y devono essere numeri validi'}), 400
+ 
+    if not name:
+        return jsonify({'error': 'name richiesto'}), 400
+ 
+    # Map room_id -> room_name
+    ROOM_NAMES = {
+        'camera1':   'Camera da letto',
+        'ufficio':   'Ufficio',
+        'cucina':    'Cucina',
+        'sala':      'Sala da pranzo',
+        'bagno':     'Bagno',
+        'camera2':   'Camera da letto 2',
+        'corridoio': 'Hallway',
+    }
+    room_name = ROOM_NAMES.get(room_id, '')
+ 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO sensors (name, type, room_id, room_name, topic, x, y)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            """, (name, type_, room_id, room_name, topic, x, y))
+            conn.commit()
+            row = cur.fetchone()
+ 
+    return jsonify(row_to_dict(row)), 201
+ 
+ 
+# ── GET /api/sensors/<id> ─────────────────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>', methods=['GET'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['GET'])
+def get_sensor(sensor_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM sensors WHERE id = %s", (sensor_id,))
+            row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'non trovato'}), 404
+    return jsonify(row_to_dict(row))
+ 
+ 
+# ── PUT /api/sensors/<id> ─────────────────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>', methods=['PUT'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['PUT'])
+def update_sensor(sensor_id):
+    """Aggiorna metadati sensore (nome, tipo, stanza, topic)."""
+    body = request.get_json()
+ 
+    ROOM_NAMES = {
+        'camera1': 'Camera da letto', 'ufficio': 'Ufficio',
+        'cucina': 'Cucina', 'sala': 'Sala da pranzo',
+        'bagno': 'Bagno', 'camera2': 'Camera da letto 2',
+        'corridoio': 'Hallway',
+    }
+    room_id   = body.get('room_id', '')
+    room_name = ROOM_NAMES.get(room_id, '')
+ 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE sensors
+                SET name      = COALESCE(%s, name),
+                    type      = COALESCE(%s, type),
+                    room_id   = %s,
+                    room_name = %s,
+                    topic     = COALESCE(%s, topic)
+                WHERE id = %s
+                RETURNING *
+            """, (
+                body.get('name'), body.get('type'),
+                room_id, room_name,
+                body.get('topic'), sensor_id
+            ))
+            conn.commit()
+            row = cur.fetchone()
+ 
+    if not row:
+        return jsonify({'error': 'non trovato'}), 404
+    return jsonify(row_to_dict(row))
+ 
+ 
+# ── PATCH /api/sensors/<id>/position ─────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>/position', methods=['PATCH'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>/position', methods=['PATCH'])
+def update_position(sensor_id):
+    """Update only the X/Y position on the map (drag & drop)."""
+    body = request.get_json(silent=True) or {}
+    try:
+        x = float(body.get('x', 0))
+        y = float(body.get('y', 0))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'x e y devono essere numeri validi'}), 400
+ 
+    # Clamp 0-100
+    x = max(0.0, min(100.0, x))
+    y = max(0.0, min(100.0, y))
+ 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE sensors SET x = %s, y = %s WHERE id = %s RETURNING id, x, y
+            """, (x, y, sensor_id))
+            conn.commit()
+            row = cur.fetchone()
+ 
+    if not row:
+        return jsonify({'error': 'non trovato'}), 404
+    return jsonify(row_to_dict(row))
+ 
+ 
+# ── DELETE /api/sensors/<id> ──────────────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>', methods=['DELETE'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['DELETE'])
+def delete_sensor(sensor_id):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE sensors SET active = FALSE WHERE id = %s RETURNING id
+            """, (sensor_id,))
+            conn.commit()
+            row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'non trovato'}), 404
+    return jsonify({'ok': True, 'id': sensor_id})
+ 
+ 
+# ── POST /api/sensors/<id>/reading ───────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>/reading', methods=['POST'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>/reading', methods=['POST'])
+def post_reading(sensor_id):
+    """
+    Endpoint chiamato dal Raspberry Pi / MQTT bridge per aggiornare
+    temperature/humidity and save the historical reading.
+ 
+    Body JSON:
+    {
+        "temperature": 22.5,
+        "humidity": 58.0,
+        "extra": {}   // optional
+    }
+    """
+    body = request.get_json()
+    temp     = body.get('temperature')
+    humidity = body.get('humidity')
+    extra    = body.get('extra', {})
+    now      = datetime.now(timezone.utc)
+ 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # Update sensor live values
+            cur.execute("""
+                UPDATE sensors
+                SET temperature = COALESCE(%s, temperature),
+                    humidity    = COALESCE(%s, humidity),
+                    last_seen   = %s
+                WHERE id = %s AND active = TRUE
+                RETURNING id
+            """, (temp, humidity, now, sensor_id))
+ 
+            if cur.rowcount == 0:
+                conn.rollback()
+                return jsonify({'error': 'sensore non trovato'}), 404
+ 
+            # Insert historical reading
+            cur.execute("""
+                INSERT INTO sensor_readings (sensor_id, temperature, humidity, extra, recorded_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (sensor_id, temp, humidity, json.dumps(extra), now))
+ 
+            conn.commit()
+ 
+    return jsonify({'ok': True, 'sensor_id': sensor_id, 'recorded_at': now.isoformat()})
+ 
+ 
+# ── GET /api/sensors/<id>/history ────────────────────────────
+@sensor_bp.route('/sensors/<int:sensor_id>/history', methods=['GET'])
+@sensor_bp.route('/api/sensors/<int:sensor_id>/history', methods=['GET'])
+def get_history(sensor_id):
+    """
+    Restituisce le ultime N letture storiche.
+    Query params: ?limit=100&hours=24
+    """
+    limit = min(int(request.args.get('limit', 100)), 1000)
+    hours = int(request.args.get('hours', 24))
+ 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, temperature, humidity, extra, recorded_at
+                FROM sensor_readings
+                WHERE sensor_id = %s
+                  AND recorded_at >= NOW() - INTERVAL '%s hours'
+                ORDER BY recorded_at DESC
+                LIMIT %s
+            """, (sensor_id, hours, limit))
+            rows = cur.fetchall()
+ 
+    return jsonify([row_to_dict(r) for r in reversed(rows)])
+ 
+ 
+# ── GET /api/sensors/summary ──────────────────────────────────
+@sensor_bp.route('/sensors/summary', methods=['GET'])
+@sensor_bp.route('/api/sensors/summary', methods=['GET'])
+def sensors_summary():
+    """Aggregated statistics for the dashboard."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    COUNT(*) FILTER (WHERE active)                 AS total,
+                    COUNT(*) FILTER (WHERE active AND last_seen > NOW() - INTERVAL '5 min') AS online,
+                    ROUND(AVG(temperature)::numeric, 1)            AS avg_temp,
+                    ROUND(AVG(humidity)::numeric, 1)               AS avg_hum,
+                    MAX(temperature)                               AS max_temp,
+                    MIN(temperature)                               AS min_temp,
+                    COUNT(*) FILTER (WHERE temperature > 28 OR humidity > 75) AS alerts
+                FROM sensors
+                WHERE active = TRUE
+            """)
+            row = cur.fetchone()
+    return jsonify(row_to_dict(row))
