@@ -1100,8 +1100,6 @@ export default function FloorplanPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
       >
-        <KpiCard label="Total" icon="📡" value={sensors.length} unit="" color="var(--accent)" />
-        <KpiCard label="Alerts" icon="⚠️" value={alerts.length} unit="" color={alerts.length > 0 ? '#ef4444' : '#10b981'} />
         {avgTemp && <KpiCard label="Avg Temp" icon="🌡️" value={avgTemp} unit="°C" color={parseFloat(avgTemp) > 26 ? '#ef4444' : '#f59e0b'} />}
         {avgHum && <KpiCard label="Avg Humidity" icon="💧" value={avgHum} unit="%" color={parseFloat(avgHum) > 70 ? '#ef4444' : '#2563eb'} />}
         {hottest && <KpiCard label="Warmest" icon="🔥" value={hottest.temperature.toFixed(1)} unit="°C" color="#ef4444" trend={`@ ${hottest.name}`} />}
