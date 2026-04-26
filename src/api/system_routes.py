@@ -9,6 +9,7 @@ from models.database import handle_db_error
 from services.ssh_service import SSHService
 from send_email import EmailSender, send_backup_email
 from config.settings import get_config
+from utils.redis_cache import cache_json_response
 
 system_bp   = Blueprint('system', __name__)
 config      = get_config()
@@ -142,6 +143,7 @@ def _validate_port(value, default: int = None) -> int:
 # ── Stats ──────────────────────────────────────────────────
 @system_bp.route('/api_raspberry_pi_stats')
 @handle_db_error
+@cache_json_response(ttl_seconds=10)
 def api_raspi_stats():
     try:
         try:
@@ -276,6 +278,7 @@ def api_shutdown():
 
 @system_bp.route('/api/system/throttle')
 @handle_db_error
+@cache_json_response(ttl_seconds=15)
 def api_throttle():
     try:
         r   = _run_host_cmd(['vcgencmd', 'get_throttled'])
@@ -292,6 +295,7 @@ def api_throttle():
 # ── Services ───────────────────────────────────────────────
 @system_bp.route('/api/services')
 @handle_db_error
+@cache_json_response(ttl_seconds=30)
 def api_services():
     services, errors = [], []
     for svc in sorted(ALLOWED_SERVICES):
@@ -331,6 +335,7 @@ def api_service_action(service):
 # ── Processes ──────────────────────────────────────────────
 @system_bp.route('/api/processes')
 @handle_db_error
+@cache_json_response(ttl_seconds=15)
 def api_processes():
     procs = []
     for p in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
@@ -371,6 +376,7 @@ def api_kill_process(pid):
 # ── Network ────────────────────────────────────────────────
 @system_bp.route('/api/network')
 @handle_db_error
+@cache_json_response(ttl_seconds=15)
 def api_network():
     counters  = psutil.net_io_counters(pernic=True)
     addrs     = psutil.net_if_addrs()
@@ -395,6 +401,7 @@ def api_network():
 # ── Logs ───────────────────────────────────────────────────
 @system_bp.route('/api/logs/system')
 @handle_db_error
+@cache_json_response(ttl_seconds=20)
 def api_logs_system():
     lines = min(int(request.args.get('lines', 50)), 200)
     try:
@@ -406,6 +413,7 @@ def api_logs_system():
 
 @system_bp.route('/api/logs/auth')
 @handle_db_error
+@cache_json_response(ttl_seconds=20)
 def api_logs_auth():
     try:
         r = _run_host_cmd(['journalctl', '-u', 'ssh', '-n', '30', '--no-pager', '-o', 'short-iso'])
@@ -453,5 +461,6 @@ def api_upgrade_start():
 
 @system_bp.route('/api/system/upgrade/status')
 @handle_db_error
+@cache_json_response(ttl_seconds=5)
 def api_upgrade_status():
     return jsonify(_upgrade_state)

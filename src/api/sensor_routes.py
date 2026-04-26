@@ -10,6 +10,7 @@ import psycopg2
 import psycopg2.extras
 import requests
 import logging
+from utils.redis_cache import cache_json_response, invalidate_cached_paths
 
 sensor_bp = Blueprint('sensor', __name__)
 config = get_config()
@@ -94,6 +95,7 @@ except Exception as e:
 
 @sensor_bp.route('/api_sensors')
 @handle_db_error
+@cache_json_response(ttl_seconds=30)
 def api_sensors():
     """API to get sensor data with statistics."""
     data = sensor_service.get_hourly_today()
@@ -137,6 +139,7 @@ def api_sensors():
 
 @sensor_bp.route('/api/today_temperature', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=60)
 def api_today_temperature():
     """API for today's hourly temperature."""
     return jsonify(sensor_service.get_today_hourly_temperature())
@@ -144,6 +147,7 @@ def api_today_temperature():
 
 @sensor_bp.route('/api/today_humidity', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=60)
 def api_today_humidity():
     """API for today's hourly humidity."""
     return jsonify(sensor_service.get_today_hourly_humidity())
@@ -151,6 +155,7 @@ def api_today_humidity():
 
 @sensor_bp.route('/api/monthly_temperature')
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_monthly_temperature():
     """API for monthly temperature data."""
     return jsonify(sensor_service.get_monthly_temperature_data())
@@ -158,6 +163,7 @@ def api_monthly_temperature():
 
 @sensor_bp.route('/api/monthly_average_temperature')
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_monthly_avg_temp_default():
     """API for monthly average temperature (current year)."""
     return jsonify(sensor_service.get_monthly_average_temperature())
@@ -165,6 +171,7 @@ def api_monthly_avg_temp_default():
 
 @sensor_bp.route('/api/monthly_average_temperature/<int:year>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_monthly_avg_temp_by_year(year):
     """API for monthly average temperature for a specific year."""
     if year < 1900 or year > datetime.now().year:
@@ -174,6 +181,7 @@ def api_monthly_avg_temp_by_year(year):
 
 @sensor_bp.route('/api/daily_temperature/<int:month>/', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_daily_temp(month):
     """API for daily temperature of a specific month."""
     if month < 1 or month > 12:
@@ -186,6 +194,7 @@ def api_daily_temp(month):
 
 @sensor_bp.route('/api/monthly_average_temperature/<int:month>/<int:year>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_daily_temp_by_month_year(month, year):
     """API for daily temperature of a specific month/year."""
     if month < 1 or month > 12:
@@ -200,6 +209,7 @@ def api_daily_temp_by_month_year(month, year):
 
 @sensor_bp.route('/api/temperature_average/<start_datetime>/<end_datetime>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=600)
 def api_temperature_average(start_datetime, end_datetime):
     """API for average temperature in a date range."""
     try:
@@ -216,6 +226,7 @@ def api_temperature_average(start_datetime, end_datetime):
 
 @sensor_bp.route('/api/humidity_average/<start_datetime>/<end_datetime>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=600)
 def api_humidity_average(start_datetime, end_datetime):
     """API for average humidity in a date range."""
     try:
@@ -231,6 +242,7 @@ def api_humidity_average(start_datetime, end_datetime):
 
 
 @sensor_bp.route('/last_temp', methods=['GET'])
+@cache_json_response(ttl_seconds=30)
 def last_temp():
     """API for the last recorded temperature."""
     try:
@@ -246,6 +258,7 @@ def last_temp():
 
 @sensor_bp.route('/api/monthly_average_humidity/<int:month>/<int:year>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_daily_humidity_by_month_year(month, year):
     """API for daily humidity of a specific month/year."""
     if month < 1 or month > 12:
@@ -688,6 +701,7 @@ def row_to_dict(row):
 # ── GET /api/sensors ──────────────────────────────────────────
 @sensor_bp.route('/sensors', methods=['GET'])
 @sensor_bp.route('/api/sensors', methods=['GET'])
+@cache_json_response(ttl_seconds=30)
 def list_sensors():
     """Return all sensors with their latest reading."""
     with get_conn() as conn:
@@ -742,6 +756,20 @@ def create_sensor():
             """, (name, type_, room_id, room_name, topic, x, y))
             conn.commit()
             row = cur.fetchone()
+
+    invalidate_cached_paths(
+        '/api/sensors',
+        '/sensors',
+        '/api_sensors',
+        '/api/today_temperature',
+        '/api/today_humidity',
+        '/api/monthly_temperature',
+        '/api/monthly_average_temperature',
+        '/api/monthly_average_humidity',
+        '/api/temperature_average',
+        '/api/humidity_average',
+        '/last_temp',
+    )
  
     return jsonify(row_to_dict(row)), 201
  
@@ -749,6 +777,7 @@ def create_sensor():
 # ── GET /api/sensors/<id> ─────────────────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>', methods=['GET'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['GET'])
+@cache_json_response(ttl_seconds=30)
 def get_sensor(sensor_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -756,6 +785,19 @@ def get_sensor(sensor_id):
             row = cur.fetchone()
     if not row:
         return jsonify({'error': 'non trovato'}), 404
+    invalidate_cached_paths(
+        '/api/sensors',
+        '/sensors',
+        '/api_sensors',
+        '/api/today_temperature',
+        '/api/today_humidity',
+        '/api/monthly_temperature',
+        '/api/monthly_average_temperature',
+        '/api/monthly_average_humidity',
+        '/api/temperature_average',
+        '/api/humidity_average',
+        '/last_temp',
+    )
     return jsonify(row_to_dict(row))
  
  
@@ -825,6 +867,7 @@ def update_position(sensor_id):
  
     if not row:
         return jsonify({'error': 'non trovato'}), 404
+    invalidate_cached_paths('/api/sensors', '/sensors')
     return jsonify(row_to_dict(row))
  
  
@@ -841,6 +884,19 @@ def delete_sensor(sensor_id):
             row = cur.fetchone()
     if not row:
         return jsonify({'error': 'non trovato'}), 404
+    invalidate_cached_paths(
+        '/api/sensors',
+        '/sensors',
+        '/api_sensors',
+        '/api/today_temperature',
+        '/api/today_humidity',
+        '/api/monthly_temperature',
+        '/api/monthly_average_temperature',
+        '/api/monthly_average_humidity',
+        '/api/temperature_average',
+        '/api/humidity_average',
+        '/last_temp',
+    )
     return jsonify({'ok': True, 'id': sensor_id})
  
  
@@ -888,6 +944,21 @@ def post_reading(sensor_id):
             """, (sensor_id, temp, humidity, json.dumps(extra), now))
  
             conn.commit()
+
+    invalidate_cached_paths(
+        '/api_sensors',
+        '/api/today_temperature',
+        '/api/today_humidity',
+        '/api/monthly_temperature',
+        '/api/monthly_average_temperature',
+        '/api/monthly_average_humidity',
+        '/api/temperature_average',
+        '/api/humidity_average',
+        '/last_temp',
+        '/api/sensors',
+        '/sensors',
+        '/api/sensors/summary',
+    )
  
     return jsonify({'ok': True, 'sensor_id': sensor_id, 'recorded_at': now.isoformat()})
  
@@ -895,6 +966,7 @@ def post_reading(sensor_id):
 # ── GET /api/sensors/<id>/history ────────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>/history', methods=['GET'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>/history', methods=['GET'])
+@cache_json_response(ttl_seconds=300)
 def get_history(sensor_id):
     """
     Restituisce le ultime N letture storiche.
@@ -921,6 +993,7 @@ def get_history(sensor_id):
 # ── GET /api/sensors/summary ──────────────────────────────────
 @sensor_bp.route('/sensors/summary', methods=['GET'])
 @sensor_bp.route('/api/sensors/summary', methods=['GET'])
+@cache_json_response(ttl_seconds=30)
 def sensors_summary():
     """Aggregated statistics for the dashboard."""
     with get_conn() as conn:

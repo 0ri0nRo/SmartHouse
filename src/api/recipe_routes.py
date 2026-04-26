@@ -5,6 +5,7 @@ Recipe Routes - /api/recipe/*
 from flask import Blueprint, jsonify
 from services.recipe_service import RecipeService
 import logging
+from utils.redis_cache import cache_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ _service = RecipeService()
 
 
 @recipe_bp.route("/daily", methods=["GET"])
+@cache_json_response(ttl_seconds=60 * 60 * 24)
 def get_daily_recipe():
     """
     GET /api/recipe/daily

@@ -3,6 +3,7 @@ import psycopg2
 import psycopg2.extras
 from models.database import handle_db_error
 from config.settings import get_config
+from utils.redis_cache import cache_json_response, invalidate_cached_paths
 
 # Blueprint for security system endpoints
 security_bp = Blueprint('security', __name__)
@@ -11,6 +12,7 @@ config = get_config()
 
 @security_bp.route('/security/alarm', methods=['GET', 'POST'])
 @handle_db_error
+@cache_json_response(ttl_seconds=10)
 def alarm_status():
     """
     API endpoint to manage the security alarm status.
@@ -62,6 +64,7 @@ def alarm_status():
             cur.execute("DELETE FROM alarms_status;")  # Keep only the latest entry
             cur.execute("INSERT INTO alarms_status (status) VALUES (%s);", (status,))
             conn.commit()
+            invalidate_cached_paths('/security/alarm')
             return jsonify({'message': "Status updated"}), 201
     
     finally:

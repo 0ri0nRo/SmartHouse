@@ -6,6 +6,7 @@ from client.PostgresClient import PostgresHandler
 from config.settings import get_config
 import psycopg2.extras
 import logging
+from utils.redis_cache import cache_json_response, invalidate_cached_paths
 
 # Blueprint for air quality endpoints
 air_quality_bp = Blueprint('air_quality', __name__)
@@ -20,6 +21,7 @@ last_aggregation_time = None
 
 @air_quality_bp.route('/api/air_quality', methods=['GET', 'POST'])
 @handle_db_error
+@cache_json_response(ttl_seconds=30)
 def api_air_quality():
     """
     API endpoint for managing air quality data.
@@ -88,6 +90,14 @@ def api_air_quality():
         payload = request.get_json()
         try:
             insert_res = air_quality_service.insert_record(payload)
+            invalidate_cached_paths(
+                '/api/air_quality',
+                '/api/last_air_quality_today',
+                '/api/air_quality_today',
+                '/api/gas_concentration_today',
+                '/api/air_quality_monthly',
+                '/api/air_quality_yearly',
+            )
             return jsonify({
                 'message': 'Data saved',
                 'id': insert_res['id'],
@@ -100,6 +110,7 @@ def api_air_quality():
 
 @air_quality_bp.route('/api/last_air_quality_today', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=60)
 def api_last_air_quality_today():
     """Returns the latest air quality reading recorded today."""
     conn = get_db_connection(config['DB_CONFIG'])
@@ -133,6 +144,7 @@ def api_last_air_quality_today():
 
 @air_quality_bp.route('/api/air_quality_today', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=300)
 def api_air_quality_today_simplified():
     """Returns a simplified view of today's hourly air quality index (average values)."""
     data = air_quality_service.get_daily_aggregated()
@@ -145,6 +157,7 @@ def api_air_quality_today_simplified():
 
 @air_quality_bp.route('/api/gas_concentration_today', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=300)
 def api_gas_concentration_today():
     """
     Returns today's hourly gas concentration data.
@@ -176,6 +189,7 @@ def api_gas_concentration_today():
 
 @air_quality_bp.route('/api/air_quality_monthly/<int:month>/<int:year>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=1800)
 def api_air_quality_monthly(month, year):
     """Returns daily average AQI for a given month/year."""
     conn = get_db_connection(config['DB_CONFIG'])
@@ -203,6 +217,7 @@ def api_air_quality_monthly(month, year):
 
 @air_quality_bp.route('/api/air_quality_yearly/<int:year>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=3600)
 def api_air_quality_yearly(year):
     """Returns monthly average AQI for a given year."""
     conn = get_db_connection(config['DB_CONFIG'])

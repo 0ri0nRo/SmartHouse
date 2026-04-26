@@ -3,6 +3,7 @@ import os
 from models.database import handle_db_error
 from services.expenses_gsheet import GoogleSheetExpenseManager, SheetValueFetcher
 from config.settings import get_config
+from utils.redis_cache import cache_json_response, invalidate_cached_paths
 
 # Blueprint for expense-related endpoints
 expense_bp = Blueprint('expense', __name__)
@@ -14,6 +15,7 @@ manager = GoogleSheetExpenseManager(config['CREDENTIALS_PATH'], config['SHEET_NA
 
 @expense_bp.route('/api/expenses', methods=['POST', 'GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=300)
 def api_expenses():
     """
     API endpoint to manage expenses.
@@ -43,6 +45,7 @@ def api_expenses():
                 return jsonify({"error": "Missing fields"}), 400
             
             manager.add_expense(description, date, amount, category)
+            invalidate_cached_paths('/api/expenses')
             return jsonify({"message": "Expense added"}), 201
         except ValueError as e:
             return jsonify({"error": str(e)}), 404
@@ -57,6 +60,7 @@ def api_expenses():
 
 @expense_bp.route('/api/p49', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=60)
 def api_p49():
     """
     API endpoint to fetch the value of cell P49 from a Google Sheet.

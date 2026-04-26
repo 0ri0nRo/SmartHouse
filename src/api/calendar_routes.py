@@ -13,6 +13,7 @@ from datetime import datetime, timezone, timedelta
 import os
 import pickle
 import logging
+from utils.redis_cache import cache_json_response
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ def _parse_event(event):
 # TODAY
 # =========================
 @calendar_bp.route('/api/calendar/today', methods=['GET'])
+@cache_json_response(ttl_seconds=300)
 def get_today_events():
     try:
         service = get_calendar_service()
@@ -145,6 +147,7 @@ def get_today_events():
 # WEEK
 # =========================
 @calendar_bp.route('/api/calendar/week', methods=['GET'])
+@cache_json_response(ttl_seconds=900)
 def get_week_events():
     try:
         service = get_calendar_service()

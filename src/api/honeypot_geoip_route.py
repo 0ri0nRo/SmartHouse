@@ -40,6 +40,7 @@ import time
 from collections import Counter
 
 from flask import Blueprint, jsonify, request
+from utils.redis_cache import cache_json_response
 
 try:
     import geoip2.database
@@ -211,6 +212,7 @@ def _geolocate_batch(ips: list[str]) -> dict[str, dict]:
 # ── Route ─────────────────────────────────────────────────────────
 
 @honeypot_geo_bp.route("/api/honeypot/geoip")
+@cache_json_response(ttl_seconds=1800)
 def get_geoip():
     """
     GET /api/honeypot/geoip
