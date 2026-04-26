@@ -50,6 +50,9 @@ def cache_json_response(ttl_seconds: int = 300):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            if request.method != 'GET':
+                return make_response(func(*args, **kwargs))
+
             client = get_redis_client()
             key = _cache_key()
 
