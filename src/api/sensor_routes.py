@@ -1,11 +1,10 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, request
 from datetime import datetime, timezone
 from contextlib import contextmanager
 import json
 from models.database import handle_db_error
 from services.sensor_service import SensorService
 from config.settings import get_config
-from client.PostgresClient import PostgresHandler
 import psycopg2
 import psycopg2.extras
 import requests

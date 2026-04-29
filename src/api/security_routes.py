@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request
 import psycopg2
 import psycopg2.extras
 from models.database import handle_db_error
@@ -74,11 +74,4 @@ def alarm_status():
         if conn:
             conn.close()
 
-
-# @security_bp.route('/security')
-# def page_security():
-#     """
-#     Web page to display and control the security system.
-#     """
-#     pass  # route disabled - served by React
 

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request
 from services.todolist_service import TodolistService
 from config.settings import get_config
 from bson import ObjectId
@@ -77,12 +77,6 @@ def todolist_search_by_timestamp(start_timestamp, end_timestamp):
         return jsonify(docs), 200
     except Exception as e:
         return jsonify({"message": f"Error retrieving history: {str(e)}"}), 500
-
-# @todolist_bp.route('/shopping-list', methods=['GET'])
-# def shopping_list_page():
-#     """Page to display the shopping list."""
-#     pass  # route disabled - served by React
-
 
 @todolist_bp.route('/api/shopping-list/complete/<item_id>', methods=['POST'])
 def mark_item_complete(item_id):

@@ -5,7 +5,6 @@ from .train_routes import train_bp
 from .todolist_routes import todolist_bp
 from .security_routes import security_bp
 from .system_routes import system_bp
-from .expenses_routes import expense_bp
 from .receipt_routes import receipt_bp
 from .ping_routes import ping_bp
 from .network_devices_routes import network_devices_bp
@@ -21,7 +20,6 @@ def register_blueprints(app):
     app.register_blueprint(todolist_bp)
     app.register_blueprint(security_bp)
     app.register_blueprint(system_bp)
-    app.register_blueprint(expense_bp)
     app.register_blueprint(receipt_bp)
     
     # Log dei blueprint registrati

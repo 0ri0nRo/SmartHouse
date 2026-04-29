@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Script di inizializzazione per Activity Monitor
-Esegue il setup iniziale del sistema
+Initialization script for Activity Monitor
+Runs the initial system setup
 """
 
 import sys
@@ -25,7 +25,7 @@ db_config = {
 
 def main():
     print("=" * 60)
-    print("INIZIALIZZAZIONE ACTIVITY MONITOR")
+    print("ACTIVITY MONITOR INITIALIZATION")
     print("=" * 60)
     print()
     
@@ -45,7 +45,7 @@ def main():
         
         # Ask the user for their email
         print("\n⚠️  IMPORTANT: Enter your Google email")
-        user_email = input("Email Google: ").strip()
+        user_email = input("Google email: ").strip()
         
         if user_email:
             gcal_client.set_user_email(user_email)
@@ -58,7 +58,7 @@ def main():
     except FileNotFoundError as e:
         print(f"✗ Credentials file not found: {e}")
         print("\nTo configure Google Calendar:")
-        print("1. Vai su https://console.cloud.google.com")
+        print("1. Go to https://console.cloud.google.com")
         print("2. Create a new project or select an existing one")
         print("3. Enable the Google Calendar API")
         print("4. Create OAuth 2.0 credentials")
@@ -121,7 +121,7 @@ def main():
     
     choice = input().strip().lower()
     
-    if choice == 's':
+    if choice in ('y', 's'):
         print("\nHow many days of history do you want to sync?")
         print("1. Last 7 days")
         print("2. Last 30 days")
@@ -176,20 +176,13 @@ def main():
     
     # Step 7: Summary
     print("\n" + "=" * 60)
-    print("✓ INIZIALIZZAZIONE COMPLETATA!")
+    print("✓ INITIALIZATION COMPLETED!")
     print("=" * 60)
     print("\nNext steps:")
     print("1. Start the Flask server: python app.py")
-    print("2. Open the browser: http://localhost:5000/api/activity/dashboard")
-    print("3. Use the [CODE] format in Google Calendar event titles")
+    print("2. Use the [CODE] format in Google Calendar event titles")
     print("   Example: '[L.1] Backend development'")
-    print("\nAvailable API endpoints:")
-    print("  - GET  /api/activity/categories")
-    print("  - POST /api/activity/sync")
-    print("  - GET  /api/activity/stats/daily?date=YYYY-MM-DD")
-    print("  - GET  /api/activity/stats/weekly?year=YYYY&week=N")
-    print("  - GET  /api/activity/stats/monthly?year=YYYY&month=M")
-    print("  - GET  /api/activity/uncategorized")
+    print("\nNote: Activity API routes have been removed from this deployment.")
     print()
 
 

@@ -13,7 +13,6 @@ pytz==2024.1
 gunicorn==23.0.0
 
 # Database
-mysql-connector-python==9.0.0
 psycopg2-binary==2.9.9
 pymongo[srv]==4.5.0
 
@@ -37,7 +36,6 @@ redis==4.6.0
 python-dotenv==1.0.1
 requests==2.31.0
 beautifulsoup4==4.12.2
-lxml==4.9.3
 packaging==24.1
 zipp==3.20.0
 importlib_metadata==8.2.0
@@ -46,7 +44,6 @@ pyserial==3.5
 # Realtime
 flask-socketio==5.3.6
 python-socketio==5.8.0
-eventlet==0.36.1
 
 # Test
 pytest==7.4.2

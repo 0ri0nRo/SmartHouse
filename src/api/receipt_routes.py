@@ -2,7 +2,7 @@
 Receipt Routes - API endpoints per la gestione scontrini
 """
 import logging
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify
 
 from services.receipt_service import receipt_service
 
@@ -70,9 +70,4 @@ def health_check():
     """Health check per il servizio scontrini"""
     return jsonify({'status': 'ok', 'service': 'receipt_service'})
 
-# Rotta per la pagina web degli scontrini
-# @receipt_bp.route('/page', methods=['GET'])
-# def receipt_page():
-#     """Pagina web per la gestione scontrini"""
-#     pass  # route disabled - served by React
 

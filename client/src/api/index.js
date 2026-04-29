@@ -67,21 +67,11 @@ export const api = {
   // Raspberry Pi
   getRaspiStats:       ()         => get('/api/system/stats'),
 
-  // Activities
-  getActivities:       ()         => get('/api/activity/all'),
-  addActivity:         (b)        => post('/api/activity/add', b),
-  deleteActivity:      (id)       => post(`/api/activity/delete/${id}`, {}),
-
   // Shopping list
   getShopping:         ()         => get('/api/shopping/list'),
   addShoppingItem:     (b)        => post('/api/shopping/add', b),
   deleteShoppingItem:  (id)       => post(`/api/shopping/delete/${id}`, {}),
   toggleShoppingItem:  (id)       => post(`/api/shopping/toggle/${id}`, {}),
-
-  // Expenses
-  getExpenses:         ()         => get('/api/expenses/list'),
-  addExpense:          (b)        => post('/api/expenses/add', b),
-  deleteExpense:       (id)       => post(`/api/expenses/delete/${id}`, {}),
 
   // Receipts
   getReceipts:         ()         => get('/api/receipts/list'),
