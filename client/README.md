@@ -1,6 +1,6 @@
 # SmartHouse Frontend
 
-React/Vite frontend for the SmartHouse project.
+React/Vite single-page application for the SmartHouse project.
 
 ## Requirements
 
@@ -9,10 +9,14 @@ React/Vite frontend for the SmartHouse project.
 
 ## Development
 
+Install dependencies and start the dev server:
+
 ```bash
 pnpm install
 pnpm dev
 ```
+
+The dev server provides fast HMR and opens on `localhost:5173` by default.
 
 ## Production Build
 
@@ -26,13 +30,17 @@ pnpm build
 pnpm preview
 ```
 
-## Lint
+## Linting
 
 ```bash
 pnpm lint
 ```
 
+## Configuration
+
+The frontend is a typical Vite app. Environment variables for the build (if needed) can be provided via `.env` files in this folder. In production, built assets are copied/served by the Flask backend.
+
 ## Notes
 
 - The frontend uses React Router for client-side navigation.
-- In production, built assets are served by the Flask backend.
+- For local API integration, run the backend (see root README) and ensure `src/.env` or proxy settings point to the backend API URL.

@@ -1,7 +1,10 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timezone
 from contextlib import contextmanager
+from functools import wraps
 import json
+import os
+import hmac
 from models.database import handle_db_error
 from services.sensor_service import SensorService
 from config.settings import get_config
@@ -15,6 +18,36 @@ sensor_bp = Blueprint('sensor', __name__)
 config = get_config()
 sensor_service = SensorService(config['DB_CONFIG'])
 logger = logging.getLogger(__name__)
+
+SENSOR_WRITE_API_KEY = os.getenv('SENSOR_WRITE_API_KEY', '').strip()
+SENSOR_DEBUG_ENDPOINTS = os.getenv('SENSOR_DEBUG_ENDPOINTS', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _request_has_valid_sensor_key():
+    """Validate optional API key for sensitive write endpoints.
+
+    If SENSOR_WRITE_API_KEY is not configured, endpoints behave as before.
+    """
+    if not SENSOR_WRITE_API_KEY:
+        return True
+
+    provided = (request.headers.get('X-Sensor-Api-Key') or '').strip()
+    if not provided:
+        auth = (request.headers.get('Authorization') or '').strip()
+        if auth.lower().startswith('bearer '):
+            provided = auth[7:].strip()
+
+    return bool(provided) and hmac.compare_digest(provided, SENSOR_WRITE_API_KEY)
+
+
+def require_sensor_write_access(fn):
+    """Protect sensitive write routes with optional API key auth."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not _request_has_valid_sensor_key():
+            return jsonify({'error': 'Unauthorized'}), 401
+        return fn(*args, **kwargs)
+    return wrapper
 
 
 @contextmanager
@@ -281,6 +314,7 @@ def api_monthly_avg_humidity_by_year(year):
 
 @sensor_bp.route('/api/target_temperature', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_set_target_temperature():
     """API to set and overwrite target temperature."""
     data = request.get_json()
@@ -317,6 +351,7 @@ SHELLY_IP = "192.168.178.165"
 
 @sensor_bp.route('/api/thermostat/on', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_thermostat_on():
     # ── Blackout check ──────────────────────────────────────
     blocked, reason = sensor_service.db.is_in_blackout_period()
@@ -343,6 +378,7 @@ def api_thermostat_on():
 
 @sensor_bp.route('/api/thermostat/off', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_thermostat_off():
     success = sensor_service.set_thermostat_enabled(False)
     if not success:
@@ -383,6 +419,7 @@ def get_boiler_status_route():
 
 @sensor_bp.route('/api/boiler/set', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def set_boiler_status_route():
     data = request.get_json()
     if not data or 'is_on' not in data:
@@ -399,6 +436,9 @@ def set_boiler_status_route():
 
 @sensor_bp.route('/api/boiler/debug', methods=['GET'])
 def debug_boiler_status():
+    if not SENSOR_DEBUG_ENDPOINTS:
+        return jsonify({'error': 'Not found'}), 404
+
     try:
         row = sensor_service.db.execute_query(
             "SELECT is_on FROM boiler_status ORDER BY id DESC LIMIT 1;"
@@ -447,6 +487,7 @@ def api_get_boiler_blackout():
 
 @sensor_bp.route('/api/boiler/blackout', methods=['PUT'])
 @handle_db_error
+@require_sensor_write_access
 def api_set_boiler_blackout():
     """
     Updates the boiler blackout period configuration.
@@ -537,14 +578,17 @@ def api_shelly_schedules():
 
 
 @sensor_bp.route('/api/shelly/schedule/create', methods=['POST'])
+@require_sensor_write_access
 def api_shelly_schedule_create():
     """Create a new Shelly schedule - blocked during the blackout period."""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     timespec = data.get('timespec')
     is_on    = data.get('is_on', True)
 
     if not timespec:
         return jsonify({'error': 'Missing timespec parameter'}), 400
+    if not isinstance(timespec, str) or len(timespec) > 128:
+        return jsonify({'error': 'Invalid timespec format'}), 400
 
     # ── Blackout check: only block new ON schedules ──────────
     if is_on:
@@ -572,13 +616,20 @@ def api_shelly_schedule_create():
 
 
 @sensor_bp.route('/api/shelly/schedule/delete', methods=['POST'])
+@require_sensor_write_access
 def api_shelly_schedule_delete():
     """Delete a schedule from Shelly"""
-    data = request.json
+    data = request.get_json(silent=True) or {}
     schedule_id = data.get("id")
 
     if schedule_id is None:
         return jsonify({'error': 'Missing id parameter'}), 400
+    try:
+        schedule_id = int(schedule_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid id parameter'}), 400
+    if schedule_id < 0:
+        return jsonify({'error': 'Invalid id parameter'}), 400
 
     result = shelly_rpc("Schedule.Delete", {"id": schedule_id})
 
@@ -600,6 +651,7 @@ def api_thermostat_status_full():
 
 @sensor_bp.route('/api/thermostat/control', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_thermostat_manual_control():
     """
     API to manually run a thermostat control cycle.
@@ -610,6 +662,7 @@ def api_thermostat_manual_control():
 
 @sensor_bp.route('/api/thermostat/sync', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_thermostat_sync():
     """API to manually sync the state with Shelly."""
     success = sensor_service.sync_boiler_with_shelly()
@@ -637,6 +690,7 @@ def api_thermostat_log():
 
 @sensor_bp.route('/api/boiler/manual', methods=['POST'])
 @handle_db_error
+@require_sensor_write_access
 def api_boiler_manual_control():
     """
     API for manual boiler control (thermostat bypass).
@@ -717,6 +771,7 @@ def list_sensors():
 # ── POST /api/sensors ─────────────────────────────────────────
 @sensor_bp.route('/sensors', methods=['POST'])
 @sensor_bp.route('/api/sensors', methods=['POST'])
+@require_sensor_write_access
 def create_sensor():
     """Create a new sensor with a position on the map."""
     body = request.get_json(silent=True) or {}
@@ -803,9 +858,10 @@ def get_sensor(sensor_id):
 # ── PUT /api/sensors/<id> ─────────────────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>', methods=['PUT'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['PUT'])
+@require_sensor_write_access
 def update_sensor(sensor_id):
     """Aggiorna metadati sensore (nome, tipo, stanza, topic)."""
-    body = request.get_json()
+    body = request.get_json(silent=True) or {}
  
     ROOM_NAMES = {
         'camera1': 'Camera da letto', 'ufficio': 'Ufficio',
@@ -843,6 +899,7 @@ def update_sensor(sensor_id):
 # ── PATCH /api/sensors/<id>/position ─────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>/position', methods=['PATCH'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>/position', methods=['PATCH'])
+@require_sensor_write_access
 def update_position(sensor_id):
     """Update only the X/Y position on the map (drag & drop)."""
     body = request.get_json(silent=True) or {}
@@ -873,6 +930,7 @@ def update_position(sensor_id):
 # ── DELETE /api/sensors/<id> ──────────────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>', methods=['DELETE'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>', methods=['DELETE'])
+@require_sensor_write_access
 def delete_sensor(sensor_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -902,6 +960,7 @@ def delete_sensor(sensor_id):
 # ── POST /api/sensors/<id>/reading ───────────────────────────
 @sensor_bp.route('/sensors/<int:sensor_id>/reading', methods=['POST'])
 @sensor_bp.route('/api/sensors/<int:sensor_id>/reading', methods=['POST'])
+@require_sensor_write_access
 def post_reading(sensor_id):
     """
     Endpoint chiamato dal Raspberry Pi / MQTT bridge per aggiornare
@@ -914,11 +973,28 @@ def post_reading(sensor_id):
         "extra": {}   // optional
     }
     """
-    body = request.get_json()
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return jsonify({'error': 'Invalid JSON body'}), 400
+
     temp     = body.get('temperature')
     humidity = body.get('humidity')
     extra    = body.get('extra', {})
     now      = datetime.now(timezone.utc)
+
+    try:
+        temp = float(temp) if temp is not None else None
+        humidity = float(humidity) if humidity is not None else None
+    except (ValueError, TypeError):
+        return jsonify({'error': 'temperature/humidity must be numbers'}), 400
+
+    if temp is None and humidity is None:
+        return jsonify({'error': 'At least one of temperature/humidity is required'}), 400
+
+    if not isinstance(extra, dict):
+        return jsonify({'error': 'extra must be a JSON object'}), 400
+    if len(json.dumps(extra)) > 16384:
+        return jsonify({'error': 'extra payload too large'}), 413
  
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -971,8 +1047,14 @@ def get_history(sensor_id):
     Restituisce le ultime N letture storiche.
     Query params: ?limit=100&hours=24
     """
-    limit = min(int(request.args.get('limit', 100)), 1000)
-    hours = int(request.args.get('hours', 24))
+    limit = request.args.get('limit', 100, type=int)
+    hours = request.args.get('hours', 24, type=int)
+    if limit is None or hours is None:
+        return jsonify({'error': 'limit and hours must be integers'}), 400
+    if limit < 1 or hours < 1:
+        return jsonify({'error': 'limit and hours must be >= 1'}), 400
+    limit = min(limit, 1000)
+    hours = min(hours, 24 * 365)
  
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -980,7 +1062,7 @@ def get_history(sensor_id):
                 SELECT id, temperature, humidity, extra, recorded_at
                 FROM sensor_readings
                 WHERE sensor_id = %s
-                  AND recorded_at >= NOW() - INTERVAL '%s hours'
+                                    AND recorded_at >= NOW() - make_interval(hours => %s)
                 ORDER BY recorded_at DESC
                 LIMIT %s
             """, (sensor_id, hours, limit))

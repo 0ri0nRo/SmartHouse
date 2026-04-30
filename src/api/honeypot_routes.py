@@ -19,6 +19,7 @@ honeypot_bp = Blueprint("honeypot", __name__)
 COWRIE_LOG_PATH  = os.getenv("COWRIE_LOG_PATH",  "/var/log/cowrie/cowrie.json")
 FAIL2BAN_DB_PATH = os.getenv("FAIL2BAN_DB_PATH", "/var/lib/fail2ban/fail2ban.sqlite3")
 MAX_LOG_LINES    = 50_000
+HONEYPOT_DEBUG   = os.getenv("HONEYPOT_DEBUG", "false").lower() in ("1", "true", "yes")
 
 FEED_EVENTS = {
     "cowrie.session.connect",
@@ -277,6 +278,10 @@ def _build_sessions(events: list[dict]) -> dict[str, dict]:
 
 @honeypot_bp.route("/api/honeypot/debug")
 def get_debug():
+    # Only expose detailed debug info when explicitly enabled via env var
+    if not HONEYPOT_DEBUG:
+        return jsonify({"error": "not found"}), 404
+
     log_dir  = os.path.dirname(COWRIE_LOG_PATH) or "."
 
     try:

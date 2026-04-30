@@ -1,4 +1,5 @@
 import subprocess
+import ipaddress
 import re
 import socket
 import logging
@@ -73,6 +74,12 @@ class NetworkService:
     def scan_os(self, ip: str) -> dict:
         """Run nmap OS detection on a single IP. Requires root."""
         try:
+            # Validate IP to avoid shell injection via unexpected strings
+            try:
+                ipaddress.ip_address(ip)
+            except Exception:
+                logger.warning(f"scan_os: invalid IP provided: {ip}")
+                return {"os": None, "os_detail": None}
             result = subprocess.run(
                 ["nmap", "-O", "--osscan-guess", "-T4", ip],
                 capture_output=True,
@@ -126,6 +133,19 @@ class NetworkService:
     def scan_ports(self, ip: str, top_ports: int = 100) -> list:
         """Run nmap port scan on a single IP."""
         try:
+            # Validate IP and clamp top_ports to safe bounds
+            try:
+                ipaddress.ip_address(ip)
+            except Exception:
+                logger.warning(f"scan_ports: invalid IP provided: {ip}")
+                return []
+
+            try:
+                top_ports = int(top_ports)
+            except Exception:
+                top_ports = 100
+            # Clamp to reasonable limits
+            top_ports = max(1, min(top_ports, 1000))
             result = subprocess.run(
                 ["nmap", "-T4", f"--top-ports={top_ports}", ip],
                 capture_output=True,
