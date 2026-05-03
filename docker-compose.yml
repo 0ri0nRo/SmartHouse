@@ -115,6 +115,29 @@ services:
     env_file:
       - ./src/.env
 
+  app_go:
+    build:
+      context: .
+      dockerfile: go/Dockerfile
+    depends_on:
+      - redis
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5000
+      - STATIC_DIR=src/static/react
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CORS_ALLOWED_ORIGIN=*
+      - CORS_ALLOWED_METHODS=GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Content-Type,Authorization
+    volumes:
+      - ./src/static:/app/src/static:ro
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+    networks:
+      - smarthouse-net
+
   network_scanner:
     build:
       context: ./src
@@ -147,7 +170,7 @@ services:
       - ./nginx/smarthouse-ecc.crt:/etc/nginx/certs/smarthouse-ecc.crt:ro
       - ./nginx/smarthouse-ecc.key:/etc/nginx/certs/smarthouse-ecc.key:ro
     depends_on:
-      - app
+      - app_go
     restart: unless-stopped
     networks:
       - smarthouse-net
