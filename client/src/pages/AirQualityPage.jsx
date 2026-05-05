@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import Toast from '../components/Toast'
+import AirQualityRangeChart from '../components/AirQualityRangeChart'
 import { useToast } from '../hooks/useToast'
 
 const TT = {
@@ -696,6 +697,9 @@ export default function AirQualityPage() {
             </div>
           </div>
         </div>
+
+        {/* Custom range query */}
+        <AirQualityRangeChart />
 
         {/* Pico W Live Logs */}
         <PicoLogsPanel />

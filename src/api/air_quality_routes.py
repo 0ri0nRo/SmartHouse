@@ -240,3 +240,184 @@ def api_air_quality_yearly(year):
     finally:
         cur.close()
         conn.close()
+
+
+@air_quality_bp.route('/api/air_quality_range', methods=['GET'])
+@handle_db_error
+def api_air_quality_range():
+    """
+    Returns air quality data for a custom date range, aggregated by hour.
+    
+    Query parameters:
+        - start: Start date (YYYY-MM-DD), default: 7 days ago
+        - end: End date (YYYY-MM-DD), default: today
+    
+    Response:
+    {
+        "start_date": "2026-04-28",
+        "end_date": "2026-05-05",
+        "total_records": 1234,
+        "hours": {
+            "2026-04-28T00": { "avg_aqi": 85.2, "count": 10, ... },
+            ...
+        }
+    }
+    """
+    try:
+        # Parse date parameters
+        end_str = request.args.get('end', datetime.now().strftime('%Y-%m-%d'))
+        start_str = request.args.get('start', (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d'))
+        
+        start_date = datetime.strptime(start_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_str, '%Y-%m-%d') + timedelta(days=1)  # Include full end day
+        
+        conn = get_db_connection(config['DB_CONFIG'])
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        
+        q = """
+            SELECT 
+                TO_CHAR(timestamp, 'YYYY-MM-DD"T"HH') as hour_key,
+                ROUND(AVG(air_quality_index)::numeric, 2) as avg_aqi,
+                ROUND(AVG(smoke)::numeric, 2) as avg_smoke,
+                ROUND(AVG(lpg)::numeric, 2) as avg_lpg,
+                ROUND(AVG(methane)::numeric, 2) as avg_methane,
+                ROUND(AVG(hydrogen)::numeric, 2) as avg_hydrogen,
+                MIN(air_quality_index) as min_aqi,
+                MAX(air_quality_index) as max_aqi,
+                COUNT(*) as record_count
+            FROM air_quality
+            WHERE timestamp >= %s AND timestamp < %s
+            GROUP BY TO_CHAR(timestamp, 'YYYY-MM-DD"T"HH')
+            ORDER BY hour_key ASC;
+        """
+        
+        cur.execute(q, (start_date, end_date))
+        rows = cur.fetchall()
+        
+        if not rows:
+            return jsonify({
+                'error': 'No data',
+                'message': f'No records found between {start_str} and {end_str}',
+                'start_date': start_str,
+                'end_date': end_str
+            }), 404
+        
+        hours_data = {}
+        for r in rows:
+            hours_data[r['hour_key']] = {
+                'avg_aqi': float(r['avg_aqi']),
+                'avg_smoke': float(r['avg_smoke']),
+                'avg_lpg': float(r['avg_lpg']),
+                'avg_methane': float(r['avg_methane']),
+                'avg_hydrogen': float(r['avg_hydrogen']),
+                'min_aqi': float(r['min_aqi']),
+                'max_aqi': float(r['max_aqi']),
+                'record_count': int(r['record_count'])
+            }
+        
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            'start_date': start_str,
+            'end_date': end_str,
+            'total_records': sum(h['record_count'] for h in hours_data.values()),
+            'hours_count': len(hours_data),
+            'hours': hours_data
+        }), 200
+    
+    except ValueError as e:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+    except Exception as e:
+        logger.error(f"Error in air_quality_range: {e}")
+        return jsonify({'error': 'Internal server error', 'message': str(e)}), 500
+
+
+@air_quality_bp.route('/api/air_quality_table_today', methods=['GET'])
+@handle_db_error
+@cache_json_response(ttl_seconds=60)
+def api_air_quality_table_today():
+    """
+    Returns all air quality records for today organized by hour.
+    Useful for dashboard table visualization.
+    
+    Response format:
+    {
+        "date": "2026-05-05",
+        "total_records": 150,
+        "hours": {
+            "0": { "records": [...], "avg_aqi": 85.2, "count": 10 },
+            "1": { "records": [...], "avg_aqi": 87.5, "count": 12 },
+            ...
+        }
+    }
+    """
+    conn = get_db_connection(config['DB_CONFIG'])
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        q = """
+            SELECT 
+                id,
+                EXTRACT(HOUR FROM timestamp)::int AS hour,
+                smoke, lpg, methane, hydrogen,
+                air_quality_index, air_quality_description,
+                timestamp
+            FROM air_quality
+            WHERE DATE(timestamp) = CURRENT_DATE
+            ORDER BY timestamp ASC;
+        """
+        cur.execute(q)
+        rows = cur.fetchall()
+        
+        if not rows:
+            return jsonify({
+                'error': 'No data',
+                'message': 'No records for today',
+                'date': datetime.now().strftime('%Y-%m-%d')
+            }), 404
+        
+        # Organize by hour
+        hours_data = {}
+        for r in rows:
+            hour = int(r['hour'])
+            if hour not in hours_data:
+                hours_data[hour] = {
+                    'records': [],
+                    'aqi_values': [],
+                    'count': 0
+                }
+            
+            record = {
+                'id': r['id'],
+                'smoke': float(r['smoke']),
+                'lpg': float(r['lpg']),
+                'methane': float(r['methane']),
+                'hydrogen': float(r['hydrogen']),
+                'air_quality_index': float(r['air_quality_index']),
+                'air_quality_description': r['air_quality_description'],
+                'timestamp': r['timestamp'].isoformat()
+            }
+            hours_data[hour]['records'].append(record)
+            hours_data[hour]['aqi_values'].append(float(r['air_quality_index']))
+            hours_data[hour]['count'] += 1
+        
+        # Calculate aggregates per hour
+        result_hours = {}
+        for hour in sorted(hours_data.keys()):
+            data = hours_data[hour]
+            result_hours[str(hour).zfill(2)] = {
+                'count': data['count'],
+                'avg_aqi': round(sum(data['aqi_values']) / len(data['aqi_values']), 2),
+                'min_aqi': round(min(data['aqi_values']), 2),
+                'max_aqi': round(max(data['aqi_values']), 2),
+                'records': data['records']
+            }
+        
+        return jsonify({
+            'date': datetime.now().strftime('%Y-%m-%d'),
+            'total_records': len(rows),
+            'hours': result_hours
+        }), 200
+    finally:
+        cur.close()
+        conn.close()

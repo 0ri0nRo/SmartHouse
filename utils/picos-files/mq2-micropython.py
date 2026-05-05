@@ -153,14 +153,26 @@ class SensorManager:
         self.last_valid = avg
         return avg
 
-# ===== AQI =====
+# ===== AQI - VERSIONE CORRETTA =====
 def calculate_aqi(data):
+    """
+    Calcola AQI con soglie realistiche per sensore MQ2.
+    
+    Soglie calibrate su:
+    - MQ2 datasheet (200-10000 PPM range tipico)
+    - EPA standards per gas indoor
+    - OSHA exposure limits
+    
+    Ultima revisione: 2026-05-03
+    """
+    # Soglie in PPM - CORRETTE per MQ2
     thresholds = {
-        "smoke":    [30, 100, 250, 400],
-        "lpg":      [15,  40,  80, 150],
-        "methane":  [10,  30,  70, 120],
-        "hydrogen": [ 8,  20,  50,  90]
+        "smoke":    [200, 500, 1000, 2000],    # PPM
+        "lpg":      [200, 500, 1000, 2000],    # PPM
+        "methane":  [300, 800, 1500, 3000],    # PPM (meno tossico)
+        "hydrogen": [100, 300, 800, 1500]      # PPM (infiammabile)
     }
+    
     levels = []
     for gas, limits in thresholds.items():
         lvl = 1
@@ -171,16 +183,17 @@ def calculate_aqi(data):
 
     avg = sum(levels) / len(levels)
 
+    # Mappatura AQI standard EPA modificato per gas
     if avg <= 1.5:
-        aqi, desc = 95 - (avg - 1) * 10,           "Good"
+        aqi, desc = 100 - (avg - 1) * 30,           "Good"
     elif avg <= 2.5:
-        aqi, desc = 85 - (avg - 1.5) * 15,         "Moderate"
+        aqi, desc = 85 - (avg - 1.5) * 25,          "Moderate"
     elif avg <= 3.5:
-        aqi, desc = 70 - (avg - 2.5) * 20,         "Poor"
+        aqi, desc = 60 - (avg - 2.5) * 25,          "Unhealthy for Sensitive"
     elif avg <= 4.5:
-        aqi, desc = 50 - (avg - 3.5) * 25,         "Very Poor"
+        aqi, desc = 35 - (avg - 3.5) * 20,          "Unhealthy"
     else:
-        aqi, desc = max(25 - (avg - 4.5) * 25, 0), "Hazardous"
+        aqi, desc = max(15 - (avg - 4.5) * 30, 0),  "Hazardous"
 
     return round(aqi, 1), desc
 
@@ -188,9 +201,13 @@ def calculate_aqi(data):
 def has_changed(current, last):
     if not last:
         return True
+    # Soglie di cambiamento aggiornate per nuova scala
     thresholds = {
-        "smoke": 5, "lpg": 3, "methane": 3,
-        "hydrogen": 2, "air_quality_index": 2
+        "smoke": 50,            # Era 5, ora 50 per nuove soglie PPM
+        "lpg": 50,              # Era 3, ora 50
+        "methane": 100,         # Era 3, ora 100
+        "hydrogen": 30,         # Era 2, ora 30
+        "air_quality_index": 5  # Era 2, ora 5 (scala 0-100)
     }
     for k, t in thresholds.items():
         if abs(current.get(k, 0) - last.get(k, 0)) > t:
@@ -213,8 +230,10 @@ def main():
 
     sensor             = SensorManager()
     last_sent          = None
+    last_data_send_time = time.time()
     last_log_send_time = time.time()
     cycle              = 0
+    PERIODIC_SEND_INTERVAL = 300  # Send data every 5 minutes even if unchanged
 
     log("success", "Main loop starting")
     send_logs()
@@ -243,17 +262,29 @@ def main():
         data["air_quality_index"]       = aqi
         data["air_quality_description"] = desc
 
-        log("sensor", "AQI={} ({})".format(aqi, desc))
+        log("sensor", "AQI={} ({}) | smoke={}, lpg={}, methane={}, hydrogen={}".format(
+            aqi, desc, data["smoke"], data["lpg"], data["methane"], data["hydrogen"]))
 
-        # Send air quality data if changed
+        # Send air quality data if changed OR periodically
+        send_now = False
+        send_reason = None
+        
         if has_changed(data, last_sent):
+            send_now = True
+            send_reason = "change"
+        elif time.time() - last_data_send_time >= PERIODIC_SEND_INTERVAL:
+            send_now = True
+            send_reason = "periodic"
+        
+        if send_now:
             payload = data.copy()
-            payload["send_reason"] = "change"
+            payload["send_reason"] = send_reason
             payload["timestamp"]   = time.time()
             code = post(AIR_QUALITY_URL, payload)
             if code in (200, 201):
-                log("success", "Air quality sent")
+                log("success", "Air quality sent ({})".format(send_reason))
                 last_sent = data.copy()
+                last_data_send_time = time.time()
                 blink(1, 0.05)
             else:
                 log("error", "Air quality send failed, code={}".format(code))
