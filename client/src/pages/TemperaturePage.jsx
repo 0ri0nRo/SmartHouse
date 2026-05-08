@@ -103,6 +103,200 @@ function Row({ children, style = {} }) {
   )
 }
 
+function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onDecrease, onIncrease }) {
+  const currentLabel = Number.isFinite(currentTemp) ? currentTemp.toFixed(1) : '--'
+  const targetLabel  = Number.isFinite(targetTemp)  ? targetTemp.toFixed(1)  : '--'
+  const delta = Number.isFinite(currentTemp) && Number.isFinite(targetTemp)
+    ? targetTemp - currentTemp : 0
+
+  const statusLabel = !thermostat
+    ? 'Manual'
+    : Math.abs(delta) <= 0.3 ? 'Idle'
+    : delta > 0 ? 'Heating' : 'Cooling'
+
+  const statusColor = !thermostat
+    ? '#9ca3af'
+    : Math.abs(delta) <= 0.3 ? '#22c55e'
+    : delta > 0 ? '#f97316' : '#3b82f6'
+
+  // SVG arc helpers
+  const SIZE   = 320
+  const CX     = SIZE / 2
+  const CY     = SIZE / 2
+  const R      = 134
+  const SW     = 16  // stroke width
+
+  // Arc goes from 135° to 405° (270° sweep), leaving a gap at the bottom
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const polarToCartesian = (cx, cy, r, angleDeg) => ({
+    x: cx + r * Math.cos(toRad(angleDeg)),
+    y: cy + r * Math.sin(toRad(angleDeg)),
+  })
+
+  const describeArc = (startDeg, endDeg) => {
+    const s = polarToCartesian(CX, CY, R, startDeg)
+    const e = polarToCartesian(CX, CY, R, endDeg)
+    const large = endDeg - startDeg > 180 ? 1 : 0
+    return `M ${s.x} ${s.y} A ${R} ${R} 0 ${large} 1 ${e.x} ${e.y}`
+  }
+
+  // Full track: 135° → 405°
+  const trackPath = describeArc(135, 405)
+
+  // Orange arc: left side  135° → 230°
+  const orangePath = describeArc(135, 230)
+  // Blue arc: right side   310° → 405°
+  const bluePath   = describeArc(310, 405)
+
+  // Indicator dots
+  const orangeDot = polarToCartesian(CX, CY, R, 135)
+  const blueDot   = polarToCartesian(CX, CY, R, 405)
+  const topDot    = polarToCartesian(CX, CY, R, 270)
+
+  return (
+    <div style={{
+      borderRadius: '1.25rem',
+      border: '1px solid rgba(148,163,184,0.15)',
+      background: 'linear-gradient(180deg,rgba(255,255,255,0.97),rgba(246,248,252,0.94))',
+      boxShadow: '0 12px 40px rgba(15,23,42,0.07)',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '1rem 1.25rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Automatic thermostat
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+            {thermostat ? 'Controls boiler automatically' : 'Boiler in manual mode'}
+          </div>
+        </div>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+          padding: '0.32rem 0.65rem', borderRadius: 9999,
+          border: '1px solid rgba(148,163,184,0.22)',
+          background: 'rgba(255,255,255,0.7)',
+          color: statusColor, fontSize: '0.67rem', fontWeight: 700,
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor }} />
+          {statusLabel}
+        </div>
+      </div>
+
+      {/* Dial */}
+      <div style={{ position: 'relative', width: SIZE, margin: '0 auto' }}>
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block' }}>
+          {/* Track */}
+          <path d={trackPath} fill="none" stroke="#e9ecef" strokeWidth={SW} strokeLinecap="round" />
+          {/* Orange arc */}
+          <path d={orangePath} fill="none" stroke="rgba(251,146,60,0.75)" strokeWidth={SW} strokeLinecap="round" />
+          {/* Blue arc */}
+          <path d={bluePath}   fill="none" stroke="rgba(96,165,250,0.82)" strokeWidth={SW} strokeLinecap="round" />
+
+          {/* Top dot */}
+          <circle cx={topDot.x} cy={topDot.y} r={5} fill="#9ca3af" />
+
+          {/* Orange indicator */}
+          <circle cx={orangeDot.x} cy={orangeDot.y} r={11} fill="white" stroke="rgba(249,115,22,0.9)" strokeWidth={3} />
+          {/* Blue indicator */}
+          <circle cx={blueDot.x}  cy={blueDot.y}  r={11} fill="white" stroke="rgba(59,130,246,0.9)"  strokeWidth={3} />
+        </svg>
+
+        {/* Center content — absolutely positioned over SVG */}
+        <button
+          onClick={onToggle}
+          aria-label={thermostat ? 'Disable thermostat' : 'Enable thermostat'}
+          style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 180, height: 180,
+            borderRadius: '50%',
+            border: 'none', background: 'transparent', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: '0.3rem', padding: 0,
+          }}
+        >
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6b7280' }}>
+            {statusLabel}
+          </span>
+
+          {/* Two temps on one line */}
+          <div style={{
+            display: 'flex', alignItems: 'baseline',
+            gap: '0.5rem', lineHeight: 1,
+            whiteSpace: 'nowrap',
+          }}>
+            {/* Current */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '2.4rem', fontWeight: 600,
+                color: 'var(--text-primary)', letterSpacing: '-0.03em',
+              }}>
+                {currentLabel}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af', alignSelf: 'flex-start', marginTop: 6 }}>°C</span>
+            </div>
+            {/* Target */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '2.4rem', fontWeight: 600,
+                color: '#9ca3af', letterSpacing: '-0.03em',
+              }}>
+                {targetLabel}
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af', alignSelf: 'flex-start', marginTop: 6 }}>°C</span>
+            </div>
+          </div>
+
+          {/* Target with icon */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            fontSize: '0.78rem', color: '#6b7280', fontWeight: 500, marginTop: 2,
+          }}>
+            <Thermometer size={13} />
+            {Number.isFinite(targetTemp) ? `${targetTemp.toFixed(1)} °C` : '--'}
+          </div>
+        </button>
+      </div>
+
+      {/* +/− buttons */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', padding: '0 1rem 1.35rem', marginTop: -4 }}>
+        {[
+          { label: '−', onClick: onDecrease, fontSize: '2rem', fontWeight: 300 },
+          { label: null,  onClick: onIncrease },
+        ].map((btn, i) => (
+          <button
+            key={i}
+            onClick={btn.onClick}
+            aria-label={i === 0 ? 'Decrease' : 'Increase'}
+            style={{
+              width: 78, height: 78, borderRadius: '50%',
+              background: '#fff',
+              border: '2px solid rgba(249,115,22,0.85)',
+              boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#6b7280', transition: 'transform 0.12s ease',
+            }}
+            onMouseDown={e  => e.currentTarget.style.transform = 'translateY(1px)'}
+            onMouseUp={e    => e.currentTarget.style.transform = ''}
+            onMouseLeave={e => e.currentTarget.style.transform = ''}
+          >
+            {i === 0
+              ? <span style={{ fontSize: '2rem', lineHeight: 1, fontWeight: 300 }}>−</span>
+              : <Plus size={26} strokeWidth={2} />
+            }
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Stat Cell ──────────────────────────────────────────────
 function StatCell({ label, value, unit, color, right = false }) {
   return (
@@ -885,48 +1079,16 @@ export default function TemperaturePage() {
 
           <Divider />
 
-          {/* Current / Target temp */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-            <StatCell
-              label="Current"
-              value={currentTemp != null ? currentTemp.toFixed(1) : '—'}
-              unit="°C"
-              color="var(--card-temp-accent)"
-              right
+          {/* Thermostat */}
+          <div style={{ padding: '0.9rem 1rem 0.4rem' }}>
+            <ThermostatDialCard
+              thermostat={thermostat}
+              currentTemp={currentTemp}
+              targetTemp={targetTemp}
+              onToggle={toggleThermostat}
+              onDecrease={() => adjustTarget(-1)}
+              onIncrease={() => adjustTarget(1)}
             />
-            <div style={{ padding: '1.25rem' }}>
-              <div style={{
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.5rem',
-              }}>
-                Target
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '2.75rem',
-                  fontWeight: 400, lineHeight: 1, color: 'var(--accent)',
-                  display: 'flex', alignItems: 'baseline', gap: '0.2rem',
-                }}>
-                  {targetTemp.toFixed(1)}
-                  <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>°C</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  {[{ icon: ChevronUp, delta: 0.5 }, { icon: ChevronDown, delta: -0.5 }].map(({ icon: Icon, delta }) => (
-                    <button key={delta} onClick={() => adjustTarget(delta)} style={{
-                      width: 26, height: 26, borderRadius: 6,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-surface-2)',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'background 0.15s ease',
-                    }}>
-                      <Icon size={14} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
           <Divider />
@@ -959,32 +1121,6 @@ export default function TemperaturePage() {
                 </button>
               )
             })}
-          </Row>
-
-          <Divider />
-
-          {/* Thermostat toggle */}
-          <Row style={{ justifyContent: 'space-between', background: 'var(--bg-surface-2)' }}>
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-                Automatic thermostat
-              </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                {thermostat ? 'Controls boiler automatically' : 'Boiler in manual mode'}
-              </div>
-            </div>
-            <button onClick={toggleThermostat} style={{
-              width: 44, height: 26, borderRadius: 13, border: 'none', padding: 0,
-              background: thermostat ? 'var(--color-success)' : 'var(--toggle-off)',
-              position: 'relative', cursor: 'pointer', transition: 'background 0.25s ease', flexShrink: 0,
-            }}>
-              <div style={{
-                position: 'absolute', top: 3, left: thermostat ? 20 : 3,
-                width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                transition: 'left 0.25s cubic-bezier(0.4,0,0.2,1)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.22)',
-              }} />
-            </button>
           </Row>
 
           <Divider />
