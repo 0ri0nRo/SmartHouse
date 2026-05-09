@@ -99,7 +99,7 @@ def security_status():
         r = cur.fetchone()
 
         return jsonify({
-            'status': bool(r['status']) if r else False
+            'status': r['status'] if r else False
         })
 
     finally:

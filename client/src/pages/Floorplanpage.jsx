@@ -6,6 +6,7 @@ import {
   RefreshCw, Wifi, AlertTriangle, Trash2, Save,
   ZoomIn, ZoomOut, Home, Layers, Grid3x3, Map as MapIcon,
   Settings, Radio, CheckCircle2, XCircle,
+  Thermometer, Droplets, Wind, Eye, DoorOpen, Gauge,
 } from 'lucide-react'
 import Toast from '../components/Toast'
 import SensorLiveValueTag from '../components/SensorLiveValueTag'
@@ -43,12 +44,12 @@ const ROOMS = [
 ]
 
 const SENSOR_TYPES = [
-  { id: 'temp_hum', label: 'Temp + Humidity', icon: '🌡️', color: '#f59e0b' },
-  { id: 'temp',     label: 'Temperature',     icon: '🌡️', color: '#ef4444' },
-  { id: 'humidity', label: 'Humidity',        icon: '💧', color: '#2563eb' },
-  { id: 'motion',   label: 'Motion',          icon: '👁️', color: '#8b5cf6' },
-  { id: 'door',     label: 'Door/Window',     icon: '🚪', color: '#10b981' },
-  { id: 'air',      label: 'Air quality',     icon: '🌬️', color: '#06b6d4' },
+  { id: 'temp_hum', label: 'Temp + Humidity', icon: 'both', color: '#ff9f0a', lucideIcon: Thermometer },
+  { id: 'temp',     label: 'Temperature',     icon: 'temp', color: '#ff9f0a', lucideIcon: Thermometer },
+  { id: 'humidity', label: 'Humidity',        icon: 'hum',  color: '#00e5ff', lucideIcon: Droplets },
+  { id: 'motion',   label: 'Motion',          icon: 'motion', color: '#c084fc', lucideIcon: Eye },
+  { id: 'door',     label: 'Door/Window',     icon: 'door',   color: '#00ff88', lucideIcon: DoorOpen },
+  { id: 'air',      label: 'Air quality',     icon: 'air',    color: '#00ff88', lucideIcon: Wind },
 ]
 
 const TYPE_META = Object.fromEntries(SENSOR_TYPES.map((t) => [t.id, t]))
@@ -570,6 +571,47 @@ const SensorFormModal = ({ sensor, pendingPos, onSave, onClose }) => {
       </motion.div>
     </AnimatePresence>
   )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ║ SENSOR ICON COMPONENT — Aesthetic SVG icons for each sensor type
+// ════════════════════════════════════════════════════════════════════════════
+
+const SensorIcon = ({ type, color, size = 24 }) => {
+  const iconProps = { size, strokeWidth: 2, stroke: color, fill: 'none' }
+  
+  switch (type) {
+    case 'temp':
+    case 'temp_hum':
+      return <Thermometer {...iconProps} />
+    case 'humidity':
+      return <Droplets {...iconProps} />
+    case 'motion':
+      return <Eye {...iconProps} />
+    case 'door':
+      return <DoorOpen {...iconProps} />
+    case 'air':
+      return <Wind {...iconProps} />
+    default:
+      return <Gauge {...iconProps} />
+  }
+}
+
+// Helper to render Lucide icon as SVG text using foreignObject
+const renderSensorIconSVG = (type, color, x, y, size = 2.4) => {
+  // Use a simple SVG symbol for each type instead of foreignObject
+  // This keeps everything in SVG without nested React components
+  
+  const iconConfig = {
+    'temp': { path: 'M12 3v18m0 0a3 3 0 0 1-3 3h-6a3 3 0 0 1 0-6h12a3 3 0 0 1 0 6h-6a3 3 0 0 1-3-3m0-12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z', label: '°' },
+    'temp_hum': { path: 'M12 3v18m0 0a3 3 0 0 1-3 3h-6a3 3 0 0 1 0-6h12a3 3 0 0 1 0 6h-6a3 3 0 0 1-3-3', label: '°°' },
+    'humidity': { path: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.32 0z', label: '◇' },
+    'motion': { path: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z', label: '◉' },
+    'door': { path: 'M17 2H7a2 2 0 0 0-2 2v20h2V4h10v20h2V4a2 2 0 0 0-2-2zm-5 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4z', label: '⌐' },
+    'air': { path: 'M9.59 0.466L4.05 3.062V13.5L9.59 16.096L15.13 13.5V3.062L9.59 0.466Z', label: '◈' },
+  }
+
+  return iconConfig[type] || { path: '', label: type[0].toUpperCase() }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

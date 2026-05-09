@@ -1218,6 +1218,21 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.82), 0 14px 30px rgba(18, 42, 78, 0.11) !important;
 }
 
+/* ════ FLOORPLAN SENSORS — Minimal design ════
+   Clean circles with center value display.
+   Pulses subtly when not selected. Uses color coding by sensor type.
+ ────────────────────────────────────────────── */
+
+@keyframes fp-pulse {
+  0%, 100% { opacity: 0.08; r: 2.6px; }
+  50%      { opacity: 0.02; r: 3.4px; }
+}
+
+.fp-sensor-pulse {
+  fill-opacity: 0.08;
+  animation: fp-pulse 2.8s ease-in-out infinite;
+}
+
 /* ================================================================
    THEME TOGGLE — snippet JS da incollare prima di </body>
    ─────────────────────────────────────────────────────────────────
