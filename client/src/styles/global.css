@@ -1181,6 +1181,43 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   }
 }
 
+/* ════ FLOORPLAN PRO SKIN ════ */
+.fp .fp-map-section {
+  border: 1px solid rgba(92, 122, 162, 0.28);
+  box-shadow: 0 18px 34px rgba(18, 42, 78, 0.16), inset 0 1px 0 rgba(255,255,255,0.72);
+  background: linear-gradient(145deg, #eef3fb 0%, #e6edf7 100%);
+}
+
+.fp .fp-map-canvas {
+  background: linear-gradient(165deg, #f2f6fd 0%, #e9f0fa 58%, #e2ebf8 100%) !important;
+  border: 1px solid #c7d4e7 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 14px 32px rgba(17, 40, 74, 0.14) !important;
+}
+
+.fp .fp-map-svg {
+  filter: saturate(1.08) contrast(1.03);
+}
+
+.fp .fp-header .page-title {
+  letter-spacing: -0.7px;
+}
+
+.fp .fp-header .page-subtitle {
+  font-weight: 500;
+}
+
+:root.light .fp .fp-map-section {
+  border-color: rgba(90, 116, 156, 0.24);
+  box-shadow: 0 16px 30px rgba(15, 36, 67, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);
+  background: linear-gradient(145deg, #eef3fb 0%, #e8eff9 100%);
+}
+
+:root.light .fp .fp-map-canvas {
+  background: linear-gradient(165deg, #f4f8fe 0%, #eaf1fb 58%, #e5edf9 100%) !important;
+  border-color: #c3d1e6 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.82), 0 14px 30px rgba(18, 42, 78, 0.11) !important;
+}
+
 /* ================================================================
    THEME TOGGLE — snippet JS da incollare prima di </body>
    ─────────────────────────────────────────────────────────────────

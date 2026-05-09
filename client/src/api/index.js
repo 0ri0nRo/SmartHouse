@@ -55,6 +55,7 @@ export const api = {
 
   // Air quality
   getAirQuality:       ()         => get('/api/last_air_quality_today'),
+  getLastAirQuality:   ()         => get('/api/last_air_quality'),
   getAirQualityHistory:()         => get('/api/air_quality/history'),
 
   // Security & alarm

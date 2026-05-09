@@ -8,7 +8,9 @@ import {
   Settings, Radio, CheckCircle2, XCircle,
 } from 'lucide-react'
 import Toast from '../components/Toast'
+import SensorLiveValueTag from '../components/SensorLiveValueTag'
 import { useToast } from '../hooks/useToast'
+import { resolvePath, formatLiveValue, useLiveSensorValue } from '../hooks/useLiveSensorValue'
 import { create } from 'zustand'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -56,26 +58,6 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 // ║ UTILITIES
 // ════════════════════════════════════════════════════════════════════════════
 
-// Resolve dot-notation path inside an object. Supports "array[0].key" syntax.
-function resolvePath(obj, path) {
-  if (!path || obj == null) return obj
-  return path.split('.').reduce((acc, key) => {
-    if (acc == null) return null
-    const arrMatch = key.match(/^(\w+)\[(\d+)\]$/)
-    if (arrMatch) return acc[arrMatch[1]]?.[parseInt(arrMatch[2])]
-    return acc[key]
-  }, obj)
-}
-
-// Format a raw value for display (trim floats, handle objects).
-function fmtLive(value) {
-  if (value == null) return '—'
-  if (typeof value === 'object') return JSON.stringify(value).slice(0, 60)
-  const n = parseFloat(value)
-  if (!isNaN(n)) return n % 1 === 0 ? String(n) : n.toFixed(2)
-  return String(value)
-}
-
 // Human-readable relative timestamp.
 function relativeTs(isoString) {
   if (!isoString) return ''
@@ -84,62 +66,6 @@ function relativeTs(isoString) {
   if (diff < 60)   return `${diff}s ago`
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   return new Date(isoString).toLocaleTimeString()
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// ║ HOOK — useLiveValue
-// Fetches and parses a live value based on a sensor's live_api config.
-// ════════════════════════════════════════════════════════════════════════════
-
-function useLiveValue(liveApi) {
-  const [value,   setValue]   = useState(null)
-  const [timestamp, setTs]    = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
-
-  const doFetch = useCallback(async () => {
-    if (!liveApi?.endpoint) return
-    setLoading(true)
-    setError(null)
-    try {
-      const res  = await fetch(liveApi.endpoint)
-      const json = await res.json()
-      let extracted = null
-      let ts        = null
-
-      if (liveApi.mode === 'array') {
-        // Array / logs mode — sort descending by sort_by, take the newest item
-        const raw = liveApi.array_key ? resolvePath(json, liveApi.array_key) : json
-        const arr = Array.isArray(raw) ? raw : null
-        if (arr && arr.length > 0) {
-          const sortKey = liveApi.sort_by || 'created_at'
-          const sorted  = [...arr].sort((a, b) => new Date(b[sortKey]) - new Date(a[sortKey]))
-          const latest  = sorted[0]
-          ts        = latest[sortKey] || null
-          extracted = liveApi.value_path ? resolvePath(latest, liveApi.value_path) : latest.message
-        }
-      } else {
-        // Direct object mode — follow value_path
-        extracted = liveApi.value_path ? resolvePath(json, liveApi.value_path) : json
-        ts = new Date().toISOString()
-      }
-
-      setValue(extracted)
-      setTs(ts)
-    } catch {
-      setError('Fetch failed')
-    } finally {
-      setLoading(false)
-    }
-  }, [liveApi?.endpoint, liveApi?.mode, liveApi?.array_key, liveApi?.sort_by, liveApi?.value_path])
-
-  useEffect(() => {
-    doFetch()
-    const id = setInterval(doFetch, liveApi?.refresh_ms || 15000)
-    return () => clearInterval(id)
-  }, [doFetch, liveApi?.refresh_ms])
-
-  return { value, timestamp, loading, error, refetch: doFetch }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -360,7 +286,7 @@ function ApiConfigModal({ sensor, onSave, onClose }) {
 // ════════════════════════════════════════════════════════════════════════════
 
 function LiveValueBadge({ liveApi }) {
-  const { value, timestamp, loading, error, refetch } = useLiveValue(liveApi)
+  const { value, timestamp, loading, error, refetch } = useLiveSensorValue(liveApi)
   const hasValue = value !== null && !error
 
   return (
@@ -394,7 +320,7 @@ function LiveValueBadge({ liveApi }) {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 800,
             color: 'var(--text-primary)', lineHeight: 1 }}>
-            {fmtLive(value)}
+            {formatLiveValue(value)}
           </span>
           {liveApi.unit && (
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.70rem',
@@ -686,7 +612,14 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
   }, [handleMouseMove])
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 12, background: '#f3f6fb' }}>
+    <div className="fp-map-canvas" style={{
+      position: 'relative',
+      overflow: 'hidden',
+      borderRadius: 14,
+      background: 'linear-gradient(165deg, #edf2f9 0%, #e6edf7 52%, #dde7f4 100%)',
+      border: '1px solid #c7d4e7',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75), 0 10px 28px rgba(20,40,80,0.12)',
+    }}>
       <AnimatePresence>
         {(addMode || editMode) && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
@@ -694,7 +627,8 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
               position: 'absolute', top: 0, left: 0, right: 0, zIndex: 15,
               background: addMode ? 'rgba(37,99,235,0.92)' : 'rgba(245,158,11,0.92)',
               color: addMode ? '#fff' : '#0d1b3e',
-              textAlign: 'center', padding: '0.5rem', fontSize: '0.78rem', fontWeight: 600,
+              textAlign: 'center', padding: '0.5rem', fontSize: '0.78rem', fontWeight: 700,
+              letterSpacing: '0.2px',
             }}>
             {addMode ? '📍 Click to place sensor' : '✋ Drag to reposition'}
           </motion.div>
@@ -705,8 +639,8 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
       <div style={{
         position: 'absolute', bottom: 12, right: 12, zIndex: 10,
         display: 'flex', gap: '0.25rem', alignItems: 'center',
-        background: 'var(--bg-surface)', borderRadius: 10, padding: '0.35rem',
-        border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)',
+        background: 'rgba(255,255,255,0.88)', borderRadius: 12, padding: '0.35rem',
+        border: '1px solid #c6d2e3', boxShadow: '0 8px 18px rgba(29,53,87,0.14)', backdropFilter: 'blur(4px)',
       }}>
         <button className="btn btn--ghost btn--xs" onClick={() => onZoom(-0.2)}><ZoomOut size={12} /></button>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', minWidth: 30, textAlign: 'center' }}>
@@ -717,32 +651,45 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
         <button className="btn btn--ghost btn--xs" onClick={() => onZoom(0, true)}>1:1</button>
       </div>
 
-      <svg ref={svgRef} viewBox="0 0 100 100"
+      <svg ref={svgRef} viewBox="0 0 100 100" className="fp-map-svg"
         style={{ width: '100%', aspectRatio: '1.06/1', display: 'block',
           cursor: addMode ? 'crosshair' : 'default', userSelect: 'none' }}
         onClick={e => { if (addMode) onAddClick(getSvgCoords(e)) }}>
+        <defs>
+          <linearGradient id="fp-bg-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#f5f8fd" />
+            <stop offset="100%" stopColor="#e8eef8" />
+          </linearGradient>
+          <pattern id="fp-grid" width="2" height="2" patternUnits="userSpaceOnUse">
+            <path d="M2 0 L0 0 0 2" fill="none" stroke="#d6e0ef" strokeWidth="0.08" />
+          </pattern>
+          <filter id="room-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0.25" stdDeviation="0.25" floodColor="#7d8fa8" floodOpacity="0.22" />
+          </filter>
+        </defs>
         <g transform={`scale(${zoom})`} style={{ transformOrigin: '50px 50px' }}>
-          <rect x={0} y={0} width={100} height={100} fill="#f3f6fb" />
+          <rect x={0} y={0} width={100} height={100} fill="url(#fp-bg-grad)" />
+          <rect x={0} y={0} width={100} height={100} fill="url(#fp-grid)" opacity={0.55} />
           {bgImage && <image href={bgImage} x={0} y={0} width={100} height={100}
-            preserveAspectRatio="xMidYMid meet" opacity={0.65} />}
+            preserveAspectRatio="xMidYMid meet" opacity={0.32} />}
 
           {ROOMS.map(room => (
             <g key={room.id}>
               <rect x={room.x} y={room.y} width={room.w} height={room.h}
-                fill={bgImage ? 'rgba(255,255,255,0.08)' : 'white'}
-                stroke="#bdd0e8" strokeWidth={0.45} rx={0.6} />
+                fill={bgImage ? 'rgba(255,255,255,0.46)' : 'rgba(255,255,255,0.90)'}
+                stroke="#9bb1cf" strokeWidth={0.55} rx={0.75} filter="url(#room-shadow)" />
               {room.area ? (
                 <>
                   <text x={room.x + room.w / 2} y={room.y + room.h / 2 - 2.2}
-                    textAnchor="middle" fontSize={2.6} fill="#0d1b3e"
-                    fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif" fontWeight="700">{room.label}</text>
+                    textAnchor="middle" fontSize={2.55} fill="#12254b"
+                    fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif" fontWeight="700" letterSpacing="0.15">{room.label}</text>
                   <text x={room.x + room.w / 2} y={room.y + room.h / 2 + 2.8}
-                    textAnchor="middle" fontSize={1.8} fill="#6a8aaa"
+                    textAnchor="middle" fontSize={1.7} fill="#617f9f"
                     fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif">{room.area}</text>
                 </>
               ) : (
                 <text x={room.x + room.w / 2} y={room.y + room.h / 2}
-                  textAnchor="middle" dominantBaseline="central" fontSize={2} fill="#9ab0cc"
+                  textAnchor="middle" dominantBaseline="central" fontSize={1.9} fill="#8fa6c3"
                   fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif"
                   transform={`rotate(-90, ${room.x + room.w / 2}, ${room.y + room.h / 2})`}>
                   Hallway
@@ -751,7 +698,7 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
             </g>
           ))}
 
-          <rect x={2.5} y={4} width={94.5} height={93} fill="none" stroke="#7a96b4" strokeWidth={0.75} rx={1} />
+          <rect x={2.5} y={4} width={94.5} height={93} fill="none" stroke="#6f88ab" strokeWidth={0.95} rx={1.1} />
 
           {sensors.map(sensor => {
             const meta       = TYPE_META[sensor.type] || TYPE_META['temp_hum']
@@ -762,35 +709,36 @@ const FloorplanMap = ({ sensors, selectedId, onSelectSensor, onDragSensor, bgIma
               <g key={sensor.id} transform={`translate(${sensor.x}, ${sensor.y})`}
                 style={{ cursor: editMode ? 'grab' : 'pointer' }}>
                 {!editMode && (
-                  <circle r={2.7} fill={meta.color} opacity={0.12}>
-                    <animate attributeName="r" values="1.7;2.7;1.7" dur="2.5s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.15;0.04;0.15" dur="2.5s" repeatCount="indefinite" />
+                  <circle r={3.25} fill={meta.color} opacity={0.11}>
+                    <animate attributeName="r" values="2.2;3.25;2.2" dur="2.4s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.18;0.05;0.18" dur="2.4s" repeatCount="indefinite" />
                   </circle>
                 )}
-                {isSelected && <circle r={2.5} fill="none" stroke={meta.color} strokeWidth={0.6} opacity={0.35} />}
-                <circle r={1.7}
-                  fill={isSelected ? meta.color : 'white'}
-                  stroke={meta.color} strokeWidth={isSelected ? 0 : 0.6}
-                  style={{ filter: isSelected ? `drop-shadow(0 0 6px ${meta.color})` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                {isSelected && <circle r={3.15} fill="none" stroke={meta.color} strokeWidth={0.55} opacity={0.34} />}
+                <circle r={2.12}
+                  fill={isSelected ? '#ffffff' : '#fdfefe'}
+                  stroke={meta.color} strokeWidth={0.78}
+                  style={{ filter: isSelected ? `drop-shadow(0 0 8px ${meta.color})` : 'drop-shadow(0 3px 6px rgba(0,0,0,0.18))' }}
                   onClick={e => { e.stopPropagation(); onSelectSensor(sensor) }}
                   onMouseDown={e => handleDragStart(e, sensor)} />
                 {/* Status dot: red = alert, green = has live API */}
-                {hasAlert && <circle cx={1.8} cy={-1.8} r={0.7} fill="#ef4444" stroke="white" strokeWidth={0.25} />}
-                {hasApi && !hasAlert && <circle cx={1.8} cy={-1.8} r={0.6} fill="#10b981" stroke="white" strokeWidth={0.2} />}
+                {hasAlert && <circle cx={2.2} cy={-2.15} r={0.78} fill="#ef4444" stroke="white" strokeWidth={0.26} />}
+                {hasApi && !hasAlert && <circle cx={2.2} cy={-2.15} r={0.66} fill="#10b981" stroke="white" strokeWidth={0.2} />}
                 {!editMode && !isSelected && (
-                  <g transform="translate(2.3, -3.3)">
-                    <rect x={0} y={0} width={sensor.name.length * 1.27 + 2} height={3.7}
-                      rx={2.5} fill="white" stroke={meta.color} strokeWidth={0.9}
-                      style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.10))' }} />
-                    <text x={1} y={2.5} fontSize={1.7} fill="#0d1b3e"
-                      fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif" fontWeight="600">
+                  <g transform="translate(2.6, -3.9)">
+                    <rect x={0} y={0} width={sensor.name.length * 1.08 + 3.2} height={4.05}
+                      rx={2.7} fill="rgba(9,22,47,0.93)" stroke="#253a62" strokeWidth={0.45}
+                      style={{ filter: 'drop-shadow(0 4px 10px rgba(8,26,58,0.26))' }} />
+                    <text x={1.55} y={2.67} fontSize={1.7} fill="#f5f8ff"
+                      fontFamily="'DM Sans','Plus Jakarta Sans',sans-serif" fontWeight="600" letterSpacing="0.1">
                       {sensor.name}
                     </text>
                   </g>
                 )}
-                <text textAnchor="middle" dominantBaseline="central" fontSize={1.7} style={{ userSelect: 'none' }}>
+                <text textAnchor="middle" dominantBaseline="central" fontSize={1.55} style={{ userSelect: 'none' }}>
                   {meta.icon}
                 </text>
+                <SensorLiveValueTag liveApi={sensor.live_api} compact offsetY={-9.1} theme="dark" />
               </g>
             )
           })}
@@ -890,11 +838,12 @@ export default function FloorplanPage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error()
+      await loadSensors()
       updateSensor(apiModal.id, { live_api: liveApiConfig })
       showToast('API config saved', 'success')
     } catch { showToast('Error saving API config', 'error') }
     finally { setApiModal(null) }
-  }, [apiModal, updateSensor, showToast])
+  }, [apiModal, loadSensors, updateSensor, showToast])
 
   // ── Delete sensor ─────────────────────────────────────────
   const deleteSensor = useCallback(async (id) => {
@@ -1216,7 +1165,7 @@ export default function FloorplanPage() {
           display: grid; grid-template-columns: 1fr 268px;
           gap: 1.25rem; margin-bottom: 1.5rem;
         }
-        .fp-map-section { border-radius: 12px; overflow: hidden; background: var(--bg-surface); }
+        .fp-map-section { border-radius: 14px; overflow: hidden; }
         .fp-sidebar {
           display: flex; flex-direction: column; gap: 0.875rem;
           max-height: calc(100vh - 240px); position: sticky; top: 80px;

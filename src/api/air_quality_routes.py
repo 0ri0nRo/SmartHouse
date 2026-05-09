@@ -92,6 +92,7 @@ def api_air_quality():
             insert_res = air_quality_service.insert_record(payload)
             invalidate_cached_paths(
                 '/api/air_quality',
+                '/api/last_air_quality',
                 '/api/last_air_quality_today',
                 '/api/air_quality_today',
                 '/api/gas_concentration_today',
@@ -140,6 +141,31 @@ def api_last_air_quality_today():
     finally:
         cur.close()
         conn.close()
+
+
+@air_quality_bp.route('/api/last_air_quality', methods=['GET'])
+@handle_db_error
+@cache_json_response(ttl_seconds=60)
+def api_last_air_quality():
+    """Returns the latest air quality reading in the database."""
+    data = air_quality_service.get_latest()
+    if not data:
+        return jsonify({'error': 'No data found', 'message': 'No air quality records available'}), 404
+
+    aqi_value = int(round(float(data['air_quality_index'])))
+    return jsonify({
+        'AQI': aqi_value,
+        'aqi': aqi_value,
+        'air_quality_index': aqi_value,
+        'air_quality_description': data['air_quality_description'],
+        'timestamp': data['timestamp'],
+        'smoke': data['smoke'],
+        'lpg': data['lpg'],
+        'methane': data['methane'],
+        'hydrogen': data['hydrogen'],
+        'data_age_seconds': data.get('data_age_seconds'),
+        'is_recent': data.get('is_recent'),
+    }), 200
 
 
 @air_quality_bp.route('/api/air_quality_today', methods=['GET'])

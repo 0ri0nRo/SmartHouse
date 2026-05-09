@@ -58,6 +58,7 @@ def ensure_sensor_map_tables():
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_id VARCHAR(40) DEFAULT '';")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_name VARCHAR(120) DEFAULT '';")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS topic VARCHAR(255) DEFAULT '';")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS live_api JSONB;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS x DOUBLE PRECISION DEFAULT 50;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS y DOUBLE PRECISION DEFAULT 50;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS temperature DOUBLE PRECISION;")
@@ -695,6 +696,11 @@ def row_to_dict(row):
     for k, v in d.items():
         if isinstance(v, datetime):
             d[k] = v.isoformat()
+    if isinstance(d.get('live_api'), str):
+        try:
+            d['live_api'] = json.loads(d['live_api'])
+        except json.JSONDecodeError:
+            pass
     return d
  
  
@@ -725,6 +731,13 @@ def create_sensor():
     type_    = body.get('type', 'temp_hum')
     room_id  = body.get('room_id', '')
     topic    = body.get('topic', '')
+    live_api = body.get('live_api')
+
+    if isinstance(live_api, str):
+        try:
+            live_api = json.loads(live_api)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'live_api must be valid JSON'}), 400
 
     try:
         x = float(body.get('x', 50))
@@ -750,10 +763,19 @@ def create_sensor():
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO sensors (name, type, room_id, room_name, topic, x, y)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO sensors (name, type, room_id, room_name, topic, live_api, x, y)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
-            """, (name, type_, room_id, room_name, topic, x, y))
+            """, (
+                name,
+                type_,
+                room_id,
+                room_name,
+                topic,
+                psycopg2.extras.Json(live_api) if live_api is not None else None,
+                x,
+                y,
+            ))
             conn.commit()
             row = cur.fetchone()
 
@@ -816,6 +838,13 @@ def update_sensor(sensor_id):
     }
     room_id   = body.get('room_id', '')
     room_name = ROOM_NAMES.get(room_id, '')
+    live_api  = body.get('live_api')
+
+    if isinstance(live_api, str):
+        try:
+            live_api = json.loads(live_api)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'live_api must be valid JSON'}), 400
  
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -825,19 +854,35 @@ def update_sensor(sensor_id):
                     type      = COALESCE(%s, type),
                     room_id   = %s,
                     room_name = %s,
-                    topic     = COALESCE(%s, topic)
+                    topic     = COALESCE(%s, topic),
+                    live_api  = COALESCE(%s, live_api)
                 WHERE id = %s
                 RETURNING *
             """, (
                 body.get('name'), body.get('type'),
                 room_id, room_name,
-                body.get('topic'), sensor_id
+                body.get('topic'),
+                psycopg2.extras.Json(live_api) if live_api is not None else None,
+                sensor_id
             ))
             conn.commit()
             row = cur.fetchone()
  
     if not row:
         return jsonify({'error': 'non trovato'}), 404
+    invalidate_cached_paths(
+        '/api/sensors',
+        '/sensors',
+        '/api_sensors',
+        '/api/today_temperature',
+        '/api/today_humidity',
+        '/api/monthly_temperature',
+        '/api/monthly_average_temperature',
+        '/api/monthly_average_humidity',
+        '/api/temperature_average',
+        '/api/humidity_average',
+        '/last_temp',
+    )
     return jsonify(row_to_dict(row))
  
  

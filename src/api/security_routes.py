@@ -75,10 +75,35 @@ def alarm_status():
             conn.close()
 
 
-# @security_bp.route('/security')
-# def page_security():
-#     """
-#     Web page to display and control the security system.
-#     """
-#     pass  # route disabled - served by React
+@security_bp.route('/security/status', methods=['GET'])
+@handle_db_error
+@cache_json_response(ttl_seconds=10)
+def security_status():
+    """
+    Returns only the current alarm status as True/False.
+    """
+    conn = None
+    cur = None
 
+    try:
+        conn = psycopg2.connect(**config['DB_CONFIG'])
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+
+        cur.execute("""
+            SELECT status
+            FROM alarms_status
+            ORDER BY timestamp DESC
+            LIMIT 1;
+        """)
+
+        r = cur.fetchone()
+
+        return jsonify({
+            'status': bool(r['status']) if r else False
+        })
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
