@@ -133,6 +133,15 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
     y: cy + r * Math.sin(toRad(angleDeg)),
   })
 
+  const temperatureToAngle = (temp, fallback = 270) => {
+    if (!Number.isFinite(temp)) return fallback
+    const minTemp = 15
+    const maxTemp = 30
+    const clamped = Math.max(minTemp, Math.min(maxTemp, temp))
+    const ratio = (clamped - minTemp) / (maxTemp - minTemp)
+    return 135 + ratio * 270
+  }
+
   const describeArc = (startDeg, endDeg) => {
     const s = polarToCartesian(CX, CY, R, startDeg)
     const e = polarToCartesian(CX, CY, R, endDeg)
@@ -143,14 +152,16 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
   // Full track: 135° → 405°
   const trackPath = describeArc(135, 405)
 
-  // Orange arc: left side  135° → 230°
-  const orangePath = describeArc(135, 230)
-  // Blue arc: right side   310° → 405°
-  const bluePath   = describeArc(310, 405)
+  const orangeAngle = temperatureToAngle(currentTemp)
+  const blueAngle   = temperatureToAngle(targetTemp)
+
+  // Current temperature and target temperature positions on the dial
+  const orangePath = describeArc(135, orangeAngle)
+  const bluePath   = describeArc(135, blueAngle)
 
   // Indicator dots
-  const orangeDot = polarToCartesian(CX, CY, R, 135)
-  const blueDot   = polarToCartesian(CX, CY, R, 405)
+  const orangeDot = polarToCartesian(CX, CY, R, orangeAngle)
+  const blueDot   = polarToCartesian(CX, CY, R, blueAngle)
   const topDot    = polarToCartesian(CX, CY, R, 270)
 
   return (
