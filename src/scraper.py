@@ -4,6 +4,17 @@ import psycopg2
 from psycopg2 import Error
 from datetime import datetime
 
+
+def normalize_platform(value):
+    """Return a clean platform label or empty string when not available."""
+    if value is None:
+        return ""
+    platform = str(value).strip()
+    if platform.upper() in {"", "N/A", "ND", "N.D.", "-"}:
+        return ""
+    return platform
+
+
 class TrainScraper:
     def __init__(self, url, db_config):
         self.url = url
@@ -47,7 +58,7 @@ class TrainScraper:
                 destination = row.find(id="RStazione").text.strip()
                 time = row.find(id="ROrario").text.strip()
                 delay = row.find(id="RRitardo").text.strip()
-                platform = row.find(id="RBinario").text.strip()
+                platform = normalize_platform(row.find(id="RBinario").text)
 
                 # Estraiamo le fermate successive per verificare se c'è una fermata nella stazione specificata
                 fermate_info = row.find("div", class_="testoinfoaggiuntive")
@@ -90,6 +101,14 @@ class TrainScraper:
             query = """
             INSERT INTO trains (train_number, destination, time, delay, platform, stops, timestamp)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (train_number) DO UPDATE
+            SET
+                destination = EXCLUDED.destination,
+                time = EXCLUDED.time,
+                delay = EXCLUDED.delay,
+                platform = EXCLUDED.platform,
+                stops = EXCLUDED.stops,
+                timestamp = EXCLUDED.timestamp
             """
             for train_number, info in trains.items():
                 values = (
@@ -109,4 +128,6 @@ class TrainScraper:
             connection.close()
         
         except Error as e:
+            if connection:
+                connection.rollback()
             print(f"Error inserting train data: {e}")

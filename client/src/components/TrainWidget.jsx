@@ -28,6 +28,11 @@ function distanceKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+function hasPlatform(platform) {
+  const value = String(platform ?? '').trim().toUpperCase()
+  return value !== '' && !['N/A', 'ND', 'N.D.', '-'].includes(value)
+}
+
 function DelayBadge({ delay }) {
   if (!delay || delay === '0' || delay === 'On time')
     return <span style={{ ...badgeSx, background: 'rgba(52,199,89,0.12)', color: 'var(--color-success)' }}>On time</span>
@@ -52,7 +57,7 @@ function TrainRow({ train, isLast }) {
     }}>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1 }}>
         {train.time}
-        {train.platform && train.platform !== 'N/A' && (
+        {hasPlatform(train.platform) && (
           <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: 2 }}>
             Bin. {train.platform}
           </div>

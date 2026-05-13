@@ -41,6 +41,11 @@ async function fetchTrains(destination, fromStation) {
   return res.json()
 }
 
+function hasPlatform(platform) {
+  const value = String(platform ?? '').trim().toUpperCase()
+  return value !== '' && !['N/A', 'ND', 'N.D.', '-'].includes(value)
+}
+
 // ── Sub-components ─────────────────────────────────────────
 function DelayBadge({ delay }) {
   if (!delay || delay === '0' || delay === 'On time')
@@ -73,7 +78,7 @@ function TrainCard({ train, onShowStops }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <DelayBadge delay={train.delay} />
-          {train.platform && train.platform !== 'N/A' && (
+          {hasPlatform(train.platform) && (
             <span className="badge badge--muted">
               <MapPin size={9} /> Bin. {train.platform}
             </span>
