@@ -1,0 +1,12 @@
+homeassistant: false
+permit_join: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt-broker   # nome del container nella stessa rete
+frontend:
+  port: 8080
+serial:
+  port: /dev/ttyUSB0
+advanced:
+  log_level: info
+  network_key: GENERATE

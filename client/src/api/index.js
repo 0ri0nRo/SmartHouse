@@ -25,6 +25,7 @@ async function post(path, body) {
 // ── Sensors ───────────────────────────────────────────────
 export const api = {
   getSensors:          ()         => get('/api_sensors'),
+  getZigbeeLatest:     ()         => get('/api/zigbee-sensors/latest'),
 
   // Temperature
   getTodayTemp:        ()         => get('/api/today_temperature'),

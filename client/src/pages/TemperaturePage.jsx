@@ -6,7 +6,7 @@ import {
 import {
   Thermometer, Sun, TrendingUp, CalendarDays, LineChart as LineChartIcon,
   RefreshCw, Search, Plus, Trash2, Clock, X, Flame, Moon, Home,
-  ChevronUp, ChevronDown, Ban, AlertTriangle, CheckCircle2, Save,
+  ChevronUp, ChevronDown, Ban, AlertTriangle, CheckCircle2, Save, MapPin,
 } from 'lucide-react'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
@@ -354,6 +354,79 @@ function ChartCard({ title, icon: Icon, badge, controls, height = 200, children 
       )}
       <div style={{ padding: '1rem 0.5rem 0.75rem', height }}>
         {children}
+      </div>
+    </div>
+  )
+}
+
+function ZigbeeBathroomWidget({ latest, loading, onRefresh }) {
+  const temp = latest?.temperature
+  const hum = latest?.humidity
+  const battery = latest?.battery
+  const timestamp = latest?.timestamp
+
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card-header">
+        <div className="card-header-icon" style={{ background: 'rgba(14,165,233,0.12)', color: '#0284c7' }}>
+          <MapPin size={14} />
+        </div>
+        <span className="card-header-title">Zigbee Bathroom</span>
+        <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>API source</span>
+      </div>
+
+      <div style={{ padding: '1rem 1.25rem 1.1rem', display: 'grid', gap: '0.9rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div>
+            <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 700 }}>
+              Bathroom sensor
+            </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '0.2rem' }}>
+              Zigbee APIs from the bathroom
+            </div>
+          </div>
+          <button
+            className="btn btn--ghost btn--sm"
+            onClick={onRefresh}
+            disabled={loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem' }}
+          >
+            <RefreshCw size={12} style={{ animation: loading ? 'spin 0.8s linear infinite' : 'none' }} />
+            Refresh
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
+          <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.16)' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Temp</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.45rem', fontWeight: 700, lineHeight: 1.1, marginTop: '0.25rem' }}>
+              {Number.isFinite(temp) ? `${temp.toFixed(1)}°C` : 'N/A'}
+            </div>
+          </div>
+
+          <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.16)' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Humidity</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.45rem', fontWeight: 700, lineHeight: 1.1, marginTop: '0.25rem' }}>
+              {Number.isFinite(hum) ? `${hum.toFixed(0)}%` : 'N/A'}
+            </div>
+          </div>
+
+          <div style={{ padding: '0.8rem', borderRadius: 12, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.16)' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Battery</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.45rem', fontWeight: 700, lineHeight: 1.1, marginTop: '0.25rem' }}>
+              {Number.isFinite(battery) ? `${battery}%` : 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center' }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+            {timestamp ? `Last update: ${new Date(timestamp).toLocaleString()}` : 'Waiting for Zigbee data'}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            /api/zigbee-sensors/latest
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -779,18 +852,21 @@ export default function TemperaturePage() {
   const [rangeData,      setRangeData]      = useState([])
   const [loadingCharts,  setLoadingCharts]  = useState(false)
   const [loadingRange,   setLoadingRange]   = useState(false)
+  const [zigbeeLatest,   setZigbeeLatest]   = useState(null)
+  const [zigbeeLoading,  setZigbeeLoading]  = useState(false)
 
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
 
   useEffect(() => {
     const init = async () => {
-      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules()])
+      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules(), loadZigbeeLatest()])
       loadCharts(month, year, false, null, null)
     }
     init()
     const t1 = setInterval(loadSensor, 10000)
     const t2 = setInterval(loadThermostatFull, 20000)
-    return () => { clearInterval(t1); clearInterval(t2) }
+    const t3 = setInterval(loadZigbeeLatest, 30000)
+    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
   }, [])
 
   const loadBoiler         = () => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {})
@@ -802,6 +878,17 @@ export default function TemperaturePage() {
   }).catch(() => {})
   const loadSensor    = () => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
   const loadSchedules = () => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
+  const loadZigbeeLatest = useCallback(async () => {
+    setZigbeeLoading(true)
+    try {
+      const d = await api.getZigbeeLatest()
+      setZigbeeLatest(d.latest || null)
+    } catch {
+      setZigbeeLatest(null)
+    } finally {
+      setZigbeeLoading(false)
+    }
+  }, [])
 
   // ── Boiler toggle — checks blackout before acting ──────────────────────────
   const toggleBoiler = async () => {
@@ -1020,6 +1107,12 @@ export default function TemperaturePage() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+        <ZigbeeBathroomWidget
+          latest={zigbeeLatest}
+          loading={zigbeeLoading}
+          onRefresh={loadZigbeeLatest}
+        />
 
         {/* ── Boiler Card ──────────────────────────────── */}
         <div className="card" style={{ overflow: 'hidden' }}>

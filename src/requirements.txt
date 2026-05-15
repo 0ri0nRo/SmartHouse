@@ -47,6 +47,7 @@ pyserial==3.5
 flask-socketio==5.3.6
 python-socketio==5.8.0
 eventlet==0.36.1
+paho-mqtt==2.1.0
 
 # Test
 pytest==7.4.2

@@ -14,12 +14,11 @@ Refactored Flask application with a modular structure to handle:
 - Service Worker for offline functionality
 """
 
-from flask import Flask, send_from_directory # pyright: ignore[reportMissingImports]
+from flask import Flask, render_template, send_from_directory # pyright: ignore[reportMissingImports]
 from flask_cors import CORS # type: ignore
 from flask_socketio import SocketIO # type: ignore
 import os
 import logging
-
 # Local project imports (refactored structure)
 from config.settings import get_config, setup_logging
 from utils.json_encoder import CustomJSONEncoder
@@ -130,6 +129,11 @@ def create_app():
     def health_check():
         """Health check endpoint for monitoring and load balancers."""
         return {'status': 'healthy', 'service': 'raspberry-pi-dashboard'}, 200
+
+    @app.route('/zigbee', methods=['GET'])
+    def zigbee_dashboard():
+        """Render the Zigbee sensor dashboard."""
+        return render_template('zigbee.html')
 
     # Serve React frontend for all non-API routes.
     # This must be the LAST route registered so it does not

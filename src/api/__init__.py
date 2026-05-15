@@ -9,6 +9,7 @@ from .expenses_routes import expense_bp
 from .receipt_routes import receipt_bp
 from .ping_routes import ping_bp
 from .network_devices_routes import network_devices_bp
+from .zigbee_routes import zigbee_bp
 
 def register_blueprints(app):
     """Registra tutti i blueprint delle API nell'app Flask"""
@@ -23,6 +24,7 @@ def register_blueprints(app):
     app.register_blueprint(system_bp)
     app.register_blueprint(expense_bp)
     app.register_blueprint(receipt_bp)
+    app.register_blueprint(zigbee_bp)
     
     # Log dei blueprint registrati
     import logging

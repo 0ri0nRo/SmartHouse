@@ -1,5 +1,36 @@
 services:
 
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - smarthouse-net
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    environment:
+      - TZ=Europe/Rome
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    networks:
+      - smarthouse-net
+
   geoipupdate:
     image: maxmindinc/geoipupdate
     env_file:
@@ -68,6 +99,9 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=1234
       - TZ=Europe/Rome
+    volumes:
+      - ./src:/app
+      - ./zigbee2mqtt/data:/zigbee2mqtt/data:ro
     restart: unless-stopped
     networks:
       - smarthouse-net
@@ -99,6 +133,7 @@ services:
       - RASPI_HOST_KEY_PATH=/run/secrets/id_rsa
       - COWRIE_LOG_PATH=/var/log/cowrie/cowrie.json
     volumes:
+      - ./src:/app
       - ./backup:/backup
       - ./src/static:/app/static
       - ./uploads:/app/uploads
