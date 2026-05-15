@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
-  Home, Thermometer, Droplets, Wind, ShoppingCart,
+  Home, MapPin, Wind, ShoppingCart,
   Activity, Shield, Train, Cpu, Menu, X, Moon, Sun, House,
 } from 'lucide-react'
 
@@ -10,8 +10,7 @@ const NAV = [
   { to: '/',            label: 'Dashboard',   icon: Home },
 
   { section: 'Environment' },
-  { to: '/temperature', label: 'Temperature', icon: Thermometer },
-  { to: '/humidity',    label: 'Humidity',    icon: Droplets },
+  { to: '/floorplan',   label: 'Sensors',     icon: MapPin },
   { to: '/air-quality', label: 'Air Quality', icon: Wind },
 
   { section: 'Home' },

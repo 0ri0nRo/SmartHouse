@@ -94,17 +94,18 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=db
+      - DB_HOST=localhost
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
       - TZ=Europe/Rome
     volumes:
       - ./src:/app
       - ./zigbee2mqtt/data:/zigbee2mqtt/data:ro
     restart: unless-stopped
-    networks:
-      - smarthouse-net
+    network_mode: host
 
   app:
     build:

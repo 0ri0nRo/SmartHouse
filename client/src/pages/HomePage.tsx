@@ -23,7 +23,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
   { id: 'calendar',     label: 'Calendar',               category: 'info'    },
   { id: 'alarm',        label: 'Home Alarm',             category: 'control' },
   { id: 'boiler',       label: 'Boiler',                 category: 'control' },
-  { id: 'environment',  label: 'Temperature & Humidity', category: 'sensor'  },
+  { id: 'environment',  label: 'Sensors',                category: 'sensor'  },
   { id: 'raspi',        label: 'Raspberry Pi',           category: 'system'  },
   { id: 'weather',      label: 'Weather',                category: 'info'    },
   { id: 'ping',         label: 'Ping',                   category: 'system'  },
@@ -793,11 +793,11 @@ export default function HomePage() {
       case 'boiler':       return (
         <ToggleWidget section="temp" icon={Flame} label="Boiler"
           sublabel={thermostat ? 'Thermostat active' : 'Manual control'}
-          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler} onNavigate={() => nav('/temperature')}/>
+          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler} onNavigate={() => nav('/floorplan')}/>
       )
       case 'environment':  return (
-        <DualWidget section="hum" icon={Thermometer} label="Environment" sublabel="Temperature & Humidity"
-          onNavigate={() => nav('/temperature')}
+        <DualWidget section="hum" icon={Thermometer} label="Sensors" sublabel="Floorplan hub"
+          onNavigate={() => nav('/floorplan')}
           val1={temp} unit1="°C" tag1="Temp"     color1="var(--card-temp-accent)"
           val2={hum}  unit2="%" tag2="Humidity"  color2="var(--card-hum-accent)"/>
       )
