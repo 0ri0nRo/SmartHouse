@@ -24,7 +24,11 @@ async function post(path, body) {
 
 // ── Sensors ───────────────────────────────────────────────
 export const api = {
-  getSensors:          ()         => get('/api/sensors'),
+  // Legacy climate summary APIs used by TemperaturePage/HumidityPage/HomePage
+  getSensors:          ()         => get('/api_sensors'),
+
+  // Sensor catalog APIs used by Floorplan and registry CRUD
+  getSensorCatalog:    ()         => get('/api/sensors'),
   getSensorsSummary:   ()         => get('/api/sensors/summary'),
   getSensorById:       (id)       => get(`/api/sensors/${id}`),
   getSensorHistory:    (id, hours = 24, limit = 240) => get(`/api/sensors/${id}/history?hours=${hours}&limit=${limit}`),
@@ -82,6 +86,7 @@ export const api = {
   getAirQuality:       ()         => get('/api/last_air_quality_today'),
   getLastAirQuality:   ()         => get('/api/last_air_quality'),
   getAirQualityHistory:()         => get('/api/air_quality/history'),
+  getGasToday:         ()         => get('/api/gas_concentration_today'),
 
   // Security & alarm
   getAlarm:            ()         => get('/security/alarm'),

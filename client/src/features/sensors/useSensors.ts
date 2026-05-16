@@ -42,7 +42,7 @@ export function useSensorCatalogSync() {
       setError(null)
       try {
         const [sensors, summary] = await Promise.all([
-          api.getSensors(),
+          api.getSensorCatalog(),
           api.getSensorsSummary().catch(() => null),
         ])
 

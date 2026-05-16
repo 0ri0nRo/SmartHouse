@@ -1,3 +1,5 @@
+# Zigbee sensor data API routes for Raspberry Pi Dashboard
+# src/api/zigbee_routes.py
 from flask import Blueprint, jsonify, request
 from contextlib import contextmanager
 

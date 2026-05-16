@@ -65,6 +65,10 @@ function resolveSeries(sensor, history) {
 function SensorHistoryChart({ sensor, history, hours }) {
   const rows = useMemo(() => buildChartRows(history), [history])
   const series = useMemo(() => resolveSeries(sensor, rows), [history, sensor])
+  const hasValues = useMemo(
+    () => series.some((serie) => rows.some((row) => typeof row[serie.key] === 'number' && Number.isFinite(row[serie.key]))),
+    [rows, series],
+  )
 
   if (!sensor) {
     return null
@@ -86,6 +90,9 @@ function SensorHistoryChart({ sensor, history, hours }) {
         </div>
       </div>
       <div className="sensor-history-panel__chart">
+        {!hasValues ? (
+          <div className="sensor-history-panel__empty">No historical data available for this sensor in the selected time range.</div>
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
           {series.length > 1 ? (
             <LineChart data={rows} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
@@ -143,6 +150,7 @@ function SensorHistoryChart({ sensor, history, hours }) {
             </AreaChart>
           )}
         </ResponsiveContainer>
+        )}
       </div>
     </div>
   )
