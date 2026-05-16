@@ -1662,8 +1662,6 @@ export default function FloorplanPage() {
         style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {avgTemp && <KpiCard label="Avg temp" icon="🌡️" value={avgTemp} unit="°C" color={parseFloat(avgTemp) > 26 ? '#f87171' : '#f97316'} />}
         {avgHum && <KpiCard label="Avg humidity" icon="💧" value={avgHum} unit="%" color={parseFloat(avgHum) > 70 ? '#f87171' : '#38bdf8'} />}
-        {hottest && <KpiCard label="Warmest" icon="🔥" value={hottest.temperature.toFixed(1)} unit="°C" color="#f87171" trend={`@ ${hottest.name}`} />}
-        {wettest && <KpiCard label="Most humid" icon="💦" value={wettest.humidity.toFixed(0)} unit="%" color="#38bdf8" trend={`@ ${wettest.name}`} />}
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} style={{ marginBottom: '1rem' }}>
