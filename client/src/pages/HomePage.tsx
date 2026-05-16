@@ -839,19 +839,19 @@ export default function HomePage() {
     <div className="animate-fade">
 
       {/* Header */}
-      <div style={{ marginBottom:'1.5rem' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          flexWrap:'wrap', gap:'0.75rem', marginBottom:'0.6rem' }}>
-          <div>
-            <h1 className="page-title" style={{ fontSize:'clamp(1.4rem,4vw,2rem)' }}>
+      <section className="page-header animate-slide-up" style={{ marginBottom: '1rem' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="section-tag section-tag--act" style={{ marginBottom:'0.45rem' }}>Overview</div>
+            <h1 className="page-title" style={{ fontSize:'clamp(1.7rem, 4vw, 2.65rem)', marginBottom:'0.35rem' }}>
               Smart<span style={{ color:'var(--accent)' }}>House</span>
             </h1>
-            <p style={{ fontFamily:'var(--font-mono)', fontSize:'0.65rem',
-              color:'var(--text-muted)', letterSpacing:'0.5px', marginTop:'0.2rem' }}>
-              {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString('it-IT')}` : 'Loading...'}
+            <p className="page-subtitle" style={{ maxWidth:'64ch' }}>
+              A live home dashboard with the essentials up front: sensors, automations, health checks, and quick actions.
             </p>
           </div>
-          <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', flexWrap:'wrap' }}>
+
+          <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', flexWrap:'wrap', justifyContent:'flex-end' }}>
             <button className={editMode ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm'}
               onClick={() => setEditMode(v => !v)}
               style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
@@ -869,21 +869,46 @@ export default function HomePage() {
                 </span>
               )}
             </button>
-            <button className="btn btn--ghost btn--sm" onClick={() => loadAll()} disabled={refreshing}>
+            <button className="btn btn--ghost btn--sm" onClick={() => loadAll()} disabled={refreshing}
+              style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
               <RefreshCw size={13} style={{ animation:refreshing ? 'spin 0.8s linear infinite' : 'none' }}/>
               {refreshing ? 'Refreshing...' : 'Refresh all'}
             </button>
           </div>
         </div>
-        <RefreshBar secondsLeft={countdown} total={REFRESH_INTERVAL}/>
-      </div>
+
+        <div className="panel-strip" style={{ padding:'0.95rem 0 0' }}>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Updated</span>
+            <span className="panel-strip__value">{lastUpdate ? lastUpdate.toLocaleTimeString('it-IT') : 'Loading...'}</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Widgets</span>
+            <span className="panel-strip__value">{visibleLayout.length} visible</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Hidden</span>
+            <span className="panel-strip__value">{hiddenCount}</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Mode</span>
+            <span className="panel-strip__value">{editMode ? 'Reordering' : 'View'}</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop:'0.9rem' }}>
+          <RefreshBar secondsLeft={countdown} total={REFRESH_INTERVAL}/>
+        </div>
+      </section>
 
       {/* Edit mode hint */}
       {editMode && (
-        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem',
-          padding:'0.6rem 0.875rem', marginBottom:'0.875rem',
-          background:'var(--accent-light)', border:'1px solid rgba(0,102,204,0.2)',
-          borderRadius:'var(--radius-md)', fontSize:'0.78rem', color:'var(--text-primary)' }}>
+        <div className="card animate-slide-up" style={{
+          display:'flex', alignItems:'center', gap:'0.5rem',
+          padding:'0.85rem 0.95rem', marginBottom:'0.875rem',
+          background:'var(--accent-light)', borderColor:'rgba(59,110,255,0.16)',
+          fontSize:'0.78rem', color:'var(--text-primary)'
+        }}>
           <GripVertical size={13} style={{ color:'var(--accent)', flexShrink:0 }}/>
           Drag widgets to reorder them. Click <strong>Done</strong> when finished.
         </div>
@@ -891,10 +916,12 @@ export default function HomePage() {
 
       {/* Notification banner */}
       {showNotifBanner && permission === 'default' && (
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          gap:'1rem', padding:'0.75rem 1rem', marginBottom:'1rem',
-          background:'var(--accent-light)', border:'1px solid rgba(0,102,204,0.2)',
-          borderRadius:'var(--radius-md)', flexWrap:'wrap' }}>
+        <div className="card animate-slide-up" style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          gap:'1rem', padding:'0.9rem 1rem', marginBottom:'1rem',
+          background:'var(--accent-light)', borderColor:'rgba(59,110,255,0.16)',
+          flexWrap:'wrap'
+        }}>
           <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
             <Bell size={14} style={{ color:'var(--accent)', flexShrink:0 }}/>
             <span style={{ fontSize:'0.8rem', color:'var(--text-primary)' }}>
@@ -910,11 +937,17 @@ export default function HomePage() {
       )}
 
       {/* Widget grid */}
-      <div style={{
-        display:'grid',
-        gridTemplateColumns:'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
-        gap:'0.625rem', alignItems:'stretch',
-      }}>
+      <section>
+        <div className="flex-between" style={{ margin:'0.25rem 0 0.85rem', gap:'1rem', flexWrap:'wrap' }}>
+          <div>
+            <div className="section-tag section-tag--air">Widgets</div>
+            <div className="page-subtitle" style={{ marginTop:'0.3rem' }}>
+              Drag to reorder, hide what you do not need, and keep the essentials first.
+            </div>
+          </div>
+        </div>
+
+        <div className="bento-grid bento-grid--auto" style={{ alignItems:'stretch' }}>
         {visibleLayout.map(({ id }) => (
           <DraggableSlot key={id} id={id} editMode={editMode} isDragOver={dragOverId === id}
             onDragStart={handleDragStart} onDragOver={handleDragOver}
@@ -922,20 +955,20 @@ export default function HomePage() {
             {renderWidget(id)}
           </DraggableSlot>
         ))}
-      </div>
+        </div>
+      </section>
 
       {/* ── Bottom summary bar ── */}
       {(tempMM || humMM || aqi != null || sunrise || sunset) && (
-        <div style={{ display:'flex', gap:'1.25rem', flexWrap:'wrap', marginTop:'1rem',
-          padding:'0.75rem 1rem', background:'var(--bg-surface)',
-          border:'1px solid var(--border)', borderRadius:'var(--radius-md)',
+        <div className="card animate-slide-up" style={{ display:'flex', gap:'1rem', flexWrap:'wrap', marginTop:'1rem',
+          padding:'0.9rem 1rem', background:'var(--bg-surface)',
           alignItems:'center' }}>
 
           {/* Temp 24h */}
           {tempMM && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Thermometer size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Temp 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{tempMM} °C</span>
               </span>
             </div>
@@ -943,9 +976,9 @@ export default function HomePage() {
 
           {/* Hum 24h */}
           {humMM && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Droplets size={12} style={{ color:'var(--card-hum-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Hum 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{humMM} %</span>
               </span>
             </div>
@@ -953,9 +986,9 @@ export default function HomePage() {
 
           {/* AQI */}
           {aqi != null && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Wind size={12} style={{ color: aqiColor, flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 AQI: <span style={{ color: aqiColor, fontWeight:500 }}>{aqi.toFixed(0)} · {aqiLabel}</span>
               </span>
             </div>
@@ -963,9 +996,9 @@ export default function HomePage() {
 
           {/* Sunrise */}
           {sunrise && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Sunrise size={12} style={{ color:'var(--color-warning)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Sunrise: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunrise}</span>
               </span>
             </div>
@@ -973,9 +1006,9 @@ export default function HomePage() {
 
           {/* Sunset */}
           {sunset && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Sunset size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Sunset: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunset}</span>
               </span>
             </div>

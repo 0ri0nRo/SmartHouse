@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useLayoutEffect } from 'react'
 
 export function useTheme() {
   const [theme, setTheme] = useState(
-    () => localStorage.getItem('sh-theme') ?? 'dark'
+    () => localStorage.getItem('sh-theme') ?? 'light'
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement
     if (theme === 'light') {
       root.classList.add('light')

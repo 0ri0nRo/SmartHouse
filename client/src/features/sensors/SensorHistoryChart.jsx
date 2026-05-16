@@ -95,20 +95,21 @@ function SensorHistoryChart({ sensor, history, hours }) {
         ) : (
         <ResponsiveContainer width="100%" height="100%">
           {series.length > 1 ? (
-            <LineChart data={rows} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="4 4" stroke="rgba(148,163,184,0.18)" />
-              <XAxis dataKey="timestamp" tickFormatter={formatTimestamp} stroke="rgba(148,163,184,0.75)" />
-              <YAxis stroke="rgba(148,163,184,0.75)" width={52} />
+            <LineChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+              <XAxis dataKey="timestamp" tickFormatter={formatTimestamp} stroke="rgba(148,163,184,0.45)" tickLine={false} axisLine={false} tickMargin={10} />
+              <YAxis stroke="rgba(148,163,184,0.45)" width={46} tickLine={false} axisLine={false} tickMargin={8} />
               <Tooltip
                 contentStyle={{
-                  background: 'rgba(15, 23, 42, 0.96)',
+                  background: 'rgba(255,255,255,0.98)',
                   border: '1px solid rgba(148, 163, 184, 0.18)',
-                  borderRadius: 16,
-                  color: '#f8fafc',
+                  borderRadius: 14,
+                  color: 'var(--text-primary)',
+                  boxShadow: '0 12px 30px rgba(15,23,42,0.10)',
                 }}
                 labelFormatter={formatTimestamp}
               />
-              <Legend />
+              <Legend wrapperStyle={{ paddingTop: 8, fontFamily: 'var(--font-mono)', fontSize: '0.65rem' }} />
               {series.map((serie) => (
                 <Line
                   key={serie.key}
@@ -116,22 +117,24 @@ function SensorHistoryChart({ sensor, history, hours }) {
                   dataKey={serie.key}
                   name={serie.label}
                   stroke={serie.color}
-                  strokeWidth={2.5}
+                  strokeWidth={2.3}
                   dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
                 />
               ))}
             </LineChart>
           ) : (
-            <AreaChart data={rows} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="4 4" stroke="rgba(148,163,184,0.18)" />
-              <XAxis dataKey="timestamp" tickFormatter={formatTimestamp} stroke="rgba(148,163,184,0.75)" />
-              <YAxis stroke="rgba(148,163,184,0.75)" width={52} />
+            <AreaChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+              <XAxis dataKey="timestamp" tickFormatter={formatTimestamp} stroke="rgba(148,163,184,0.45)" tickLine={false} axisLine={false} tickMargin={10} />
+              <YAxis stroke="rgba(148,163,184,0.45)" width={46} tickLine={false} axisLine={false} tickMargin={8} />
               <Tooltip
                 contentStyle={{
-                  background: 'rgba(15, 23, 42, 0.96)',
+                  background: 'rgba(255,255,255,0.98)',
                   border: '1px solid rgba(148, 163, 184, 0.18)',
-                  borderRadius: 16,
-                  color: '#f8fafc',
+                  borderRadius: 14,
+                  color: 'var(--text-primary)',
+                  boxShadow: '0 12px 30px rgba(15,23,42,0.10)',
                 }}
                 labelFormatter={formatTimestamp}
               />
@@ -143,8 +146,10 @@ function SensorHistoryChart({ sensor, history, hours }) {
                   name={serie.label}
                   stroke={serie.color}
                   fill={serie.color}
-                  fillOpacity={0.18}
-                  strokeWidth={2.5}
+                  fillOpacity={0.12}
+                  strokeWidth={2.3}
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
                 />
               ))}
             </AreaChart>
