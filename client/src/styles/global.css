@@ -1242,6 +1242,15 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   .bento-grid--3 { grid-template-columns: 1fr; }
   .col-span-2,
   .col-span-3 { grid-column: span 1; }
+
+  /* Mobile UX improvements: larger touch targets, responsive images, smaller floorplan */
+  .btn { padding: 0.9rem 1rem; font-size: var(--text-sm); border-radius: 12px; }
+  .btn--full { width: 100%; }
+  .topbar-menu-btn { width: 44px; height: 44px; }
+  .sidebar-footer { display: none; }
+  .panel-strip { padding: var(--space-3) var(--space-4); }
+  img, svg { max-width: 100%; height: auto; }
+  .floorplan-map { min-height: 320px; }
 }
 
 @media (max-width: 480px) {

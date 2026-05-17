@@ -1417,6 +1417,17 @@ export default function FloorplanPage() {
   const { sensors, setSensors, updateSensor, removeSensor } = useFloorplanStore()
   const fileRef = useRef(null)
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 860 : false)
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 860)
+    window.addEventListener('resize', h)
+    return () => window.removeEventListener('resize', h)
+  }, [])
+
+  // Toggle to show/hide sidebar details on small screens
+  const [showSidebarDetails, setShowSidebarDetails] = useState(!isMobile)
+  useEffect(() => setShowSidebarDetails(!isMobile), [isMobile])
+
   const [loading, setLoading]           = useState(true)
   const [selectedSensor, setSelectedSensor] = useState(null)
   const [editMode, setEditMode]         = useState(false)
@@ -1632,8 +1643,34 @@ export default function FloorplanPage() {
   const avgHum     = withHum.length  ? (withHum.reduce((a, s) => a + s.humidity, 0) / withHum.length).toFixed(0)    : null
   const hasRoomOverrides = Object.keys(roomOverrides).length > 0
 
+  // Auto-collapse some widgets on small screens to prioritize the map
+  useEffect(() => {
+    if (!isMobile) return
+    setHiddenWidgets(prev => {
+      const n = new Set(prev)
+      n.add('kpi'); n.add('boiler')
+      return n
+    })
+  }, [isMobile])
+
+  const [mobileWidgetsVisible, setMobileWidgetsVisible] = useState(false)
+
+  // Sync hiddenWidgets with the mobileWidgetsVisible toggle
+  useEffect(() => {
+    if (!isMobile) return
+    setHiddenWidgets(prev => {
+      const n = new Set(prev)
+      if (mobileWidgetsVisible) {
+        n.delete('kpi'); n.delete('boiler')
+      } else {
+        n.add('kpi'); n.add('boiler')
+      }
+      return n
+    })
+  }, [mobileWidgetsVisible, isMobile])
+
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, color: T.textPrimary, fontFamily: T.sans, padding: '0 1.5rem 2rem' }}>
+    <div style={{ minHeight: '100vh', background: T.bg, color: T.textPrimary, fontFamily: T.sans, padding: isMobile ? '0.5rem' : '0 1.5rem 2rem' }}>
 
       {/* ── HEADER ── */}
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
@@ -1648,7 +1685,7 @@ export default function FloorplanPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           {alerts.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '3px 8px', borderRadius: T.radiusFull, fontSize: '0.62rem', fontWeight: 700, color: '#dc2626', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
               <AlertTriangle size={10} /> {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
@@ -1673,13 +1710,13 @@ export default function FloorplanPage() {
           {/* Sensor move mode */}
           <Btn sm active={editMode} ghost={!editMode}
             onClick={() => { setEditMode(e => !e); setAddMode(false); setRoomsEditMode(false); setSelectedSensor(null) }}>
-            <Move size={12} /> {editMode ? 'Done' : 'Move sensors'}
+            <Move size={12} /> {!isMobile && (editMode ? 'Done' : 'Move sensors')}
           </Btn>
 
           {/* Add sensor */}
           <Btn sm active={addMode} ghost={!addMode}
             onClick={() => { setAddMode(a => !a); setEditMode(false); setRoomsEditMode(false); setSelectedSensor(null) }}>
-            <Plus size={12} /> {addMode ? 'Cancel' : 'Add sensor'}
+            <Plus size={12} /> {!isMobile && (addMode ? 'Cancel' : 'Add sensor')}
           </Btn>
 
           {/* Edit rooms */}
@@ -1688,7 +1725,7 @@ export default function FloorplanPage() {
               <Btn sm active={roomsEditMode} ghost={!roomsEditMode}
                 onClick={() => { setRoomsEditMode(r => !r); setEditMode(false); setAddMode(false); setSelectedSensor(null) }}
                 style={roomsEditMode ? { borderColor: '#6366f1', background: 'rgba(99,102,241,0.14)', color: '#818cf8' } : {}}>
-                <LayoutGrid size={12} /> {roomsEditMode ? 'Done' : 'Edit rooms'}
+                <LayoutGrid size={12} /> {!isMobile && (roomsEditMode ? 'Done' : 'Edit rooms')}
               </Btn>
               {hasRoomOverrides && !roomsEditMode && (
                 <Btn sm ghost danger onClick={resetRooms} title="Reset rooms to default layout">
@@ -1700,10 +1737,10 @@ export default function FloorplanPage() {
 
           {/* Widget layout */}
           <div style={{ width: 1, height: 16, background: T.border, margin: '0 2px' }} />
-          <Btn sm active={layoutEditMode} ghost={!layoutEditMode}
+            <Btn sm active={layoutEditMode} ghost={!layoutEditMode}
             onClick={() => setLayoutEditMode(m => !m)}
             style={layoutEditMode ? { borderColor: 'var(--accent)', background: 'rgba(99,102,241,0.14)', color: '#818cf8' } : {}}>
-            <Layers size={12} /> {layoutEditMode ? 'Done' : 'Layout'}
+            <Layers size={12} /> {!isMobile && (layoutEditMode ? 'Done' : 'Layout')}
           </Btn>
           {layoutEditMode && (
             <Btn sm ghost danger onClick={resetWidgetLayout} title="Reset widget layout to default">
@@ -1712,7 +1749,7 @@ export default function FloorplanPage() {
           )}
 
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => uploadBg(e.target.files?.[0])} />
-          <Btn sm ghost onClick={() => fileRef.current?.click()}><Home size={12} /> Map image</Btn>
+          <Btn sm ghost onClick={() => fileRef.current?.click()} title="Map image"><Home size={12} /> {!isMobile && ' Map image'}</Btn>
           {bgImage && <Btn sm ghost danger onClick={() => { setBgImage(''); localStorage.removeItem('fp-bg-image') }}><X size={11} /></Btn>}
           <Btn sm ghost onClick={loadSensors}><RefreshCw size={12} /></Btn>
         </div>
@@ -1828,23 +1865,32 @@ export default function FloorplanPage() {
             {item.id === 'floormap' && (
               <div style={{ height: '100%', overflow: 'hidden' }}>
                 {viewMode === 'map' ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '1rem', height: '100%' }}>
-                    <FloorplanMap
-                      sensors={sensors}
-                      selectedId={selectedSensor?.id}
-                      onSelectSensor={s => setSelectedSensor(s)}
-                      onDragSensor={handleDragSensor}
-                      onDragSensorEnd={handleDragSensorEnd}
-                      bgImage={bgImage} zoom={mapZoom} onZoom={handleZoom}
-                      editMode={editMode} addMode={addMode}
-                      onAddClick={pos => setModal({ pendingPos: pos })}
-                      roomsEditMode={roomsEditMode}
-                      roomOverrides={roomOverrides}
-                      onRoomChange={handleRoomChange}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr minmax(200px,320px)', gap: '1rem', height: '100%' }}>
+                    <div style={{ height: isMobile ? '62vh' : '100%', minHeight: isMobile ? 320 : undefined }}>
+                      <FloorplanMap
+                        sensors={sensors}
+                        selectedId={selectedSensor?.id}
+                        onSelectSensor={s => setSelectedSensor(s)}
+                        onDragSensor={handleDragSensor}
+                        onDragSensorEnd={handleDragSensorEnd}
+                        bgImage={bgImage} zoom={mapZoom} onZoom={handleZoom}
+                        editMode={editMode} addMode={addMode}
+                        onAddClick={pos => setModal({ pendingPos: pos })}
+                        roomsEditMode={roomsEditMode}
+                        roomOverrides={roomOverrides}
+                        onRoomChange={handleRoomChange}
+                      />
+                    </div>
 
                     {/* Sidebar */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '100%', overflow: 'hidden' }}>
+                      {isMobile && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.25rem' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: T.textPrimary }}>Map info</span>
+                          <Btn sm ghost onClick={() => setShowSidebarDetails(s => !s)}>{showSidebarDetails ? 'Hide' : 'Details'}</Btn>
+                        </div>
+                      )}
+
                       <GCard style={{ padding: '0.875rem', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
                           <Layers size={12} style={{ color: T.accent }} />
@@ -1871,7 +1917,8 @@ export default function FloorplanPage() {
                         </div>
                       </GCard>
 
-                      <GCard style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+                      {(!isMobile || showSidebarDetails) && (
+                        <GCard style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
                           <Wifi size={12} style={{ color: T.accent }} />
                           <span style={{ fontSize: '0.70rem', fontWeight: 700, color: T.textPrimary }}>Sensors</span>
@@ -1899,7 +1946,8 @@ export default function FloorplanPage() {
                             ))}
                           </AnimatePresence>
                         </div>
-                      </GCard>
+                        </GCard>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1944,6 +1992,15 @@ export default function FloorplanPage() {
       {blackoutOpen && <BoilerBlackoutModal onClose={() => setBlackoutOpen(false)} onSaved={loadBoiler} showToast={showToast} />}
 
       <Toast toast={toast} />
+
+      {/* Mobile floating toggle to reveal widgets (only on small screens) */}
+      {isMobile && (
+        <div style={{ position: 'fixed', left: 12, bottom: 20, zIndex: 60 }}>
+          <Btn onClick={() => setMobileWidgetsVisible(v => !v)} style={{ borderRadius: 999, padding: '0.55rem 0.8rem' }}>
+            {mobileWidgetsVisible ? 'Hide cards' : 'Show cards'}
+          </Btn>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }

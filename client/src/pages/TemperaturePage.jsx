@@ -196,8 +196,8 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
       </div>
 
       {/* Dial */}
-      <div style={{ position: 'relative', width: SIZE, margin: '0 auto' }}>
-        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block' }}>
+        <div style={{ position: 'relative', width: 'min(320px,100%)', margin: '0 auto' }}>
+          <svg width="100%" height="auto" viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block' }}>
           {/* Track */}
           <path d={trackPath} fill="none" stroke="#e9ecef" strokeWidth={SW} strokeLinecap="round" />
           {/* Orange arc */}
@@ -222,7 +222,7 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
             position: 'absolute',
             top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 180, height: 180,
+            width: 'min(180px,48vw)', height: 'min(180px,48vw)',
             borderRadius: '50%',
             border: 'none', background: 'transparent', cursor: 'pointer',
             display: 'flex', flexDirection: 'column',
@@ -1061,13 +1061,13 @@ export default function TemperaturePage() {
 
   const DailyControls = (
     <>
-      <div className="field" style={{ flex: 1, minWidth: 110 }}>
+      <div className="field" style={{ flex: 1, minWidth: 0 }}>
         <label className="field-label">Month</label>
         <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={month} onChange={e => setMonth(+e.target.value)}>
           {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
         </select>
       </div>
-      <div className="field" style={{ flex: 1, minWidth: 90 }}>
+      <div className="field" style={{ flex: 1, minWidth: 0 }}>
         <label className="field-label">Year</label>
         <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={year} onChange={e => setYear(+e.target.value)}>
           {years.map(y => <option key={y}>{y}</option>)}
@@ -1080,13 +1080,13 @@ export default function TemperaturePage() {
         </label>
       </div>
       {compareEnabled && <>
-        <div className="field" style={{ flex: 1, minWidth: 110 }}>
+        <div className="field" style={{ flex: 1, minWidth: 0 }}>
           <label className="field-label">Cmp Month</label>
           <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={compareMonth} onChange={e => setCompareMonth(+e.target.value)}>
             {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
           </select>
         </div>
-        <div className="field" style={{ flex: 1, minWidth: 90 }}>
+        <div className="field" style={{ flex: 1, minWidth: 0 }}>
           <label className="field-label">Cmp Year</label>
           <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={compareYear} onChange={e => setCompareYear(+e.target.value)}>
             {years.map(y => <option key={y}>{y}</option>)}

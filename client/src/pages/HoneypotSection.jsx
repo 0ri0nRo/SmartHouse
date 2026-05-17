@@ -656,7 +656,7 @@ function FeedTab({ events, isMobile }) {
         </span>
       </div>
       {!isMobile && (
-        <div style={{ display: 'grid', gridTemplateColumns: '65px 130px 90px 90px 1fr', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'minmax(56px,80px) minmax(120px,1fr) minmax(90px,1fr) minmax(90px,1fr) 1fr', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
           {['Time', 'Source IP', 'Event', 'Username', 'Password / Command'].map(h => (
             <span key={h} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
           ))}
@@ -683,7 +683,7 @@ function FeedTab({ events, isMobile }) {
                 )}
               </div>
             ) : (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '65px 130px 90px 90px 1fr', gap: '0.5rem', alignItems: 'center', padding: '0.45rem 1rem', borderBottom: '1px solid var(--border)', background: isSuccess ? '#ef444408' : 'transparent' }}>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'minmax(56px,80px) minmax(120px,1fr) minmax(90px,1fr) minmax(90px,1fr) 1fr', gap: '0.5rem', alignItems: 'center', padding: '0.45rem 1rem', borderBottom: '1px solid var(--border)', background: isSuccess ? '#ef444408' : 'transparent' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{ts}</span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: isSuccess ? '#ef4444' : 'var(--text-primary)', fontWeight: isSuccess ? 700 : 400 }}>{e.src_ip || '—'}</span>
                 <EventBadge eventid={e.eventid} />

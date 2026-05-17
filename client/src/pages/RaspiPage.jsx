@@ -968,8 +968,8 @@ function ProcessesPanel() {
   return (
     <Card icon={Activity} title="Processes" accent={T.muted}
       headerRight={<Btn size="sm" onClick={load} style={{ padding: '2px 6px' }}><RefreshCw size={10} /></Btn>}>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ minWidth: 300 }}>
+      <div className="table-wrap">
+        <table>
           <thead><tr><th>PID</th><th>Name</th><th>CPU</th><th>RAM</th><th></th></tr></thead>
           <tbody>
             {loading
