@@ -187,9 +187,20 @@ const TABS = [
   { id: 'map',         label: 'Map',       icon: <Globe size={12} /> },
 ]
 
-function SubTabBar({ active, onChange }) {
+function SubTabBar({ active, onChange, mobile = false }) {
+  const barStyle = mobile ? {
+    display: 'flex', gap: '0.1rem',
+    position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 110,
+    background: 'var(--bg-surface)', borderTop: '1px solid var(--border)',
+    padding: '0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom))',
+    overflowX: 'auto', scrollbarWidth: 'none',
+    backdropFilter: 'blur(18px)', WebkitOverflowScrolling: 'touch',
+  } : {
+    display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)', borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem', overflowX: 'auto', scrollbarWidth: 'none'
+  }
+
   return (
-    <div style={{ display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)', borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
+    <div style={barStyle}>
       {TABS.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
           display: 'flex', alignItems: 'center', gap: '0.3rem',
@@ -200,7 +211,11 @@ function SubTabBar({ active, onChange }) {
           color: active === t.id ? 'var(--text-primary)' : 'var(--text-secondary)',
           boxShadow: active === t.id ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
           transition: 'all 0.15s',
+          position: 'relative',
         }}>
+          {mobile && active === t.id && (
+            <span style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: 2, borderRadius: 1, background: 'var(--accent)' }} />
+          )}
           {t.icon}{t.label}
         </button>
       ))}
@@ -431,7 +446,7 @@ function OverviewTab({ stats, isMobile }) {
   }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingBottom: isMobile ? 'calc(5.5rem + env(safe-area-inset-bottom))' : 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
         <StatCard label="Total events"    value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
         <StatCard label="Unique IPs"      value={stats.unique_ips}     icon={<Target size={15} />}   color="#ef4444" />
@@ -1419,7 +1434,7 @@ export default function HoneypotSection({ isMobile }) {
         </button>
       </div>
 
-      <SubTabBar active={subTab} onChange={setSubTab} />
+      <SubTabBar active={subTab} onChange={setSubTab} mobile={isMobile} />
 
       {subTab === 'overview'    && <OverviewTab stats={stats} isMobile={isMobile} />}
       {subTab === 'attackers'   && <AttackersTab isMobile={isMobile} onSessionClick={setSessionModal} onProfileClick={setProfileModal} />}

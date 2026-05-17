@@ -418,6 +418,69 @@ ul, ol { list-style: none; }
 .page-md  { max-width: 1000px; }
 .page-full { max-width: 100%; }
 
+.mobile-bottom-nav-shell {
+  display: none;
+}
+
+.mobile-bottom-nav {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.14);
+}
+
+.mobile-bottom-nav__item {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.7rem 0 0.6rem;
+  position: relative;
+  font: inherit;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.mobile-bottom-nav__item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.mobile-bottom-nav__item span {
+  font-size: 0.61rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.mobile-bottom-nav__item.active {
+  color: var(--accent);
+}
+
+.mobile-bottom-nav__item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 /* ════ BENTO GRID ════
   Helper class for bento grids. Use with gap and
   inline grid-template-columns for maximum flexibility.
@@ -1226,6 +1289,9 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
 @media (max-width: 768px) {
   .layout-shell { overflow-x: hidden; }
   .main-shell { margin-left: 0; }
+  .main-shell--mobile-nav .page {
+    padding-bottom: calc(1rem + 92px + env(safe-area-inset-bottom));
+  }
   .sidebar { transform: translateX(-100%); box-shadow: none; width: min(86vw, 300px); }
   .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg), 4px 0 30px rgba(59,110,255,0.10); }
   .sidebar-overlay.visible { display: block; }
@@ -1251,6 +1317,15 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   .panel-strip { padding: var(--space-3) var(--space-4); }
   img, svg { max-width: 100%; height: auto; }
   .floorplan-map { min-height: 320px; }
+  .mobile-bottom-nav-shell {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 130;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 @media (max-width: 480px) {
