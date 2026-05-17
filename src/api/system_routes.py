@@ -22,6 +22,7 @@ email_sender = EmailSender(
 )
 
 _upgrade_state = {'running': False, 'output': [], 'done': False, 'error': None}
+_nextcloud_state = {'running': False, 'output': [], 'done': False, 'error': None}
 
 HOST_IP   = config.get('RASPI_HOST_IP',       '127.0.0.1')
 HOST_USER = config.get('RASPI_HOST_USER',     'orion')
@@ -464,3 +465,62 @@ def api_upgrade_start():
 @cache_json_response(ttl_seconds=5)
 def api_upgrade_status():
     return jsonify(_upgrade_state)
+
+
+# ── Nextcloud update (async) ───────────────────────────────────────────
+@system_bp.route('/api/system/nextcloud_update/start', methods=['POST'])
+@handle_db_error
+def api_nextcloud_update_start():
+    global _nextcloud_state
+    if _nextcloud_state['running']:
+        return jsonify({'error': 'Nextcloud update already running'}), 409
+
+    _nextcloud_state = {'running': True, 'output': [], 'done': False, 'error': None}
+
+    def run():
+        global _nextcloud_state
+        try:
+            cmds = [
+                # 1. Put Nextcloud into maintenance
+                "cd ~/nextcloud-docker && docker-compose exec nextcloud php /var/www/html/occ maintenance:mode --on",
+                # 2. DB dump
+                "cd ~/nextcloud-docker && docker-compose exec db mariadb-dump -uroot -proot_password --all-databases > backup-db-$(date +%Y%m%d).sql",
+                # 3. Archive data volume
+                "docker run --rm -v nextcloud-docker_nextcloud_data:/data -v /mnt/nextcloud/backups:/backup alpine tar czf /backup/nextcloud-data-$(date +%Y%m%d).tar.gz /data",
+                # 4. Pull new images
+                "cd ~/nextcloud-docker && docker-compose pull",
+                # 5. Recreate containers
+                "cd ~/nextcloud-docker && docker-compose up -d",
+                # 6. Run occ upgrade
+                "cd ~/nextcloud-docker && docker-compose exec nextcloud php /var/www/html/occ upgrade",
+                # 7. Disable maintenance
+                "cd ~/nextcloud-docker && docker-compose exec nextcloud php /var/www/html/occ maintenance:mode --off",
+                # 8. Status
+                "cd ~/nextcloud-docker && docker-compose exec nextcloud php /var/www/html/occ status",
+            ]
+
+            for cmd in cmds:
+                _nextcloud_state['output'].append(f'$ {cmd}')
+                try:
+                    stdout, stderr, rc = _ssh_exec_host(cmd)
+                    # append stdout or stderr lines
+                    out_lines = (stdout or stderr or '').splitlines()
+                    _nextcloud_state['output'].extend(out_lines)
+                except Exception as e:
+                    _nextcloud_state['error'] = str(e)
+                    break
+        except Exception as e:
+            _nextcloud_state['error'] = str(e)
+        finally:
+            _nextcloud_state['running'] = False
+            _nextcloud_state['done']    = True
+
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Nextcloud update started'}), 202
+
+
+@system_bp.route('/api/system/nextcloud_update/status')
+@handle_db_error
+@cache_json_response(ttl_seconds=5)
+def api_nextcloud_update_status():
+    return jsonify(_nextcloud_state)

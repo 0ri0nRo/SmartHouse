@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Component } from 'react'
 import {
   Activity, Terminal, Shield, RefreshCw, Play, X,
   Power, RotateCcw, Cpu, Wifi, FileText, Package,
   AlertTriangle, Server, Zap, MapPin, Plus, Save, Trash2,
+  CloudRain,
   ZoomIn, ZoomOut, GripVertical, Maximize2, Move, ChevronDown, ChevronUp,
   LayoutGrid, Eye, EyeOff, ExternalLink,
 } from 'lucide-react'
@@ -1057,6 +1058,10 @@ function LogsPanel() {
   const [lines,   setLines]   = useState([])
   const [loading, setLoading] = useState(false)
   const boxRef = useRef(null)
+  const [ncState, setNcState] = useState(null)
+  const [ncPolling, setNcPolling] = useState(false)
+  const [ncMsg, setNcMsg] = useState(null)
+  const ncBoxRef = useRef(null)
 
   const load = async (t = tab) => {
     setLoading(true)
@@ -1094,6 +1099,10 @@ function UpgradePanel() {
   const [polling, setPolling] = useState(false)
   const [msg,     setMsg]     = useState(null)
   const boxRef = useRef(null)
+  const [ncState, setNcState] = useState(null)
+  const [ncPolling, setNcPolling] = useState(false)
+  const [ncMsg, setNcMsg] = useState(null)
+  const ncBoxRef = useRef(null)
 
   const startUpgrade = async () => {
     try {
@@ -1121,6 +1130,23 @@ function UpgradePanel() {
     return () => clearInterval(id)
   }, [polling])
 
+  useEffect(() => {
+    if (!ncPolling) return
+    const id = setInterval(async () => {
+      try {
+        const d = await fetch('/api/system/nextcloud_update/status').then(r => r.json())
+        setNcState(d)
+        setTimeout(() => { if (ncBoxRef.current) ncBoxRef.current.scrollTop = ncBoxRef.current.scrollHeight }, 50)
+        if (d.done) {
+          setNcPolling(false)
+          setNcMsg({ t: d.error ? 'Nextcloud update failed' : 'Nextcloud update completed', v: d.error ? 'error' : 'success' })
+          setTimeout(() => setNcMsg(null), 4000)
+        }
+      } catch { setNcPolling(false) }
+    }, 2000)
+    return () => clearInterval(id)
+  }, [ncPolling])
+
   return (
     <Card icon={Package} title="Updates" accent={T.warning}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.md }}>
@@ -1131,6 +1157,17 @@ function UpgradePanel() {
         <Btn variant="warning" full onClick={startUpgrade} disabled={polling} style={{ padding: '0.5rem', gap: T.space.sm }}>
           {polling ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> In progress…</> : <><Package size={13} /> Start upgrade</>}
         </Btn>
+        <div style={{ height: 6 }} />
+        <Btn variant="primary" full onClick={async () => {
+          try {
+            const res = await fetch('/api/system/nextcloud_update/start', { method: 'POST' })
+            const d = await res.json()
+            if (!res.ok) throw new Error(d.error || 'Failed to start')
+            setNcPolling(true)
+          } catch (e) { setNcMsg({ t: e.message, v: 'error' }); setTimeout(() => setNcMsg(null), 4000) }
+        }} disabled={ncPolling} style={{ padding: '0.5rem', gap: T.space.sm }}>
+          {ncPolling ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Nextcloud updating…</> : <><CloudRain size={13} /> Update Nextcloud</>}
+        </Btn>
         {state && (
           <div ref={boxRef} style={{ background: '#080f24', borderRadius: T.radius.md, padding: '0.7rem 0.85rem', fontFamily: T.mono, fontSize: '0.67rem', lineHeight: 1.65, maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(37,99,235,0.12)', color: '#7a9ac0' }}>
             {state.output.map((l, i) => <div key={i}>{l}</div>)}
@@ -1138,9 +1175,43 @@ function UpgradePanel() {
             {state.error && <div style={{ color: T.danger, marginTop: T.space.sm }}>✗ {state.error}</div>}
           </div>
         )}
+        {ncState && (
+          <div ref={ncBoxRef} style={{ background: '#07101a', borderRadius: T.radius.md, padding: '0.7rem 0.85rem', fontFamily: T.mono, fontSize: '0.67rem', lineHeight: 1.65, maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(37,99,235,0.08)', color: '#9fb7c9', marginTop: 8 }}>
+            {ncState.output.map((l, i) => <div key={i}>{l}</div>)}
+            {ncState.done && !ncState.error && <div style={{ color: T.success, marginTop: T.space.sm }}>✓ Nextcloud update completed.</div>}
+            {ncState.error && <div style={{ color: T.danger, marginTop: T.space.sm }}>✗ {ncState.error}</div>}
+          </div>
+        )}
       </div>
     </Card>
   )
+}
+
+
+// Simple ErrorBoundary to avoid a black screen and show error details
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, info) {
+    // You could log to sentry or similar here
+    console.error('ErrorBoundary caught', error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 20 }}>
+          <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>An error occurred rendering this page</div>
+          <pre style={{ whiteSpace: 'pre-wrap', background: '#111827', color: '#fca5a5', padding: 12, borderRadius: 6 }}>{String(this.state.error)}</pre>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1299,7 +1370,8 @@ export default function RaspiPage() {
   }
 
   return (
-    <div className="page animate-fade">
+    <ErrorBoundary>
+      <div className="page animate-fade">
 
       {/* ── HEADER ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: T.space.md, marginBottom: '1.25rem' }}>
@@ -1409,6 +1481,7 @@ export default function RaspiPage() {
           table { font-size:0.62rem; }
         }
       `}</style>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }
