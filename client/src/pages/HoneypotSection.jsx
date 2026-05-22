@@ -21,23 +21,24 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import { fetchJson } from '../lib/fetchCache'
 
 // ── API ────────────────────────────────────────────────────
 const api = {
-  stats:             ()      => fetch('/api/honeypot/stats').then(r => r.json()),
-  events:            (n=200) => fetch(`/api/honeypot/events?limit=${n}`).then(r => r.json()),
-  attackers:         ()      => fetch('/api/honeypot/attackers').then(r => r.json()),
-  credentials:       ()      => fetch('/api/honeypot/credentials').then(r => r.json()),
-  commands:          ()      => fetch('/api/honeypot/commands/top').then(r => r.json()),
-  session:           (id)    => fetch(`/api/honeypot/sessions/${id}`).then(r => r.json()),
-  daily:             ()      => fetch('/api/honeypot/timeline/daily').then(r => r.json()),
-  files:             ()      => fetch('/api/honeypot/files').then(r => r.json()),
-  geoip:             (n=100) => fetch(`/api/honeypot/geoip?limit=${n}`).then(r => r.json()),
-  banned:            (j='')  => fetch(`/api/honeypot/banned${j ? `?jail=${j}` : ''}`).then(r => r.json()),
-  alerts:            (h=24)  => fetch(`/api/honeypot/alerts?hours=${h}`).then(r => r.json()),
-  threats:           (d=7)   => fetch(`/api/honeypot/threats?days=${d}`).then(r => r.json()),
-  attackerProfile:   (ip)    => fetch(`/api/honeypot/attackers/${ip}`).then(r => r.json()),
-  downloadsAnalysis: ()      => fetch('/api/honeypot/downloads/analysis').then(r => r.json()),
+  stats:             ()      => fetchJson('/api/honeypot/stats'),
+  events:            (n=200) => fetchJson(`/api/honeypot/events?limit=${n}`),
+  attackers:         ()      => fetchJson('/api/honeypot/attackers'),
+  credentials:       ()      => fetchJson('/api/honeypot/credentials'),
+  commands:          ()      => fetchJson('/api/honeypot/commands/top'),
+  session:           (id)    => fetchJson(`/api/honeypot/sessions/${id}`),
+  daily:             ()      => fetchJson('/api/honeypot/timeline/daily'),
+  files:             ()      => fetchJson('/api/honeypot/files'),
+  geoip:             (n=100) => fetchJson(`/api/honeypot/geoip?limit=${n}`),
+  banned:            (j='')  => fetchJson(`/api/honeypot/banned${j ? `?jail=${j}` : ''}`),
+  alerts:            (h=24)  => fetchJson(`/api/honeypot/alerts?hours=${h}`),
+  threats:           (d=7)   => fetchJson(`/api/honeypot/threats?days=${d}`),
+  attackerProfile:   (ip)    => fetchJson(`/api/honeypot/attackers/${ip}`),
+  downloadsAnalysis: ()      => fetchJson('/api/honeypot/downloads/analysis'),
 }
 
 // ── Constants ──────────────────────────────────────────────

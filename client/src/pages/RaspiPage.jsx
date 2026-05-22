@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback, Component } from 'react'
 import {
   Activity, Terminal, Shield, RefreshCw, Play, X,
-  Power, RotateCcw, Cpu, Wifi, FileText, Package,
+  Power, RotateCcw, Cpu, Wifi, FileText,
   AlertTriangle, Server, Zap, MapPin, Plus, Save, Trash2,
-  CloudRain,
   ZoomIn, ZoomOut, GripVertical, Maximize2, Move, ChevronDown, ChevronUp,
   LayoutGrid, Eye, EyeOff, ExternalLink, Settings, ChevronRight,
 } from 'lucide-react'
@@ -11,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts'
+import SmartHouseUpgradeWidget from '../components/SmartHouseUpgradeWidget'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESIGN TOKENS
@@ -51,8 +51,7 @@ const DEFAULT_LAYOUT = [
   { id:'devinfo',   col:8,  row:3,  colSpan:4,  rowSpan:3  },
   { id:'resources', col:8,  row:6,  colSpan:4,  rowSpan:2  },
   { id:'floorplan', col:0,  row:8,  colSpan:6,  rowSpan:4  },
-  { id:'power',     col:6,  row:8,  colSpan:3,  rowSpan:4  },
-  { id:'services',  col:9,  row:8,  colSpan:3,  rowSpan:4  },
+  { id:'services',  col:6,  row:8,  colSpan:6,  rowSpan:4  },
   { id:'processes', col:6,  row:12, colSpan:6,  rowSpan:4  },
   { id:'network',   col:6,  row:16, colSpan:3,  rowSpan:4  },
   { id:'ssh',       col:0,  row:18, colSpan:12, rowSpan:5  },
@@ -285,7 +284,7 @@ function BottomNav({ active, onChange, alerts }) {
 // ── SETTINGS SHEET ───────────────────────────────────────────────────────────
 const WIDGET_LABELS = {
   gauges: 'Gauges', chart: 'Live Trends', devinfo: 'Device Info',
-  resources: 'Resources', floorplan: 'Mappa di Casa', power: 'Power',
+  resources: 'Resources', floorplan: 'Mappa di Casa',
   services: 'Services', processes: 'Processes', network: 'Network',
   ssh: 'SSH Terminal', logs: 'Logs', upgrade: 'Updates', backup: 'Backup',
 }
@@ -1036,113 +1035,6 @@ function LogsPanel() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UPGRADE PANEL
-// ─────────────────────────────────────────────────────────────────────────────
-function UpgradePanel() {
-  const [state,     setState]     = useState(null)
-  const [polling,   setPolling]   = useState(false)
-  const [msg,       setMsg]       = useState(null)
-  const [ncState,   setNcState]   = useState(null)
-  const [ncPolling, setNcPolling] = useState(false)
-  const [ncMsg,     setNcMsg]     = useState(null)
-  const boxRef   = useRef(null)
-  const ncBoxRef = useRef(null)
-
-  const startUpgrade = async () => {
-    try {
-      const res = await fetch('/api/system/upgrade/start', { method: 'POST' })
-      const d   = await res.json()
-      if (!res.ok) throw new Error(d.error)
-      setPolling(true)
-    } catch (e) { setMsg({ t: e.message, v: 'error' }); setTimeout(() => setMsg(null), 3000) }
-  }
-
-  useEffect(() => {
-    if (!polling) return
-    const id = setInterval(async () => {
-      try {
-        const d = await fetch('/api/system/upgrade/status').then(r => r.json())
-        setState(d)
-        setTimeout(() => { if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight }, 50)
-        if (d.done) { setPolling(false); setMsg({ t: d.error ? 'Update failed' : 'Completed', v: d.error ? 'error' : 'success' }); setTimeout(() => setMsg(null), 3000) }
-      } catch { setPolling(false) }
-    }, 1500)
-    return () => clearInterval(id)
-  }, [polling])
-
-  useEffect(() => {
-    if (!ncPolling) return
-    const id = setInterval(async () => {
-      try {
-        const d = await fetch('/api/system/nextcloud_update/status').then(r => r.json())
-        setNcState(d)
-        setTimeout(() => { if (ncBoxRef.current) ncBoxRef.current.scrollTop = ncBoxRef.current.scrollHeight }, 50)
-        if (d.done) { setNcPolling(false); setNcMsg({ t: d.error ? 'Nextcloud update failed' : 'Nextcloud update completed', v: d.error ? 'error' : 'success' }); setTimeout(() => setNcMsg(null), 4000) }
-      } catch { setNcPolling(false) }
-    }, 2000)
-    return () => clearInterval(id)
-  }, [ncPolling])
-
-  return (
-    <Card icon={Package} title="Updates" accent={T.warning}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.md }}>
-        <div style={{ padding: '0.4rem 0.6rem', borderRadius: T.radius.md, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', fontSize: '0.65rem', color: '#b45309', fontFamily: T.mono }}>
-          <code style={{ background: T.bgSurf2, padding: '1px 5px', borderRadius: 4 }}>apt update && upgrade -y</code>
-        </div>
-        {msg && <div style={{ fontSize: '0.65rem', fontWeight: 600, color: msg.v === 'error' ? T.danger : T.success }}>{msg.t}</div>}
-        <Btn variant="warning" full onClick={startUpgrade} disabled={polling} style={{ padding: '0.5rem', gap: T.space.sm }}>
-          {polling ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> In progress…</> : <><Package size={13} /> Start upgrade</>}
-        </Btn>
-        <div style={{ height: 2 }} />
-        <Btn variant="primary" full onClick={async () => {
-          try {
-            const res = await fetch('/api/system/nextcloud_update/start', { method: 'POST' })
-            const d = await res.json()
-            if (!res.ok) throw new Error(d.error || 'Failed to start')
-            setNcPolling(true)
-          } catch (e) { setNcMsg({ t: e.message, v: 'error' }); setTimeout(() => setNcMsg(null), 4000) }
-        }} disabled={ncPolling} style={{ padding: '0.5rem', gap: T.space.sm }}>
-          {ncPolling ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Nextcloud updating…</> : <><CloudRain size={13} /> Update Nextcloud</>}
-        </Btn>
-        {state && (
-          <div ref={boxRef} style={{ background: '#080f24', borderRadius: T.radius.md, padding: '0.7rem 0.85rem', fontFamily: T.mono, fontSize: '0.67rem', lineHeight: 1.65, maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(37,99,235,0.12)', color: '#7a9ac0' }}>
-            {state.output.map((l, i) => <div key={i}>{l}</div>)}
-            {state.done && !state.error && <div style={{ color: T.success, marginTop: T.space.sm }}>✓ Completed.</div>}
-            {state.error && <div style={{ color: T.danger, marginTop: T.space.sm }}>✗ {state.error}</div>}
-          </div>
-        )}
-        {ncState && (
-          <div ref={ncBoxRef} style={{ background: '#07101a', borderRadius: T.radius.md, padding: '0.7rem 0.85rem', fontFamily: T.mono, fontSize: '0.67rem', lineHeight: 1.65, maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(37,99,235,0.08)', color: '#9fb7c9', marginTop: 8 }}>
-            {ncState.output.map((l, i) => <div key={i}>{l}</div>)}
-            {ncState.done && !ncState.error && <div style={{ color: T.success, marginTop: T.space.sm }}>✓ Nextcloud update completed.</div>}
-            {ncState.error && <div style={{ color: T.danger, marginTop: T.space.sm }}>✗ {ncState.error}</div>}
-          </div>
-        )}
-        {ncMsg && <div style={{ fontSize: '0.65rem', fontWeight: 600, color: ncMsg.v === 'error' ? T.danger : T.success }}>{ncMsg.t}</div>}
-      </div>
-    </Card>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BACKUP WIDGET
-// ─────────────────────────────────────────────────────────────────────────────
-function BackupWidget({ onBackup, backing }) {
-  return (
-    <Card icon={Shield} title="Backup" accent={T.success}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: T.space.md }}>
-        <div style={{ padding: '0.4rem 0.6rem', borderRadius: T.radius.md, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.18)', fontSize: '0.65rem', color: '#b45309', lineHeight: 1.5 }}>
-          Snapshot of config, user data, packages and settings.
-        </div>
-        <Btn variant="success" full onClick={onBackup} disabled={backing} style={{ padding: '0.5rem', gap: T.space.sm }}>
-          {backing ? <><RefreshCw size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> In progress…</> : <><Shield size={13} /> Start backup</>}
-        </Btn>
-      </div>
-    </Card>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // VISIBILITY PANEL (desktop edit mode)
 // ─────────────────────────────────────────────────────────────────────────────
 function VisibilityPanel({ hidden, onToggle }) {
@@ -1264,14 +1156,12 @@ export default function RaspiPage() {
       case 'devinfo':   return <DeviceInfoWidget stats={stats} diskTotal={diskTotal} memTotal={memTotal} />
       case 'resources': return <ResourcesWidget {...{ cpu, temp, diskPct, memPct, cpuHigh, tempHigh, loading }} />
       case 'floorplan': return <HomeMapWidget />
-      case 'power':     return <PowerPanel />
       case 'services':  return <ServicesPanel />
       case 'processes': return <ProcessesPanel />
       case 'network':   return <NetworkPanel />
       case 'ssh':       return <SshPanel />
       case 'logs':      return <LogsPanel />
-      case 'upgrade':   return <UpgradePanel />
-      case 'backup':    return <BackupWidget onBackup={backup} backing={backing} />
+      case 'upgrade':   return <SmartHouseUpgradeWidget />
       default:          return null
     }
   }
@@ -1374,8 +1264,6 @@ export default function RaspiPage() {
               <div style={{ padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Services */}
                 <MobileSection>{renderWidget('services')}</MobileSection>
-                {/* Power */}
-                <MobileSection>{renderWidget('power')}</MobileSection>
                 {/* Upgrade */}
                 <MobileSection>{renderWidget('upgrade')}</MobileSection>
                 {/* Backup */}

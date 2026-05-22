@@ -11,6 +11,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request
+from utils.redis_cache import cache_json_response
 
 honeypot_bp = Blueprint("honeypot", __name__)
 
@@ -316,6 +317,7 @@ def get_debug():
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @honeypot_bp.route("/api/honeypot/events")
+@cache_json_response(ttl_seconds=10)
 def get_events():
     limit       = min(int(request.args.get("limit", 200)), 500)
     type_filter = request.args.get("type", "").lower()
@@ -348,6 +350,7 @@ def get_events():
 
 
 @honeypot_bp.route("/api/honeypot/stats")
+@cache_json_response(ttl_seconds=30)
 def get_stats():
     events       = _parse_logs()
     ip_counter   = Counter()
@@ -425,6 +428,7 @@ def get_stats():
 
 
 @honeypot_bp.route("/api/honeypot/attackers")
+@cache_json_response(ttl_seconds=60)
 def get_attackers():
     events = _parse_logs()
 
@@ -507,6 +511,7 @@ def get_attackers():
 
 
 @honeypot_bp.route("/api/honeypot/credentials")
+@cache_json_response(ttl_seconds=300)
 def get_credentials():
     events       = _parse_logs()
     pair_counter = Counter()
@@ -541,6 +546,7 @@ def get_credentials():
 
 
 @honeypot_bp.route("/api/honeypot/commands/top")
+@cache_json_response(ttl_seconds=60)
 def get_top_commands():
     events      = _parse_logs()
     cmd_counter = Counter()
@@ -582,6 +588,7 @@ def get_top_commands():
 
 
 @honeypot_bp.route("/api/honeypot/sessions/<session_id>")
+@cache_json_response(ttl_seconds=15)
 def get_session(session_id: str):
     events         = _parse_logs()
     session_events = [e for e in events if e.get("session") == session_id]
@@ -643,6 +650,7 @@ def get_session(session_id: str):
 
 
 @honeypot_bp.route("/api/honeypot/timeline/daily")
+@cache_json_response(ttl_seconds=300)
 def get_daily_timeline():
     days   = min(int(request.args.get("days", 30)), 90)
     events = _parse_logs()
@@ -683,6 +691,7 @@ def get_daily_timeline():
 
 
 @honeypot_bp.route("/api/honeypot/files")
+@cache_json_response(ttl_seconds=60)
 def get_files():
     events      = _parse_logs()
     FILE_EVENTS = {"cowrie.session.file_download", "cowrie.session.file_upload"}
@@ -707,6 +716,7 @@ def get_files():
 
 
 @honeypot_bp.route("/api/honeypot/summary")
+@cache_json_response(ttl_seconds=30)
 def get_summary():
     events  = _parse_logs()
     now     = _now_utc()
@@ -745,6 +755,7 @@ def get_summary():
 
 
 @honeypot_bp.route("/api/honeypot/banned")
+@cache_json_response(ttl_seconds=60)
 def get_banned():
     jail_filter = request.args.get("jail", "").strip()
     active_only = request.args.get("active", "true").lower() != "false"
@@ -810,6 +821,7 @@ def get_banned():
 
 
 @honeypot_bp.route("/api/honeypot/alerts")
+@cache_json_response(ttl_seconds=30)
 def get_alerts():
     hours    = min(int(request.args.get("hours", 24)), 720)
     limit    = min(int(request.args.get("limit", 50)), 500)
@@ -873,6 +885,7 @@ def get_alerts():
 
 
 @honeypot_bp.route("/api/honeypot/threats")
+@cache_json_response(ttl_seconds=60)
 def get_threats():
     days     = min(int(request.args.get("days", 7)), 90)
     events   = _parse_logs()
@@ -949,6 +962,7 @@ def get_threats():
 
 
 @honeypot_bp.route("/api/honeypot/attackers/<ip>")
+@cache_json_response(ttl_seconds=60)
 def get_attacker_profile(ip: str):
     events      = _parse_logs()
     sessions    = _build_sessions(events)
@@ -1026,6 +1040,7 @@ def get_attacker_profile(ip: str):
 
 
 @honeypot_bp.route("/api/honeypot/downloads/analysis")
+@cache_json_response(ttl_seconds=300)
 def get_downloads_analysis():
     limit       = min(int(request.args.get("limit", 100)), 500)
     events      = _parse_logs()

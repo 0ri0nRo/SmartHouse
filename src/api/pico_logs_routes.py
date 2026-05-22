@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from utils.redis_cache import cache_json_response
 from models.database import handle_db_error
 import logging
 
@@ -15,6 +16,7 @@ def init_pico_logs_service(service):
 
 @pico_logs_bp.route('/api/pico-logs', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=5)
 def get_recent_logs():
     """API endpoint to get recent Pico W logs"""
     if not pico_log_service:
@@ -131,6 +133,7 @@ def receive_pico_logs_batch():
 
 @pico_logs_bp.route('/api/pico-logs/stats', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=30)
 def get_log_stats():
     """API endpoint to get Pico W log statistics"""
     if not pico_log_service:
