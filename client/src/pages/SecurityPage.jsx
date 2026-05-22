@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { createElement, useState, useEffect, useCallback, useRef } from 'react'
 import {
   Shield, Monitor, RefreshCw, Bell, BellOff, Wifi,
   Cpu, Globe, Server, Smartphone, Laptop, Router, HardDrive,
@@ -175,18 +175,8 @@ function DesktopTabBar({ active, onChange }) {
   )
 }
 
-// ── Settings Sheet ─────────────────────────────────────────
-function SettingsSheet({
-  open, onClose,
-  onlyOnline, setOnlyOnline,
-  autoRefresh, setAutoRefresh,
-  onClearAlerts, alertCount,
-  onRescan, refreshing,
-  isMobile,
-}) {
-  if (!open) return null
-
-  const Section = ({ label, children }) => (
+function SettingsSection({ label, children }) {
+  return (
     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
       <div style={{
         fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase',
@@ -196,27 +186,25 @@ function SettingsSheet({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
     </div>
   )
+}
 
-  const ToggleRow = ({ icon: Icon, label, desc, active, onToggle, accentColor }) => (
+function SettingsToggleRow({ icon: Icon, label, desc, active, onToggle, accentColor }) {
+  const tone = accentColor || 'var(--accent)'
+  const IconNode = Icon
+  return (
     <div onClick={onToggle} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
-      background: active
-        ? `color-mix(in srgb, ${accentColor || 'var(--accent)'} 10%, transparent)`
-        : 'var(--bg-surface-2)',
-      border: `1px solid ${active
-        ? `color-mix(in srgb, ${accentColor || 'var(--accent)'} 35%, transparent)`
-        : 'var(--border)'}`,
+      background: active ? `color-mix(in srgb, ${tone} 10%, transparent)` : 'var(--bg-surface-2)',
+      border: `1px solid ${active ? `color-mix(in srgb, ${tone} 35%, transparent)` : 'var(--border)'}`,
       transition: 'all 0.15s',
     }}>
       <div style={{
         width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-        background: active
-          ? `color-mix(in srgb, ${accentColor || 'var(--accent)'} 15%, transparent)`
-          : 'rgba(148,163,184,0.08)',
+        background: active ? `color-mix(in srgb, ${tone} 15%, transparent)` : 'rgba(148,163,184,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Icon size={16} style={{ color: active ? (accentColor || 'var(--accent)') : 'var(--text-muted)' }} />
+        {createElement(IconNode, { size: 16, style: { color: active ? tone : 'var(--text-muted)' } })}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
@@ -224,7 +212,7 @@ function SettingsSheet({
       </div>
       <div style={{
         width: 42, height: 24, borderRadius: 999,
-        background: active ? (accentColor || 'var(--accent)') : 'rgba(148,163,184,0.25)',
+        background: active ? tone : 'rgba(148,163,184,0.25)',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}>
         <div style={{
@@ -235,8 +223,11 @@ function SettingsSheet({
       </div>
     </div>
   )
+}
 
-  const ActionRow = ({ icon: Icon, label, desc, onClick, danger }) => (
+function SettingsActionRow({ icon: Icon, label, desc, onClick, danger }) {
+  const IconNode = Icon
+  return (
     <div onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '11px 14px', borderRadius: 12,
@@ -249,7 +240,7 @@ function SettingsSheet({
         background: danger ? 'rgba(239,68,68,0.10)' : 'rgba(148,163,184,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Icon size={16} style={{ color: danger ? '#f87171' : 'var(--text-secondary)' }} />
+        {createElement(IconNode, { size: 16, style: { color: danger ? '#f87171' : 'var(--text-secondary)' } })}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: danger ? '#f87171' : 'var(--text-primary)' }}>{label}</div>
@@ -257,43 +248,66 @@ function SettingsSheet({
       </div>
     </div>
   )
+}
 
-  const Inner = () => (
+function SettingsContent({
+  onlyOnline,
+  setOnlyOnline,
+  autoRefresh,
+  setAutoRefresh,
+  onClearAlerts,
+  alertCount,
+  onRescan,
+  onClose,
+}) {
+  return (
     <>
-      <Section label="View">
-        <ToggleRow
+      <SettingsSection label="View">
+        <SettingsToggleRow
           icon={Wifi} label="Online only"
           desc="Hide offline devices from the list"
           active={onlyOnline}
           onToggle={() => setOnlyOnline(v => !v)}
           accentColor="var(--card-hum-accent)"
         />
-        <ToggleRow
+        <SettingsToggleRow
           icon={RefreshCw} label="Auto-refresh"
           desc="Update every 30 seconds automatically"
           active={autoRefresh}
           onToggle={() => setAutoRefresh(v => !v)}
         />
-      </Section>
+      </SettingsSection>
 
-      <Section label="Actions">
-        <ActionRow
+      <SettingsSection label="Actions">
+        <SettingsActionRow
           icon={Scan} label="Rescan network"
           desc="Force a full device refresh"
           onClick={() => { onRescan(); onClose() }}
         />
         {alertCount > 0 && (
-          <ActionRow
+          <SettingsActionRow
             icon={Check} label={`Mark ${alertCount} alert${alertCount !== 1 ? 's' : ''} as read`}
             desc="Clear new-device notifications"
             onClick={() => { onClearAlerts(); onClose() }}
           />
         )}
-      </Section>
+      </SettingsSection>
 
       <div style={{ height: 20 }} />
     </>
   )
+}
+
+// ── Settings Sheet ─────────────────────────────────────────
+function SettingsSheet({
+  open, onClose,
+  onlyOnline, setOnlyOnline,
+  autoRefresh, setAutoRefresh,
+  onClearAlerts, alertCount,
+  onRescan,
+  isMobile,
+}) {
+  if (!open) return null
 
   if (isMobile) {
     return (
@@ -335,7 +349,16 @@ function SettingsSheet({
             </button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <Inner />
+            <SettingsContent
+              onlyOnline={onlyOnline}
+              setOnlyOnline={setOnlyOnline}
+              autoRefresh={autoRefresh}
+              setAutoRefresh={setAutoRefresh}
+              onClearAlerts={onClearAlerts}
+              alertCount={alertCount}
+              onRescan={onRescan}
+              onClose={onClose}
+            />
           </div>
         </div>
       </>
@@ -381,7 +404,16 @@ function SettingsSheet({
               <X size={13} />
             </button>
           </div>
-          <Inner />
+          <SettingsContent
+            onlyOnline={onlyOnline}
+            setOnlyOnline={setOnlyOnline}
+            autoRefresh={autoRefresh}
+            setAutoRefresh={setAutoRefresh}
+            onClearAlerts={onClearAlerts}
+            alertCount={alertCount}
+            onRescan={onRescan}
+            onClose={onClose}
+          />
         </div>
       </div>
     </>
@@ -969,11 +1001,9 @@ export default function SecurityPage() {
   const [history,      setHistory]      = useState({})
   const [loading,      setLoading]      = useState(true)
   const [refreshing,   setRefreshing]   = useState(false)
-  const [scanningPort, setScanningPort] = useState(null)
-  const [scanningOs,   setScanningOs]   = useState(null)
   const [showAlerts,   setShowAlerts]   = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [search,       setSearch]       = useState('')
+  const [search]                    = useState('')
   const [isMobile,     setIsMobile]     = useState(() => window.innerWidth < 640)
 
   // Settings state
@@ -1016,34 +1046,21 @@ export default function SecurityPage() {
   }, [])
 
   useEffect(() => {
-    load()
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) load()
+    })
     const id = setInterval(() => {
       if (autoRefreshRef.current) load(true)
     }, 30000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [load])
 
   useEffect(() => {
     if (tab === 'history' && Object.keys(history).length === 0) {
       api.history().then(setHistory).catch(() => {})
     }
-  }, [tab])
-
-  const handlePortScan = async mac => {
-    setScanningPort(mac)
-    try {
-      const r = await api.portScan(mac)
-      setDevices(prev => prev.map(d => d.mac === mac ? { ...d, open_ports: r.ports } : d))
-    } finally { setScanningPort(null) }
-  }
-
-  const handleOsScan = async mac => {
-    setScanningOs(mac)
-    try {
-      const r = await api.osScan(mac)
-      setDevices(prev => prev.map(d => d.mac === mac ? { ...d, os: r.os, os_detail: r.os_detail } : d))
-    } finally { setScanningOs(null) }
-  }
+  }, [tab, history])
 
   const handleClearAlerts = async () => {
     await api.clearAlerts()

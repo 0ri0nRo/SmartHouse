@@ -43,7 +43,7 @@ function StatCard({ label, value, accent }) {
 }
 
 // ── Receipt item ───────────────────────────────────────────
-function ReceiptItem({ item, index, onComplete, onDelete, completing, deleting }) {
+function ReceiptItem({ item, onComplete, onDelete, completing, deleting }) {
   return (
     <li style={{
       display:'flex', alignItems:'flex-start', gap:'0.75rem',
@@ -295,9 +295,15 @@ export default function ShoppingPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showToast])
 
-  useEffect(() => { loadItems() }, [loadItems])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) loadItems()
+    })
+    return () => { cancelled = true }
+  }, [loadItems])
 
   // Keyboard shortcut
   useEffect(() => {

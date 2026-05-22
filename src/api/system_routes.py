@@ -49,6 +49,8 @@ HOST_PWD  = config.get('RASPI_HOST_PASSWORD', None)
 HOST_KEY  = config.get('RASPI_HOST_KEY_PATH', '/run/secrets/id_rsa')
 HOST_PORT = int(config.get('RASPI_HOST_SSH_PORT', 2244))   # ← default port 2244
 
+# Default SSH timeout (seconds) — used when a payload doesn't specify timeout
+DEFAULT_SSH_TIMEOUT = 30
 ALLOWED_SERVICES = {
     'nginx', 'ssh', 'cron', 'docker',
     'bluetooth', 'avahi-daemon', 'fail2ban',
@@ -221,7 +223,7 @@ def api_run_backup():
 @system_bp.route('/api/ssh_exec', methods=['POST'])
 @handle_db_error
 def api_ssh_exec():
-    data        = request.get_json()
+    data        = request.get_json() or {}
     private_key = data.get('privateKey')
     command     = data.get('command')
     passphrase  = data.get('passphrase') or None
@@ -229,6 +231,11 @@ def api_ssh_exec():
     password    = data.get('password')   or None
     ip          = data.get('ip')         or None
     port        = _validate_port(data.get('port'), default=HOST_PORT)
+    # Read optional timeout from payload, fallback to DEFAULT_SSH_TIMEOUT
+    try:
+        timeout = int(data.get('timeout', DEFAULT_SSH_TIMEOUT))
+    except (TypeError, ValueError):
+        timeout = DEFAULT_SSH_TIMEOUT
 
     if (not private_key and not password) or not command:
         return jsonify({'error': 'Missing authentication method or command'}), 400
@@ -241,7 +248,7 @@ def api_ssh_exec():
             password=password,
             ip=ip,
             port=port,
-            timeout=timeout,        # forwarded
+            timeout=timeout,
         )
         return jsonify({'output': out})
     except ValueError as e:
@@ -413,269 +420,6 @@ def api_network():
         })
     result.sort(key=lambda x: x['bytesRecv'], reverse=True)
     return jsonify(result)
-
-
-# ── Logs ───────────────────────────────────────────────────
-@system_bp.route('/api/logs/system')
-@handle_db_error
-@cache_json_response(ttl_seconds=20)
-def api_logs_system():
-    lines = min(int(request.args.get('lines', 50)), 200)
-    try:
-        r = _run_host_cmd(['journalctl', '-n', str(lines), '--no-pager', '-o', 'short-iso'])
-        return jsonify({'lines': (r.stdout or '').splitlines(), 'source': 'host'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@system_bp.route('/api/logs/auth')
-@handle_db_error
-@cache_json_response(ttl_seconds=20)
-def api_logs_auth():
-    try:
-        r = _run_host_cmd(['journalctl', '-u', 'ssh', '-n', '30', '--no-pager', '-o', 'short-iso'])
-        if (r.stdout or '').strip():
-            return jsonify({'lines': r.stdout.splitlines(), 'source': 'host'})
-        with open('/var/log/auth.log') as f:
-            return jsonify({'lines': [l.rstrip() for l in f.readlines()[-30:]], 'source': 'local'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-# ── APT Upgrade ────────────────────────────────────────────
-@system_bp.route('/api/system/upgrade/start', methods=['POST'])
-@handle_db_error
-def api_upgrade_start():
-    global _upgrade_state
-    if _upgrade_state['running']:
-        return jsonify({'error': 'Upgrade already running'}), 409
-
-    _upgrade_state = {'running': True, 'output': [], 'done': False, 'error': None}
-
-    def run():
-        global _upgrade_state
-        try:
-            for cmd in [
-                ['sudo', 'apt-get', 'update', '-y'],
-                ['sudo', 'apt-get', 'upgrade', '-y'],
-            ]:
-                _upgrade_state['output'].append(f'$ {" ".join(cmd)}')
-                try:
-                    stdout, _, _ = _ssh_exec_host(' '.join(cmd))
-                    _upgrade_state['output'].extend((stdout or '').splitlines())
-                except Exception as e:
-                    _upgrade_state['error'] = str(e)
-                    break
-        except Exception as e:
-            _upgrade_state['error'] = str(e)
-        finally:
-            _upgrade_state['running'] = False
-            _upgrade_state['done']    = True
-
-    threading.Thread(target=run, daemon=True).start()
-    return jsonify({'message': 'Upgrade started'}), 202
-
-
-@system_bp.route('/api/system/upgrade/status')
-@handle_db_error
-@cache_json_response(ttl_seconds=5)
-def api_upgrade_status():
-    return jsonify(_upgrade_state)
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# FULL SYSTEM UPGRADE
-# ══════════════════════════════════════════════════════════════════════════════
- 
-@system_bp.route('/api/system/full_upgrade/start', methods=['POST'])
-def api_full_upgrade_start():
-    """
-    Start a complete and safe system upgrade:
-    1. Pre-check (disk space, connection)
-    2. Package list backup
-    3. apt update
-    4. apt full-upgrade
-    5. apt autoremove
-    6. apt autoclean
-    7. Firmware update (rpi-update)
-    8. Post-check and report
-    """
-    global _full_upgrade_state
-    
-    if _full_upgrade_state['running']:
-        return jsonify({'error': 'Full upgrade already running'}), 409
-    
-    # Reset state
-    _full_upgrade_state = {
-        'running': True,
-        'output': [],
-        'done': False,
-        'error': None,
-        'step': 'Initialization',
-        'progress': 0,
-        'total_steps': 8,
-        'start_time': datetime.now().isoformat(),
-        'end_time': None
-    }
-    
-    def run_full_upgrade():
-        global _full_upgrade_state
-        
-        def log(msg):
-            _full_upgrade_state['output'].append(f'[{datetime.now().strftime("%H:%M:%S")}] {msg}')
-            logger.info(f'FullUpgrade: {msg}')
-        
-        def update_progress(step, step_num):
-            _full_upgrade_state['step'] = step
-            _full_upgrade_state['progress'] = int((step_num / _full_upgrade_state['total_steps']) * 100)
-        
-        try:
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 1: Pre-check
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('System pre-check', 1)
-            log('═══ STEP 1/8: Pre-check ═══')
-            
-            # Check disk space
-            stdout, stderr, rc = _ssh_exec_host("df -h / | tail -1 | awk '{print $5}'")
-            if rc == 0:
-                disk_usage = stdout.strip().replace('%', '')
-                log(f'Disk space used: {disk_usage}%')
-                if int(disk_usage) > 85:
-                    log('⚠️  WARNING: Disk almost full, proceed with caution')
-            
-            # Check internet connection
-            stdout, stderr, rc = _ssh_exec_host('ping -c 2 8.8.8.8 > /dev/null 2>&1 && echo OK || echo FAIL')
-            if 'OK' in stdout:
-                log('✓ Internet connection OK')
-            else:
-                raise Exception('No internet connection')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 2: Package list backup
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Package list backup', 2)
-            log('═══ STEP 2/8: Package backup ═══')
-            
-            backup_cmd = f"dpkg --get-selections > /tmp/package-backup-$(date +%Y%m%d-%H%M%S).txt"
-            stdout, stderr, rc = _ssh_exec_host(backup_cmd)
-            if rc == 0:
-                log('✓ Package list saved in /tmp/')
-            else:
-                log(f'⚠️  Warning: Backup failed - {stderr}')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 3: apt update
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Repository update', 3)
-            log('═══ STEP 3/8: apt update ═══')
-            
-            stdout, stderr, rc = _ssh_exec_host('sudo apt-get update', timeout=180)
-            log(stdout if stdout else stderr)
-            if rc != 0:
-                raise Exception(f'apt update failed: {stderr}')
-            log('✓ Repositories updated')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 4: apt full-upgrade
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Package upgrade', 4)
-            log('═══ STEP 4/8: apt full-upgrade ═══')
-            
-            stdout, stderr, rc = _ssh_exec_host(
-                'sudo DEBIAN_FRONTEND=noninteractive apt-get full-upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"',
-                timeout=600
-            )
-            log(stdout if stdout else stderr)
-            if rc != 0:
-                raise Exception(f'apt full-upgrade failed: {stderr}')
-            log('✓ Packages updated')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 5: apt autoremove
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Remove obsolete packages', 5)
-            log('═══ STEP 5/8: apt autoremove ═══')
-            
-            stdout, stderr, rc = _ssh_exec_host('sudo apt-get autoremove -y', timeout=180)
-            log(stdout if stdout else stderr)
-            if rc == 0:
-                log('✓ Obsolete packages removed')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 6: apt autoclean
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Cache cleanup', 6)
-            log('═══ STEP 6/8: apt autoclean ═══')
-            
-            stdout, stderr, rc = _ssh_exec_host('sudo apt-get autoclean -y', timeout=120)
-            log(stdout if stdout else stderr)
-            if rc == 0:
-                log('✓ Cache cleaned')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 7: Firmware update (optional, Raspberry Pi only)
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Firmware verification', 7)
-            log('═══ STEP 7/8: Firmware check ═══')
-            
-            # Check if rpi-update is available
-            stdout, stderr, rc = _ssh_exec_host('which rpi-update')
-            if rc == 0:
-                log('rpi-update found, checking firmware...')
-                # We do not run rpi-update automatically for safety reasons
-                log('ℹ️  Firmware update available but not executed automatically')
-                log('   Run manually: sudo rpi-update')
-            else:
-                log('ℹ️  rpi-update not available on this system')
-            
-            # ─────────────────────────────────────────────────────────────────
-            # STEP 8: Post-check and final report
-            # ─────────────────────────────────────────────────────────────────
-            update_progress('Final report', 8)
-            log('═══ STEP 8/8: Post-check ═══')
-            
-            # Check for broken packages
-            stdout, stderr, rc = _ssh_exec_host('dpkg --audit')
-            if stdout.strip():
-                log(f'⚠️  Broken packages:\n{stdout}')
-            else:
-                log('✓ No broken packages')
-            
-            # Check freed space
-            stdout, stderr, rc = _ssh_exec_host("df -h / | tail -1 | awk '{print $5}'")
-            if rc == 0:
-                disk_usage = stdout.strip().replace('%', '')
-                log(f'Disk space after upgrade: {disk_usage}%')
-            
-            # Check if reboot is required
-            stdout, stderr, rc = _ssh_exec_host('[ -f /var/run/reboot-required ] && echo YES || echo NO')
-            if 'YES' in stdout:
-                log('⚠️  REBOOT REQUIRED to complete upgrade')
-            else:
-                log('✓ No reboot required')
-            
-            log('═══ UPGRADE COMPLETED SUCCESSFULLY ═══')
-            
-        except Exception as e:
-            _full_upgrade_state['error'] = str(e)
-            log(f'❌ ERROR: {str(e)}')
-        finally:
-            _full_upgrade_state['running'] = False
-            _full_upgrade_state['done'] = True
-            _full_upgrade_state['end_time'] = datetime.now().isoformat()
-            
-            # Calculate duration
-            if _full_upgrade_state['start_time']:
-                start = datetime.fromisoformat(_full_upgrade_state['start_time'])
-                end = datetime.fromisoformat(_full_upgrade_state['end_time'])
-                duration = (end - start).total_seconds()
-                log(f'Total duration: {int(duration // 60)}m {int(duration % 60)}s')
-    
-    # Launch thread
-    threading.Thread(target=run_full_upgrade, daemon=True).start()
-    return jsonify({'message': 'Full upgrade started'}), 202
  
  
 @system_bp.route('/api/system/full_upgrade/status')

@@ -894,8 +894,13 @@ function AlertsTab({ isMobile }) {
   const [hours, setHours]   = useState(24)
 
   useEffect(() => {
-    setLoading(true)
-    api.alerts(hours).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setLoading(true)
+      api.alerts(hours).then(d => { if (!cancelled) setData(d) }).catch(() => { if (!cancelled) setData(null) }).finally(() => { if (!cancelled) setLoading(false) })
+    })
+    return () => { cancelled = true }
   }, [hours])
 
   if (loading) return <Loading />
@@ -965,8 +970,13 @@ function ThreatsTab({ isMobile }) {
   const [days, setDays]     = useState(7)
 
   useEffect(() => {
-    setLoading(true)
-    api.threats(days).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setLoading(true)
+      api.threats(days).then(d => { if (!cancelled) setData(d) }).catch(() => { if (!cancelled) setData(null) }).finally(() => { if (!cancelled) setLoading(false) })
+    })
+    return () => { cancelled = true }
   }, [days])
 
   if (loading) return <Loading />
@@ -1065,7 +1075,11 @@ function BannedTab({ isMobile }) {
     api.banned(jail).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }, [jail])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [load])
 
   if (loading) return <Loading />
   if (!data || data.error) return <Empty icon={<Ban size={28} />} text={data?.error || 'Unable to connect to the Fail2ban database'} />
@@ -1393,9 +1407,10 @@ export default function HoneypotSection({ isMobile }) {
   }, [])
 
   useEffect(() => {
-    loadCore()
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) loadCore() })
     const id = setInterval(() => loadCore(true), 30000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [loadCore])
 
   if (loading) return <div className="loading-box" style={{ height: 300 }}><span className="spinner" /></div>

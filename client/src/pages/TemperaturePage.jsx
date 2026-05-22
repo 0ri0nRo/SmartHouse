@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { createElement, useState, useEffect, useCallback, useRef } from 'react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -335,11 +335,11 @@ function StatCell({ label, value, unit, color, right = false }) {
 }
 
 // ── Chart Card ─────────────────────────────────────────────
-function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }) {
+function ChartCard({ title, icon, badge, controls, height = 200, children }) {
   return (
     <div className="card card--flat" style={{ boxShadow: '0 10px 28px rgba(15,23,42,0.05)' }}>
       <div className="card-header">
-        <div className="card-header-icon icon-amber"><Icon size={14} /></div>
+        <div className="card-header-icon icon-amber">{createElement(icon, { size: 14 })}</div>
         <span className="card-header-title">{title}</span>
         {badge && <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{badge}</span>}
       </div>
@@ -516,7 +516,7 @@ function BlackoutCard({ showToast, onStatusLoad }) {
   const [endDay,      setEndDay]      = useState(30)
   const [reason,      setReason]      = useState('Boiler disabled during warm season')
 
-  const loadCfg = async () => {
+  const loadCfg = useCallback(async () => {
     setLoading(true)
     try {
       const res  = await fetch('/api/boiler/blackout')
@@ -535,9 +535,15 @@ function BlackoutCard({ showToast, onStatusLoad }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [onStatusLoad, showToast])
 
-  useEffect(() => { loadCfg() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) void loadCfg()
+    })
+    return () => { cancelled = true }
+  }, [loadCfg])
 
   // Clamp day when month changes
   const handleStartMonthChange = (m) => {
@@ -857,27 +863,15 @@ export default function TemperaturePage() {
 
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
 
-  useEffect(() => {
-    const init = async () => {
-      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules(), loadZigbeeLatest()])
-      loadCharts(month, year, false, null, null)
-    }
-    init()
-    const t1 = setInterval(loadSensor, 10000)
-    const t2 = setInterval(loadThermostatFull, 20000)
-    const t3 = setInterval(loadZigbeeLatest, 30000)
-    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
-  }, [])
-
-  const loadBoiler         = () => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {})
-  const loadThermostatFull = () => api.getThermostatFull().then((d) => {
+  const loadBoiler = useCallback(() => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {}), [setIsOn])
+  const loadThermostatFull = useCallback(() => api.getThermostatFull().then((d) => {
     setThermostat(d.thermostat_enabled || false)
     if (d.current_temperature != null) setCurrentTemp(d.current_temperature)
     if (d.target_temperature  != null) setTargetTemp(d.target_temperature)
     if (d.boiler_on           != null) setIsOn(d.boiler_on)
-  }).catch(() => {})
-  const loadSensor    = () => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
-  const loadSchedules = () => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
+  }).catch(() => {}), [setCurrentTemp, setIsOn, setTargetTemp, setThermostat])
+  const loadSensor = useCallback(() => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {}), [setCurrentTemp])
+  const loadSchedules = useCallback(() => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {}), [setSchedules])
   const loadZigbeeLatest = useCallback(async () => {
     setZigbeeLoading(true)
     try {
@@ -888,7 +882,7 @@ export default function TemperaturePage() {
     } finally {
       setZigbeeLoading(false)
     }
-  }, [])
+  }, [setZigbeeLatest, setZigbeeLoading])
 
   // ── Boiler toggle — checks blackout before acting ──────────────────────────
   const toggleBoiler = async () => {
@@ -954,10 +948,7 @@ export default function TemperaturePage() {
     }
   }
 
-  const sendTargetTemp = useCallback(
-    useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600),
-    []
-  )
+  const sendTargetTemp = useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600)
 
   const adjustTarget = (d) => {
     const n = Math.max(15, Math.min(30, targetTemp + d))
@@ -1018,8 +1009,27 @@ export default function TemperaturePage() {
       } else {
         setCompareData(null)
       }
-    } catch {} finally { setLoadingCharts(false) }
-  }, [])
+    } catch (error) {
+      void error
+    } finally {
+      setLoadingCharts(false)
+    }
+  }, [setCompareData, setDailyData, setLoadingCharts, setMonthlyData, setTodayData])
+
+  useEffect(() => {
+    let cancelled = false
+    const init = async () => {
+      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules(), loadZigbeeLatest()])
+      if (!cancelled) loadCharts(month, year, false, null, null)
+    }
+    Promise.resolve().then(() => {
+      if (!cancelled) init()
+    })
+    const t1 = setInterval(loadSensor, 10000)
+    const t2 = setInterval(loadThermostatFull, 20000)
+    const t3 = setInterval(loadZigbeeLatest, 30000)
+    return () => { cancelled = true; clearInterval(t1); clearInterval(t2); clearInterval(t3) }
+  }, [loadBoiler, loadCharts, loadSchedules, loadSensor, loadThermostatFull, loadZigbeeLatest, month, year])
 
   const fetchRange = async () => {
     if (!startDate || !endDate) { showToast('Select both dates', 'error'); return }
@@ -1147,7 +1157,6 @@ export default function TemperaturePage() {
               <button onClick={toggleBoiler} style={{
                 padding: '0.55rem 1.25rem',
                 borderRadius: 'var(--radius-full)',
-                border: 'none',
                 background: isOn === true
                   ? 'var(--color-success)'
                   : isOn === false

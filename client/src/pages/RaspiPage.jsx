@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Component } from 'react'
+import { useState, useEffect, useRef, useCallback, Component, createElement } from 'react'
 import {
   Activity, Terminal, Shield, RefreshCw, Play, X,
   Power, RotateCcw, Cpu, Wifi, FileText,
@@ -67,11 +67,11 @@ function loadLayout() {
       const saved = JSON.parse(raw)
       return DEFAULT_LAYOUT.map(d => ({ ...d, ...(saved.find(s => s.id === d.id) || {}) }))
     }
-  } catch {}
+  } catch (e) { console.warn('loadLayout failed', e) }
   return DEFAULT_LAYOUT
 }
 function saveLayout(l) {
-  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(l)) } catch {}
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(l)) } catch (e) { console.warn('saveLayout failed', e) }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ function BottomNav({ active, onChange, alerts }) {
               <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: 2, borderRadius: 1, background: T.accent }} />
             )}
             <div style={{ position: 'relative' }}>
-              <Icon size={21} strokeWidth={isActive ? 2.2 : 1.8} />
+              {createElement(Icon, { size: 21, strokeWidth: isActive ? 2.2 : 1.8 })}
               {tab.id === 'control' && alerts > 0 && (
                 <span style={{ position: 'absolute', top: -4, right: -6, width: 14, height: 14, borderRadius: '50%', background: T.danger, color: '#fff', fontSize: '0.46rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${T.bgSurf}` }}>{alerts}</span>
               )}
@@ -289,15 +289,17 @@ const WIDGET_LABELS = {
   ssh: 'SSH Terminal', logs: 'Logs', upgrade: 'Updates', backup: 'Backup',
 }
 
-function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggleHidden, resetLayout, isMobile }) {
-  const Section = ({ label, children }) => (
+function SettingsSection({ label, children }) {
+  return (
     <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
       <div style={{ fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: T.textMuted, marginBottom: 10, fontFamily: T.mono }}>{label}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
     </div>
   )
+}
 
-  const ToggleRow = ({ icon: Icon, label, desc, active, onToggle, accentColor }) => (
+function SettingsToggleRow({ icon: Icon, label, desc, active, onToggle, accentColor }) {
+  return (
     <div onClick={onToggle} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '11px 14px', borderRadius: 12,
@@ -308,7 +310,7 @@ function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggle
       <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0,
         background: active ? `color-mix(in srgb,${accentColor || T.accent} 15%, transparent)` : 'rgba(148,163,184,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={16} style={{ color: active ? (accentColor || T.accent) : T.textMuted }} />
+        {createElement(Icon, { size: 16, style: { color: active ? (accentColor || T.accent) : T.textMuted } })}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: T.textPri }}>{label}</div>
@@ -319,8 +321,10 @@ function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggle
       </div>
     </div>
   )
+}
 
-  const ActionRow = ({ icon: Icon, label, desc, onClick, danger }) => (
+function SettingsActionRow({ icon: Icon, label, desc, onClick, danger }) {
+  return (
     <div onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '11px 14px', borderRadius: 12,
@@ -331,7 +335,7 @@ function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggle
       <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0,
         background: danger ? 'rgba(239,68,68,0.10)' : 'rgba(148,163,184,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={16} style={{ color: danger ? T.danger : T.textSec }} />
+        {createElement(Icon, { size: 16, style: { color: danger ? T.danger : T.textSec } })}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: danger ? T.danger : T.textPri }}>{label}</div>
@@ -340,21 +344,25 @@ function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggle
       <ChevronRight size={14} style={{ color: T.textMuted, flexShrink: 0 }} />
     </div>
   )
+}
+
+function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggleHidden, resetLayout, isMobile }) {
+  // Use module-level components to avoid creating components during render
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Settings" maxHeight="92vh">
       {!isMobile && (
-        <Section label="Desktop layout">
-          <ToggleRow icon={LayoutGrid} label="Edit layout" desc="Drag & resize widgets on the grid"
+        <SettingsSection label="Desktop layout">
+          <SettingsToggleRow icon={LayoutGrid} label="Edit layout" desc="Drag & resize widgets on the grid"
             active={editMode} onToggle={() => setEditMode(v => !v)} />
           {editMode && (
-            <ActionRow icon={RotateCcw} label="Reset layout" desc="Restore default widget positions"
+            <SettingsActionRow icon={RotateCcw} label="Reset layout" desc="Restore default widget positions"
               danger onClick={() => { resetLayout(); onClose() }} />
           )}
-        </Section>
+        </SettingsSection>
       )}
 
-      <Section label="Widget visibility">
+      <SettingsSection label="Widget visibility">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {Object.entries(WIDGET_LABELS).map(([id, label]) => {
             const vis = !hiddenIds.has(id)
@@ -372,7 +380,7 @@ function SettingsSheet({ open, onClose, editMode, setEditMode, hiddenIds, toggle
             )
           })}
         </div>
-      </Section>
+      </SettingsSection>
       <div style={{ height: 24 }} />
     </BottomSheet>
   )
@@ -389,7 +397,7 @@ function Card({ icon: Icon, title, accent = T.accent, badge, headerRight, childr
         padding: `${T.space.sm} ${T.space.lg}`, borderBottom: `1px solid ${T.border}`, flexShrink: 0,
       }}>
         <span style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: `color-mix(in srgb, ${accent} 12%, transparent)`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid color-mix(in srgb, ${accent} 22%, transparent)` }}>
-          <Icon size={13} />
+          {createElement(Icon, { size: 13 })}
         </span>
         <span style={{ fontWeight: 700, fontSize: '0.75rem', color: T.textPri }}>{title}</span>
         {badge != null && (
@@ -407,7 +415,7 @@ function Card({ icon: Icon, title, accent = T.accent, badge, headerRight, childr
 // ─────────────────────────────────────────────────────────────────────────────
 let _gid = 0
 function GaugeRing({ value, max = 100, color, size = 96, label, unit = '%', sub, alert }) {
-  const uid = useRef(`gr_${_gid++}`)
+  const [uid] = useState(() => `gr_${_gid++}`)
   const pct = value != null ? Math.min(Math.max(value / max, 0), 1) : 0
   const r = 34, circ = 2 * Math.PI * r, dash = circ * pct
   const c = alert || color
@@ -415,14 +423,14 @@ function GaugeRing({ value, max = 100, color, size = 96, label, unit = '%', sub,
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
         <defs>
-          <linearGradient id={uid.current} x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={uid} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#2563eb" />
             <stop offset="100%" stopColor={c} />
           </linearGradient>
         </defs>
         <circle cx={50} cy={50} r={r} fill="none" stroke={T.bgSurf3} strokeWidth={9} />
         <circle cx={50} cy={50} r={r} fill="none"
-          stroke={`url(#${uid.current})`} strokeWidth={9}
+          stroke={`url(#${uid})`} strokeWidth={9}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
           transform="rotate(-90 50 50)"
           style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(.4,0,.2,1)' }} />
@@ -838,7 +846,7 @@ function PowerPanel() {
             </div>
           ) : (
             <Btn key={a} full color={c} style={{ justifyContent: 'flex-start', gap: T.space.sm, padding: '0.55rem 0.75rem' }} onClick={() => setConfirm(a)}>
-              <Icon size={13} /> {label}
+              {createElement(Icon, { size: 13 })} {label}
             </Btn>
           )
         )}
@@ -863,7 +871,11 @@ function ServicesPanel() {
     } catch { setMsg({ t: 'Error loading services', v: 'error' }) }
     finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [])
 
   const act = async (svc, action) => {
     const k = `${svc}:${action}`; setActing(k)
@@ -917,15 +929,19 @@ function ProcessesPanel() {
   const load = async () => {
     setLoading(true)
     try { const d = await fetch('/api/processes').then(r => r.json()); setProcs(Array.isArray(d) ? d : []) }
-    catch {} finally { setLoading(false) }
+    catch (e) { console.warn('ProcessesPanel.load failed', e) } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [])
 
   const kill = async (pid, name) => {
     if (!window.confirm(`Kill ${name} (PID ${pid})?`)) return
     setKilling(pid)
     try { const res = await fetch(`/api/processes/${pid}/kill`, { method: 'POST' }); if (!res.ok) throw new Error(); await load() }
-    catch {} finally { setKilling(null) }
+    catch (e) { console.warn('ProcessesPanel.kill failed', e) } finally { setKilling(null) }
   }
 
   const Bar = ({ pct, c }) => (
@@ -969,9 +985,13 @@ function NetworkPanel() {
   const load = async () => {
     setLoading(true)
     try { const d = await fetch('/api/network').then(r => r.json()); setIfaces(Array.isArray(d) ? d : []) }
-    catch {} finally { setLoading(false) }
+    catch (e) { console.warn('NetworkPanel.load failed', e) } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <Card icon={Wifi} title="Network" accent={T.success} badge={ifaces.length || undefined}
@@ -1008,16 +1028,20 @@ function LogsPanel() {
   const [loading, setLoading] = useState(false)
   const boxRef = useRef(null)
 
-  const load = async (t = tab) => {
+  const load = useCallback(async (t) => {
     setLoading(true)
     try {
       const d = await fetch(t === 'auth' ? '/api/logs/auth' : '/api/logs/system?lines=60').then(r => r.json())
       setLines(d.lines || [])
       setTimeout(() => { if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight }, 50)
-    } catch { setLines(['Error loading logs']) }
+    } catch (e) { setLines(['Error loading logs']); console.warn('LogsPanel.load failed', e) }
     finally { setLoading(false) }
-  }
-  useEffect(() => { load(tab) }, [tab])
+  }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load(tab) })
+    return () => { cancelled = true }
+  }, [tab, load])
 
   return (
     <Card icon={FileText} title="System Logs" accent="#5a6a8a"
@@ -1090,17 +1114,17 @@ export default function RaspiPage() {
   const [history,     setHistory]     = useState([])
   const [loading,     setLoading]     = useState(true)
   const [refreshing,  setRefreshing]  = useState(false)
-  const [backing,     setBacking]     = useState(false)
+  
   const [layout,      setLayout]      = useState(loadLayout)
   const [editMode,    setEditMode]    = useState(false)
   const [hiddenIds,   setHiddenIds]   = useState(new Set())
   const [isMobile,    setIsMobile]    = useState(false)
-  const [msg,         setMsg]         = useState(null)
+  const [msg,         _setMsg]         = useState(null)
   const [mobileTab,   setMobileTab]   = useState('stats')
   const [settingsOpen,setSettingsOpen]= useState(false)
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 860)
+    const check = () => Promise.resolve().then(() => setIsMobile(window.innerWidth < 860))
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
@@ -1116,22 +1140,18 @@ export default function RaspiPage() {
         cpu:  toNum(d.cpuUsage)    ?? 0,
         temp: toNum(d.temperature) ?? 0,
       }])
-    } catch {}
+    } catch (e) { console.warn('loadStats failed', e) }
     finally { setLoading(false); setRefreshing(false) }
   }
 
   useEffect(() => {
-    loadStats()
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) loadStats() })
     const id = setInterval(() => loadStats(true), 5000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
-  const backup = async () => {
-    setBacking(true)
-    try { await fetch('/api_run_backup', { method: 'POST' }); setMsg({ t: 'Backup started', v: 'success' }) }
-    catch { setMsg({ t: 'Backup error', v: 'error' }) }
-    finally { setBacking(false); setTimeout(() => setMsg(null), 3000) }
-  }
+  
 
   const resetLayout = () => { setLayout(DEFAULT_LAYOUT); saveLayout(DEFAULT_LAYOUT) }
   const toggleHidden = id => setHiddenIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })

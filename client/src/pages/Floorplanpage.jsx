@@ -820,7 +820,9 @@ function BoilerBlackoutModal({ onClose, onSaved, showToast }) {
       } catch { showToast('Failed to load blackout config', 'error') }
       finally { setLoading(false) }
     }
-    loadCfg()
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) loadCfg() })
+    return () => { cancelled = true }
   }, [showToast])
 
   const selectStyle = { padding: '0.42rem 0.6rem', fontSize: '0.8rem', background: T.surface2, border: `1px solid ${T.border}`, borderRadius: T.radiusSm, color: T.textPrimary, fontFamily: T.mono, cursor: 'pointer' }

@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { createElement, useEffect, useState, useRef, useCallback } from 'react'
 import {
   Download, Shield, Wrench, Cloud, RefreshCw, CheckCircle,
   XCircle, AlertTriangle, X, Package, RotateCcw,
@@ -65,14 +65,17 @@ const NC_STEPS = [
 ]
 
 function useIsMobile(bp = 640) {
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= bp : false)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    if (window.matchMedia) return window.matchMedia(`(max-width: ${bp}px)`).matches
+    return window.innerWidth <= bp
+  })
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
     const mq = window.matchMedia(`(max-width: ${bp}px)`)
     const handler = e => setIsMobile(e.matches)
     if (mq.addEventListener) mq.addEventListener('change', handler)
     else mq.addListener(handler)
-    setIsMobile(mq.matches)
     return () => { if (mq.removeEventListener) mq.removeEventListener('change', handler); else mq.removeListener(handler) }
   }, [bp])
   return isMobile
@@ -176,7 +179,7 @@ function ActionCard({ icon: Icon, label, sub, color = T.accent, primary, onClick
         background: `color-mix(in srgb,${color} 14%,transparent)`,
         border: `1.5px solid color-mix(in srgb,${color} 28%,transparent)`, color,
       }}>
-        <Icon size={primary ? 13 : 10} />
+        {createElement(Icon, { size: primary ? 13 : 10 })}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: primary ? '0.71rem' : '0.66rem', fontWeight: 700, color: T.textPri, lineHeight: 1.2 }}>{label}</div>
@@ -559,7 +562,6 @@ export default function SmartHouseUpgradeWidget() {
   const [notice,      setNotice]      = useState(null)
   const [busy,        setBusy]        = useState(false)
   const [pkgOpen,     setPkgOpen]     = useState(false)
-  const [dirOpen,     setDirOpen]     = useState(false)
   const [backing,     setBacking]     = useState(false)
   const [backupLines, setBackupLines] = useState([])
 
@@ -570,7 +572,7 @@ export default function SmartHouseUpgradeWidget() {
   const closeNotice = useCallback(() => setNotice(null), [])
 
   // ── load all health data ─────────────────────────────────────────────────
-  const loadHealth = async () => {
+  const loadHealth = useCallback(async () => {
     setLoading(true)
     const [pkg, disk, thr, rb] = await Promise.allSettled([
       fj('/api/system/package_info'),
@@ -583,8 +585,9 @@ export default function SmartHouseUpgradeWidget() {
     if (thr.status  === 'fulfilled') setThrottle(thr.value)
     if (rb.status   === 'fulfilled') setReboot(rb.value)
     setLoading(false)
-  }
-  useEffect(() => { loadHealth() }, [])
+  }, [])
+
+  useEffect(() => { loadHealth() }, [loadHealth])
 
   // ── poll active workflow ─────────────────────────────────────────────────
   useEffect(() => {
@@ -629,7 +632,7 @@ export default function SmartHouseUpgradeWidget() {
       }
     }, 2000)
     return () => clearInterval(id)
-  }, [workflow.kind, workflow.running])
+  }, [workflow.kind, workflow.running, loadHealth])
 
   // ── start async workflow ──────────────────────────────────────────────────
   const startWf = async ({ kind, title, color, url, step, body }) => {
@@ -706,7 +709,6 @@ export default function SmartHouseUpgradeWidget() {
   // ══════════════════════════════════════════════════════════════════════════
   const renderUpgrade = () => {
     const isFullUpgradeRunning = workflow.running && workflow.kind === 'fullUpgrade'
-    const isNcRunning          = workflow.running && workflow.kind === 'nextcloud'
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: T.sp.sm }}>
@@ -931,6 +933,17 @@ export default function SmartHouseUpgradeWidget() {
             <StatTile label="Installed"  value={installed}  color={T.textSec}                              loading={loading} />
             <StatTile label="Upgradable" value={upgradable} color={upgradable > 0 ? T.warning : T.success} loading={loading} />
             <StatTile label="To remove"  value={autoremove} color={autoremove > 0 ? T.cyan : T.textSec}    loading={loading} />
+          </div>
+        </>
+      )}
+
+      {(dfData || aptCache !== '—' || logSize !== '—') && (
+        <>
+          <SectionLabel>Disk usage</SectionLabel>
+          {dfData && <DiskBar dfData={dfData} />}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: T.sp.sm, marginTop: T.sp.sm }}>
+            <StatTile label="APT cache" value={aptCache} color={T.cyan} loading={loading} />
+            <StatTile label="Logs" value={logSize} color={T.warning} loading={loading} />
           </div>
         </>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Train, RefreshCw, X, ExternalLink, MapPin, Home, Navigation, ArrowRight } from 'lucide-react'
 import Toast from '../components/Toast'
 import { useToast } from '../hooks/useToast'
@@ -144,12 +144,12 @@ export default function TrainPage() {
   const { toast, showToast } = useToast()
 
   // GPS state
-  const [atHome,   setAtHome]   = useState(null)    // null = locating
-  const [locating, setLocating] = useState(true)
+  const [atHome,   setAtHome]   = useState(() => (navigator.geolocation ? null : false))    // null = locating
+  const [locating, setLocating] = useState(() => !!navigator.geolocation)
 
   // Search state — driven by GPS default, overridable manually
-  const [destination,  setDestination]  = useState('')
-  const [fromStation,  setFromStation]  = useState('ROMA TERMINI')
+  const [destination,  setDestination]  = useState(() => (navigator.geolocation ? '' : DIRECTION.away.to))
+  const [fromStation,  setFromStation]  = useState(() => (navigator.geolocation ? 'ROMA TERMINI' : DIRECTION.away.fromParam))
   const [customDest,   setCustomDest]   = useState('')
 
   // Results
@@ -165,41 +165,7 @@ export default function TrainPage() {
     return () => clearInterval(id)
   }, [])
 
-  // ── GPS detection on mount ───────────────────────────────
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setAtHome(false)
-      setLocating(false)
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const km = distanceKm(coords.latitude, coords.longitude, COLLEFERRO_LAT, COLLEFERRO_LON)
-        const home = km <= HOME_RADIUS_KM
-        setAtHome(home)
-        setLocating(false)
-        // Set default direction based on GPS
-        const dir = home ? DIRECTION.home : DIRECTION.away
-        setDestination(dir.to)
-        setFromStation(dir.fromParam)
-      },
-      () => {
-        // GPS denied: default to Roma→Colleferro
-        setAtHome(false)
-        setLocating(false)
-        setDestination(DIRECTION.away.to)
-        setFromStation(DIRECTION.away.fromParam)
-      },
-      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
-    )
-  }, [])
-
-  // ── Auto-fetch when destination is set ───────────────────
-  useEffect(() => {
-    if (destination) doFetch(destination, fromStation)
-  }, [destination, fromStation])
-
-  async function doFetch(dest, from) {
+  const doFetch = useCallback(async (dest, from) => {
     if (!dest) return
     setLoading(true)
     try {
@@ -213,7 +179,40 @@ export default function TrainPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [showToast])
+
+  // ── GPS detection on mount ───────────────────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      let cancelled = false
+      Promise.resolve().then(() => {
+        if (!cancelled) doFetch(DIRECTION.away.to, DIRECTION.away.fromParam)
+      })
+      return () => { cancelled = true }
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const km = distanceKm(coords.latitude, coords.longitude, COLLEFERRO_LAT, COLLEFERRO_LON)
+        const home = km <= HOME_RADIUS_KM
+        setAtHome(home)
+        setLocating(false)
+        // Set default direction based on GPS
+        const dir = home ? DIRECTION.home : DIRECTION.away
+        setDestination(dir.to)
+        setFromStation(dir.fromParam)
+        doFetch(dir.to, dir.fromParam)
+      },
+      () => {
+        // GPS denied: default to Roma→Colleferro
+        setAtHome(false)
+        setLocating(false)
+        setDestination(DIRECTION.away.to)
+        setFromStation(DIRECTION.away.fromParam)
+        doFetch(DIRECTION.away.to, DIRECTION.away.fromParam)
+      },
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    )
+  }, [doFetch])
 
   function handleRefresh() {
     const dest = destination || customDest.trim()
@@ -226,6 +225,7 @@ export default function TrainPage() {
     setCustomDest('')
     setFromStation('ROMA TERMINI')   // quick picks always scrape from Roma
     setDestination(dest)
+    doFetch(dest, 'ROMA TERMINI')
   }
 
   // Toggle direction (Home ↔ Away) manually
@@ -236,6 +236,7 @@ export default function TrainPage() {
     setDestination(dir.to)
     setFromStation(dir.fromParam)
     setCustomDest('')
+    doFetch(dir.to, dir.fromParam)
   }
 
   const dir = atHome === null ? null : atHome ? DIRECTION.home : DIRECTION.away
