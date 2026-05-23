@@ -223,7 +223,6 @@ function NextcloudStepper({ workflow }) {
   const running  = workflow.running && !workflow.done && !workflow.error
   const done     = workflow.done && !workflow.error
   const pct      = clamp(workflow.progress || 0, 0, 100)
-  // Calcola step corrente dal progresso (1-8)
   const curStep  = Math.ceil(pct / (100 / NC_STEPS.length))
 
   return (
@@ -232,7 +231,6 @@ function NextcloudStepper({ workflow }) {
       border: `1px solid color-mix(in srgb,${T.purple} 18%,${T.border})`,
       display: 'flex', flexDirection: 'column', gap: '0.45rem',
     }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <Cloud size={10} style={{ color: T.purple, flexShrink: 0 }} />
         <span style={{ fontSize: '0.62rem', fontWeight: 800, color: T.purple, flex: 1 }}>
@@ -247,7 +245,6 @@ function NextcloudStepper({ workflow }) {
         {workflow.error && <XCircle size={10} style={{ color: T.danger }} />}
       </div>
 
-      {/* Barra globale */}
       <MiniBar
         pct={pct}
         color={workflow.error ? T.danger : done ? T.success : T.purple}
@@ -255,7 +252,6 @@ function NextcloudStepper({ workflow }) {
         bg={`color-mix(in srgb,${T.purple} 10%,${T.bgSurf3})`}
       />
 
-      {/* Griglia step */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.28rem' }}>
         {NC_STEPS.map(s => {
           const isPast    = pct >= (s.n / NC_STEPS.length * 100)
@@ -288,7 +284,6 @@ function NextcloudStepper({ workflow }) {
         })}
       </div>
 
-      {/* Step corrente + output live */}
       {(running || workflow.error) && workflow.step && (
         <div style={{ fontSize: '0.58rem', color: workflow.error ? T.danger : T.purple, fontFamily: T.mono, display: 'flex', alignItems: 'center', gap: 5 }}>
           {running && <RefreshCw size={7} style={{ animation: 'shu-spin 0.8s linear infinite', flexShrink: 0 }} />}
@@ -377,7 +372,6 @@ function WorkflowFooter({ wf, expanded, onToggle, onClear }) {
               {wf.error}
             </div>
           )}
-          {/* Terminal output espanso */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: '0.28rem' }}>
             <Terminal size={8} style={{ color: T.textMuted }} />
             <span style={{ fontFamily: T.mono, fontSize: '0.52rem', color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
@@ -425,19 +419,27 @@ function Toast({ notice, onClose, isMobile }) {
     position: 'fixed',
   }
 
+  // ── FIX: entrambe le varianti usano bottom ────────────────────────────────
   const containerStyle = isMobile ? {
     ...sharedStyle,
-    bottom: 12, right: 'auto', left: '50%', top: 'auto',
+    bottom: 80,           // sopra la bottom nav su mobile
+    right: 'auto',
+    left: '50%',
+    top: 'auto',
     transform: 'translateX(-50%)',
     width: 'min(92vw, 640px)',
     borderRadius: T.r.md,
-    animation: 'shu-toast-in-mobile 0.28s cubic-bezier(.32,1.1,.42,1)',
+    animation: 'shu-toast-in-bottom 0.28s cubic-bezier(.32,1.1,.42,1)',
   } : {
     ...sharedStyle,
-    top: 24, right: 24, bottom: 'auto', left: 'auto', transform: 'none',
+    bottom: 24,           // ← FIX: era top: 24 — ora in basso a destra su desktop
+    right: 24,
+    top: 'auto',
+    left: 'auto',
+    transform: 'none',
     width: 'min(340px, calc(100vw - 48px))',
     borderRadius: T.r.xl,
-    animation: 'shu-toast-in-desktop 0.28s cubic-bezier(.32,1.1,.42,1)',
+    animation: 'shu-toast-in-bottom 0.28s cubic-bezier(.32,1.1,.42,1)',
   }
 
   const toastNode = (
@@ -520,6 +522,7 @@ function ConfirmSheet({ data, onClose, onConfirm }) {
             background: `color-mix(in srgb,${c} 5%,${T.bgSurf2})`,
             border: `1px solid color-mix(in srgb,${c} 14%,${T.border})`,
             borderRadius: T.r.md,
+            whiteSpace: 'pre-line',
           }}>
             {data.message}
           </p>
@@ -564,8 +567,6 @@ export default function SmartHouseUpgradeWidget() {
   const [pkgOpen,     setPkgOpen]     = useState(false)
   const [backing,     setBacking]     = useState(false)
   const [backupLines, setBackupLines] = useState([])
-
-  // Stato locale Nextcloud per mostrare lo stepper
   const [ncWorkflow,  setNcWorkflow]  = useState(null)
 
   const isMobile = useIsMobile(640)
@@ -610,7 +611,6 @@ export default function SmartHouseUpgradeWidget() {
           color:   prev.color,
           title:   prev.title,
         }))
-        // Aggiorna anche lo stepper Nextcloud dedicato
         if (workflow.kind === 'nextcloud') {
           setNcWorkflow(d)
         }
@@ -619,7 +619,7 @@ export default function SmartHouseUpgradeWidget() {
           setBusy(false)
           loadHealth()
           setNotice({
-            title:   d.error ? 'Nextcloud update failed' : 'Nextcloud update completed ✓',
+            title:   d.error ? `${workflow.title} failed` : `${workflow.title} completed ✓`,
             tone:    d.error ? 'danger' : 'success',
             message: d.error || d.message || 'Done.',
           })
@@ -632,7 +632,7 @@ export default function SmartHouseUpgradeWidget() {
       }
     }, 2000)
     return () => clearInterval(id)
-  }, [workflow.kind, workflow.running, loadHealth])
+  }, [workflow.kind, workflow.running, loadHealth, workflow.title])
 
   // ── start async workflow ──────────────────────────────────────────────────
   const startWf = async ({ kind, title, color, url, step, body }) => {
@@ -644,9 +644,9 @@ export default function SmartHouseUpgradeWidget() {
         body: JSON.stringify(body || {}),
       })
       setWorkflow({ kind, title, color, running: true, done: false, error: null, step, progress: 0, output: [], message: '' })
+      setWfExpanded(false)
     } catch (e) {
       setNotice({ title: 'Workflow error', tone: 'danger', message: e.message })
-    } finally {
       setBusy(false)
     }
   }
@@ -694,8 +694,7 @@ export default function SmartHouseUpgradeWidget() {
   const throttleFlg = (throttle?.flags || []).length
   const dfData      = parseDf(diskUsage?.summary?.raw)
 
-  // Workflow Nextcloud attivo (sia dal wf globale che dallo stato locale)
-  const ncActive = workflow.kind === 'nextcloud' ? workflow : null
+  const ncActive      = workflow.kind === 'nextcloud' ? workflow : null
   const showNcStepper = ncActive || (ncWorkflow && (ncWorkflow.running || ncWorkflow.done || ncWorkflow.error))
 
   const TABS = [
@@ -712,7 +711,6 @@ export default function SmartHouseUpgradeWidget() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: T.sp.sm }}>
-        {/* Progress badge per Full Upgrade */}
         {isFullUpgradeRunning && (
           <StepBadge
             step={workflow.step} progress={workflow.progress}
@@ -748,7 +746,6 @@ export default function SmartHouseUpgradeWidget() {
         <Sep />
         <SectionLabel>Nextcloud</SectionLabel>
 
-        {/* Stepper Nextcloud — visibile se c'è un workflow NC attivo o completato */}
         {showNcStepper && (
           <NextcloudStepper workflow={ncActive || ncWorkflow} />
         )}
@@ -781,7 +778,6 @@ export default function SmartHouseUpgradeWidget() {
           )}
         />
 
-        {/* Lista pacchetti upgradabili */}
         {(pkgInfo?.upgradable_list || []).length > 0 && (
           <>
             <Sep />
@@ -1059,13 +1055,9 @@ export default function SmartHouseUpgradeWidget() {
       <style>{`
         @keyframes shu-spin  { to { transform: rotate(360deg); } }
         @keyframes shu-pulse { 0%,100%{opacity:1} 50%{opacity:0.28} }
-        @keyframes shu-toast-in-desktop {
-          from { opacity: 0; transform: translateX(20px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes shu-toast-in-mobile {
-          from { opacity: 0; transform: translateY(12px) translateX(-50%); }
-          to   { opacity: 1; transform: translateY(0)    translateX(-50%); }
+        @keyframes shu-toast-in-bottom {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes shu-toast-progress {
           from { width: 100%; }

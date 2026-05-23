@@ -897,3 +897,86 @@ def api_nextcloud_update_start():
 def api_nextcloud_update_status():
     """Restituisce lo stato corrente dell'aggiornamento Nextcloud."""
     return jsonify(_nextcloud_state)
+
+
+_upgrade_state = {
+    'running': False, 'output': [], 'done': False,
+    'error': None, 'step': '', 'progress': 0,
+}
+
+@system_bp.route('/api/system/upgrade/start', methods=['POST'])
+def api_upgrade_start():
+    global _upgrade_state
+    if _upgrade_state['running']:
+        return jsonify({'error': 'Already running'}), 409
+    _upgrade_state = {'running': True, 'output': [], 'done': False,
+                      'error': None, 'step': 'Updating…', 'progress': 0}
+    def run():
+        global _upgrade_state
+        try:
+            for cmd, label, p in [
+                ('sudo apt-get update -y',   'apt update',   50),
+                ('sudo apt-get upgrade -y',  'apt upgrade', 100),
+            ]:
+                _upgrade_state['step'] = label
+                _upgrade_state['progress'] = p
+                _upgrade_state['output'].append(f'$ {cmd}')
+                stdout, stderr, rc = _ssh_exec_host(cmd, timeout=300)
+                _upgrade_state['output'].append(stdout or stderr or '')
+                if rc != 0:
+                    raise Exception(stderr or f'exit {rc}')
+            _upgrade_state['output'].append('✓ Done')
+        except Exception as e:
+            _upgrade_state['error'] = str(e)
+        finally:
+            _upgrade_state['running'] = False
+            _upgrade_state['done'] = True
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'APT Upgrade started'}), 202
+
+@system_bp.route('/api/system/upgrade/status')
+def api_upgrade_status():
+    return jsonify(_upgrade_state)
+
+@system_bp.route('/api/system/full_upgrade/start', methods=['POST'])
+def api_full_upgrade_start():
+    global _full_upgrade_state
+    if _full_upgrade_state['running']:
+        return jsonify({'error': 'Already running'}), 409
+    _full_upgrade_state = {
+        'running': True, 'output': [], 'done': False, 'error': None,
+        'step': 'Initializing…', 'progress': 0, 'total_steps': 8,
+        'start_time': datetime.now().isoformat(), 'end_time': None,
+    }
+    def run():
+        global _full_upgrade_state
+        steps = [
+            (1, 'Pre-check disk',      'df -h /'),
+            (2, 'apt-get update',      'sudo apt-get update -y'),
+            (3, 'apt-get full-upgrade','sudo DEBIAN_FRONTEND=noninteractive apt-get full-upgrade -y'),
+            (4, 'autoremove',          'sudo apt-get autoremove -y --purge'),
+            (5, 'autoclean',           'sudo apt-get autoclean -y'),
+            (6, 'Firmware check',      'sudo rpi-update --dry-run 2>/dev/null || echo "skipped"'),
+            (7, 'Reboot check',        '[ -f /var/run/reboot-required ] && cat /var/run/reboot-required || echo "no reboot required"'),
+            (8, 'Final report',        'df -h / && free -h'),
+        ]
+        try:
+            for n, label, cmd in steps:
+                _full_upgrade_state['step'] = label
+                _full_upgrade_state['progress'] = int(n / 8 * 100)
+                _full_upgrade_state['output'].append(f'═══ STEP {n}/8: {label} ═══')
+                _full_upgrade_state['output'].append(f'$ {cmd}')
+                stdout, stderr, rc = _ssh_exec_host(cmd, timeout=600)
+                _full_upgrade_state['output'].append(stdout or stderr or '')
+                if rc != 0 and n in (2, 3):
+                    raise Exception(stderr or f'exit {rc}')
+            _full_upgrade_state['output'].append('═══ FULL UPGRADE COMPLETATO ═══')
+            _full_upgrade_state['progress'] = 100
+        except Exception as e:
+            _full_upgrade_state['error'] = str(e)
+        finally:
+            _full_upgrade_state['running'] = False
+            _full_upgrade_state['done'] = True
+            _full_upgrade_state['end_time'] = datetime.now().isoformat()
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Full upgrade started'}), 202
