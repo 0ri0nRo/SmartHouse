@@ -6,6 +6,9 @@ import {
   HardDrive, ChevronDown, ChevronUp, Archive, Power,
   ChevronRight, Server, Activity, Zap, Cpu, Terminal,
 } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card'
+import Button from './ui/Button'
+import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from './ui/Modal'
 
 // ─── design tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -475,69 +478,6 @@ function Toast({ notice, onClose, isMobile }) {
   return typeof document !== 'undefined' ? createPortal(toastNode, document.body) : toastNode
 }
 
-function ConfirmSheet({ data, onClose, onConfirm }) {
-  useEffect(() => {
-    if (!data) return
-    const handler = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [data, onClose])
-
-  if (!data) return null
-
-  const c   = data.tone === 'danger' ? T.danger : T.warning
-  const Ico = data.tone === 'danger' ? XCircle : AlertTriangle
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 298, background: 'rgba(0,0,0,0.28)' }} />
-      <div role="dialog" aria-modal="true" style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 299,
-        background: T.bgSurf, borderTop: `1px solid ${T.border}`,
-        borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        padding: '0 0 env(safe-area-inset-bottom)',
-        boxShadow: '0 -12px 40px rgba(0,0,0,0.22)',
-        animation: 'shu-sheet-up 0.28s cubic-bezier(.32,1.1,.42,1)',
-        maxWidth: 600, margin: '0 auto',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(148,163,184,0.30)' }} />
-        </div>
-        <div style={{ padding: '0.75rem 1.25rem 1.1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem' }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `color-mix(in srgb,${c} 14%,transparent)`,
-              color: c, border: `1px solid color-mix(in srgb,${c} 24%,transparent)`,
-            }}><Ico size={13} /></span>
-            <span style={{ fontWeight: 800, fontSize: '0.82rem', color: T.textPri, flex: 1 }}>{data.title}</span>
-            <button onClick={onClose} style={{ background: T.bgSurf2, border: `1px solid ${T.border}`, borderRadius: 8, padding: '4px 6px', cursor: 'pointer', color: T.textMuted, lineHeight: 1 }}>
-              <X size={13} />
-            </button>
-          </div>
-          <p style={{
-            fontSize: '0.68rem', color: T.textSec, lineHeight: 1.6, marginBottom: '1rem',
-            padding: '0.55rem 0.7rem',
-            background: `color-mix(in srgb,${c} 5%,${T.bgSurf2})`,
-            border: `1px solid color-mix(in srgb,${c} 14%,${T.border})`,
-            borderRadius: T.r.md,
-            whiteSpace: 'pre-line',
-          }}>
-            {data.message}
-          </p>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <button className="btn btn--ghost btn--sm" onClick={onClose}>Cancel</button>
-            <button className="btn btn--primary btn--sm" onClick={onConfirm}>
-              {data.confirmLabel || 'Continue'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
 function SectionLabel({ children }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0.15rem 0 0.35rem' }}>
@@ -755,21 +695,21 @@ export default function SmartHouseUpgradeWidget() {
           sub="8 step sicuri · pre-check · maintenance · DB dump · pull · occ upgrade"
           disabled={busy}
           onClick={() => ask(
-            'Aggiornare Nextcloud?',
+            'Update Nextcloud?',
             [
-              'Processo in 8 step:',
-              '1. Pre-check Docker e container',
+              '8-step process:',
+              '1. Pre-check Docker and container',
               '2. Maintenance mode ON',
-              '3. Backup database MariaDB → /tmp',
-              '4. Snapshot volume dati',
-              '5. docker compose pull (nuove immagini)',
+              '3. Backup MariaDB database → /tmp',
+              '4. Snapshot data volume',
+              '5. docker compose pull (new images)',
               '6. docker compose up -d --force-recreate',
-              '7. occ upgrade + migrazioni DB',
+              '7. occ upgrade + DB migrations',
               '8. Maintenance mode OFF + status check',
               '',
-              'In caso di errore il maintenance mode rimane attivo per sicurezza.',
+              'If an error occurs, maintenance mode remains active for safety.',
             ].join('\n'),
-            'Avvia aggiornamento',
+            'Start Update',
             () => startWf({
               kind: 'nextcloud', title: 'Nextcloud Update', color: T.purple,
               url: '/api/system/nextcloud_update/start',
@@ -1040,15 +980,27 @@ export default function SmartHouseUpgradeWidget() {
       />
 
       {/* ── Notifications ── */}
-      <ConfirmSheet
-        data={confirm}
-        onClose={() => setConfirm(null)}
-        onConfirm={async () => {
-          const fn = confirm?.onConfirm
-          setConfirm(null)
-          try { await fn?.() } catch (e) { setNotice({ title: 'Error', tone: 'danger', message: e.message }) }
-        }}
-      />
+      <Modal isOpen={!!confirm} onClose={() => setConfirm(null)}>
+        <ModalHeader>
+          <ModalTitle>{confirm?.title}</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <p>{confirm?.message}</p>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
+          <Button 
+            variant="primary" 
+            onClick={async () => {
+              const fn = confirm?.onConfirm
+              setConfirm(null)
+              try { await fn?.() } catch (e) { setNotice({ title: 'Error', tone: 'danger', message: e.message }) }
+            }}
+          >
+            {confirm?.confirmLabel || 'Continue'}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       <Toast notice={notice} onClose={closeNotice} isMobile={isMobile} />
 
