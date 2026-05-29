@@ -1,76 +1,73 @@
 /* ================================================================
-   SMARTHOUSE — global.css  v4.1
+   SMARTHOUSE — global.css  v4.3
    "Deep Control" — smart home aesthetic.
    Dark navy base · Electric cyan accent · Glassmorphic surfaces
    LED glow effects · Ambient grid background · Premium feel.
 
-   v4.1 changes (bento grid refactor):
-   ─ Added .btn--warning, .btn--xs
-   ─ Added .card--alert variant
-   ─ Added .panel-strip utility
-   ─ Refined .badge--muted for light mode
-   ─ Fixed .btn--success / .btn--danger light mode contrast
-   ─ Added .bento-grid helper
-   ─ Minor focus/a11y polish
+   v4.2 changes:
+   ─ Floorplan generic buttons: accent-tinted glass (rgba accent bg,
+     accent border, accent text) replacing plain --bg-surface grey
+   ─ Added :root.light overrides for floorplan buttons
+
+   v4.3 changes:
+   ─ Aggiunta --cyan come token ufficiale in :root e :root.light
+   ─ .btn--ghost usa var(--cyan) — sempre definita in entrambi i temi
+   ─ :root.light .btn--ghost → accent blue palette (fix grigio opaco)
+   ─ :root.light .btn base → background: transparent (blocca ereditarietà)
+   ─ Nuovo .btn--icon con stile dedicato e override light coerente
+   ─ Hover .btn--ghost dark migliorato con glow cyan
    ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ════ TOKENS DARK (default) ════ */
 :root {
-  /* Backgrounds */
   --bg-page:      #0a1020;
   --bg-surface:   #10192e;
   --bg-surface-2: #151f37;
   --bg-surface-3: #1d2a46;
   --bg-glass:     rgba(16, 25, 46, 0.76);
 
-  /* Borders */
   --border:        rgba(148, 163, 184, 0.12);
   --border-strong: rgba(148, 163, 184, 0.20);
   --border-glow:   rgba(96, 165, 250, 0.28);
 
-  /* Text */
   --text-primary:   #eef4ff;
   --text-secondary: #9eb0c9;
   --text-muted:     #5d6c86;
 
-  /* Accent — electric cyan */
-  --accent:         #7aa7ff;
-  --accent-hover:   #96b9ff;
+  --accent:         #63b3ed;
+  --accent-hover:   #90cdf4;
   --accent-dim:     #4f7ee8;
-  --accent-light:   rgba(122, 167, 255, 0.10);
-  --accent-glow:    rgba(122, 167, 255, 0.24);
-  --accent-glow-lg: rgba(122, 167, 255, 0.12);
+  --accent-light:   rgba(99, 179, 237, 0.10);
+  --accent-glow:    rgba(99, 179, 237, 0.20);
+  --accent-glow-lg: rgba(99, 179, 237, 0.12);
 
-  /* Semantic colors */
-  --color-success: #37d67a;
-  --color-warning: #f5b84b;
-  --color-danger:  #ff6a72;
-  --color-info:    #7aa7ff;
+  --color-success: #4ade80;
+  --color-warning: #fb923c;
+  --color-danger:  #f87171;
+  --color-info:    #63b3ed;
 
-  /* Semantic glows */
+  /* v4.3 — token cyan ufficiale */
+  --cyan: #22d3ee;
+
   --glow-success: rgba(55, 214, 122, 0.28);
   --glow-warning: rgba(245, 184, 75, 0.28);
   --glow-danger:  rgba(255, 106, 114, 0.28);
   --glow-info:    rgba(122, 167, 255, 0.28);
 
-  /* Sidebar */
   --sidebar-bg:        rgba(8, 13, 25, 0.94);
   --sidebar-border:    rgba(148, 163, 184, 0.10);
   --sidebar-link:      #8d9bb2;
   --sidebar-active-bg: rgba(122, 167, 255, 0.10);
   --sidebar-active:    #7aa7ff;
 
-  /* Toggle */
   --toggle-off: #24324e;
   --toggle-on:  #7aa7ff;
 
-  /* Typography */
   --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
 
-  /* Type scale */
   --text-2xs:  0.65rem;
   --text-xs:   0.72rem;
   --text-sm:   0.82rem;
@@ -81,7 +78,6 @@
   --text-2xl:  2rem;
   --text-3xl:  2.6rem;
 
-  /* Spacing */
   --space-1:  0.25rem;
   --space-2:  0.5rem;
   --space-3:  0.75rem;
@@ -92,32 +88,27 @@
   --space-8:  2rem;
   --space-10: 2.5rem;
 
-  /* Radii */
   --radius-sm:   8px;
   --radius-md:   12px;
   --radius-lg:   16px;
   --radius-xl:   20px;
   --radius-full: 9999px;
 
-  /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.22);
   --shadow-lg: 0 24px 50px rgba(0, 0, 0, 0.30);
   --shadow-glow-sm: 0 0 12px rgba(122, 167, 255, 0.16);
   --shadow-glow-md: 0 0 24px rgba(122, 167, 255, 0.12);
 
-  /* Transitions */
   --transition-fast:   0.10s ease;
   --transition-base:   0.22s ease;
   --transition-slow:   0.35s ease;
   --transition-spring: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   --transition:        var(--transition-base);
 
-  /* Layout */
   --sidebar-w: 248px;
   --topbar-h:  68px;
 
-  /* ── Card tokens ── */
   --card-temp-bg:      rgba(255, 159,  10, 0.07);
   --card-temp-border:  rgba(255, 159,  10, 0.20);
   --card-temp-tag:     #ff9f0a;
@@ -189,135 +180,126 @@
   --card-rec-glow:     rgba(255,  71,  87, 0.12);
 }
 
-/* ════ TOKENS LIGHT ════
-  Apply the .light class to <html> (or <body>) to enable light mode.
-  The recommended JS is at the end of the file in the "Theme Toggle" section.
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ════ TOKENS LIGHT ════ */
 :root.light {
-  /* Backgrounds */
-  --bg-page:      #f5f7fb;
+  --bg-page:      #f0f3f8;
   --bg-surface:   #ffffff;
-  --bg-surface-2: #f8fafc;
-  --bg-surface-3: #eef2f7;
-  --bg-glass:     rgba(255, 255, 255, 0.90);
+  --bg-surface-2: #f5f7fa;
+  --bg-surface-3: #eff2f7;
+  --bg-glass:     rgba(255, 255, 255, 0.92);
 
-  /* Borders */
-  --border:        rgba(15, 23, 42, 0.08);
-  --border-strong: rgba(15, 23, 42, 0.14);
-  --border-glow:   rgba(59, 110, 255, 0.18);
+  --border:        rgba(59, 110, 255, 0.10);
+  --border-strong: rgba(59, 110, 255, 0.18);
+  --border-glow:   rgba(59, 110, 255, 0.24);
 
-  /* Text */
-  --text-primary:   #152033;
-  --text-secondary: #516176;
-  --text-muted:     #7a879a;
+  --text-primary:   #1a2847;
+  --text-secondary: #4a5f7f;
+  --text-muted:     #7a8fa8;
 
-  /* Accent — deep blue */
-  --accent:         #3b6eff;
-  --accent-hover:   #2d5ae6;
-  --accent-dim:     #2348ba;
-  --accent-light:   rgba(59, 110, 255, 0.08);
-  --accent-glow:    rgba(59, 110, 255, 0.16);
-  --accent-glow-lg: rgba(59, 110, 255, 0.08);
+  --accent:         #2563eb;
+  --accent-hover:   #1d4ed8;
+  --accent-dim:     #1e40af;
+  --accent-light:   rgba(37, 99, 235, 0.10);
+  --accent-glow:    rgba(37, 99, 235, 0.20);
+  --accent-glow-lg: rgba(37, 99, 235, 0.12);
 
-  /* Semantic */
   --color-success: #16a34a;
-  --color-warning: #d97706;
+  --color-warning: #c2410c;
   --color-danger:  #dc2626;
-  --color-info:    #3b6eff;
+  --color-info:    #2563eb;
 
-  --glow-success: rgba(22, 163, 74, 0.18);
-  --glow-warning: rgba(217, 119, 6, 0.18);
-  --glow-danger:  rgba(220, 38, 38, 0.18);
-  --glow-info:    rgba(59, 110, 255, 0.18);
+  /* v4.3 — token cyan light */
+  --cyan: #0284c7;
 
-  /* Sidebar */
-  --sidebar-bg:        rgba(255, 255, 255, 0.92);
-  --sidebar-border:    rgba(15, 23, 42, 0.08);
-  --sidebar-link:      #607085;
-  --sidebar-active-bg: rgba(59, 110, 255, 0.08);
-  --sidebar-active:    #3b6eff;
+  --glow-success: rgba(22, 163, 74, 0.20);
+  --glow-warning: rgba(194, 65, 12, 0.20);
+  --glow-danger:  rgba(220, 38, 38, 0.20);
+  --glow-info:    rgba(37, 99, 235, 0.20);
 
-  /* Toggle */
-  --toggle-off: #d6deea;
-  --toggle-on:  #3b6eff;
+  --sidebar-bg:        rgba(255, 255, 255, 0.95);
+  --sidebar-border:    rgba(59, 110, 255, 0.10);
+  --sidebar-link:      #5a6f8f;
+  --sidebar-active-bg: rgba(37, 99, 235, 0.10);
+  --sidebar-active:    #2563eb;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 1px rgba(15, 23, 42, 0.03);
-  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 20px 46px rgba(15, 23, 42, 0.10);
-  --shadow-glow-sm: 0 0 0 1px rgba(59, 110, 255, 0.08), 0 8px 24px rgba(59, 110, 255, 0.08);
-  --shadow-glow-md: 0 0 0 1px rgba(59, 110, 255, 0.10), 0 14px 30px rgba(15, 23, 42, 0.08);
+  --toggle-off: #cbd5e1;
+  --toggle-on:  #2563eb;
 
-  /* Card tokens (light) */
-  --card-temp-bg:      rgba(245, 158, 11, 0.08);
-  --card-temp-border:  rgba(245, 158, 11, 0.18);
-  --card-temp-tag:     #b45309;
-  --card-temp-value:   #92400e;
-  --card-temp-accent:  #f59e0b;
-  --card-temp-glow:    rgba(245, 158, 11, 0.10);
+  --shadow-sm: 0 1px 2px rgba(26, 40, 71, 0.06), 0 1px 1px rgba(26, 40, 71, 0.04);
+  --shadow-md: 0 10px 24px rgba(26, 40, 71, 0.10);
+  --shadow-lg: 0 16px 40px rgba(26, 40, 71, 0.12);
+  --shadow-glow-sm: 0 0 0 1px rgba(37, 99, 235, 0.10), 0 6px 20px rgba(37, 99, 235, 0.10);
+  --shadow-glow-md: 0 0 0 1px rgba(37, 99, 235, 0.12), 0 12px 28px rgba(26, 40, 71, 0.10);
 
-  --card-hum-bg:       rgba(59, 130, 246, 0.06);
-  --card-hum-border:   rgba(59, 130, 246, 0.16);
-  --card-hum-tag:      #2563eb;
-  --card-hum-value:    #1d4ed8;
-  --card-hum-accent:   #3b82f6;
-  --card-hum-glow:     rgba(59, 130, 246, 0.10);
+  --card-temp-bg:      rgba(251, 146, 60, 0.12);
+  --card-temp-border:  rgba(251, 146, 60, 0.24);
+  --card-temp-tag:     #a16207;
+  --card-temp-value:   #7c2d12;
+  --card-temp-accent:  #ea580c;
+  --card-temp-glow:    rgba(251, 146, 60, 0.16);
 
-  --card-air-bg:       rgba(16, 185, 129, 0.06);
-  --card-air-border:   rgba(16, 185, 129, 0.16);
-  --card-air-tag:      #047857;
-  --card-air-value:    #065f46;
-  --card-air-accent:   #10b981;
-  --card-air-glow:     rgba(16, 185, 129, 0.10);
+  --card-hum-bg:       rgba(59, 130, 246, 0.12);
+  --card-hum-border:   rgba(59, 130, 246, 0.24);
+  --card-hum-tag:      #1e40af;
+  --card-hum-value:    #172554;
+  --card-hum-accent:   #1d4ed8;
+  --card-hum-glow:     rgba(59, 130, 246, 0.16);
 
-  --card-raspi-bg:     rgba(168, 85, 247, 0.06);
-  --card-raspi-border: rgba(168, 85, 247, 0.16);
-  --card-raspi-tag:    #7e22ce;
-  --card-raspi-value:  #6b21a8;
-  --card-raspi-accent: #a855f7;
-  --card-raspi-glow:   rgba(168, 85, 247, 0.10);
+  --card-air-bg:       rgba(34, 197, 94, 0.12);
+  --card-air-border:   rgba(34, 197, 94, 0.24);
+  --card-air-tag:      #15803d;
+  --card-air-value:    #052e16;
+  --card-air-accent:   #16a34a;
+  --card-air-glow:     rgba(34, 197, 94, 0.16);
 
-  --card-sec-bg:       rgba(59, 130, 246, 0.06);
-  --card-sec-border:   rgba(59, 130, 246, 0.14);
-  --card-sec-tag:      #2563eb;
-  --card-sec-value:    #1d4ed8;
-  --card-sec-accent:   #3b82f6;
-  --card-sec-glow:     rgba(59, 130, 246, 0.08);
+  --card-raspi-bg:     rgba(168, 85, 247, 0.12);
+  --card-raspi-border: rgba(168, 85, 247, 0.24);
+  --card-raspi-tag:    #6b21a8;
+  --card-raspi-value:  #3f0f5c;
+  --card-raspi-accent: #9333ea;
+  --card-raspi-glow:   rgba(168, 85, 247, 0.16);
 
-  --card-train-bg:     rgba(16, 185, 129, 0.06);
-  --card-train-border: rgba(16, 185, 129, 0.14);
-  --card-train-tag:    #047857;
-  --card-train-value:  #065f46;
-  --card-train-accent: #10b981;
-  --card-train-glow:   rgba(16, 185, 129, 0.08);
+  --card-sec-bg:       rgba(37, 99, 235, 0.12);
+  --card-sec-border:   rgba(37, 99, 235, 0.24);
+  --card-sec-tag:      #1e40af;
+  --card-sec-value:    #172554;
+  --card-sec-accent:   #2563eb;
+  --card-sec-glow:     rgba(37, 99, 235, 0.16);
 
-  --card-shop-bg:      rgba(239, 68, 68, 0.06);
-  --card-shop-border:  rgba(239, 68, 68, 0.14);
-  --card-shop-tag:     #b91c1c;
-  --card-shop-value:   #991b1b;
-  --card-shop-accent:  #ef4444;
-  --card-shop-glow:    rgba(239, 68, 68, 0.08);
+  --card-train-bg:     rgba(34, 197, 94, 0.12);
+  --card-train-border: rgba(34, 197, 94, 0.24);
+  --card-train-tag:    #15803d;
+  --card-train-value:  #052e16;
+  --card-train-accent: #16a34a;
+  --card-train-glow:   rgba(34, 197, 94, 0.16);
 
-  --card-exp-bg:       rgba(168, 85, 247, 0.06);
-  --card-exp-border:   rgba(168, 85, 247, 0.14);
-  --card-exp-tag:      #7e22ce;
-  --card-exp-value:    #6b21a8;
-  --card-exp-accent:   #a855f7;
-  --card-exp-glow:     rgba(168, 85, 247, 0.08);
+  --card-shop-bg:      rgba(239, 68, 68, 0.12);
+  --card-shop-border:  rgba(239, 68, 68, 0.24);
+  --card-shop-tag:     #991b1b;
+  --card-shop-value:   #450a0a;
+  --card-shop-accent:  #dc2626;
+  --card-shop-glow:    rgba(239, 68, 68, 0.16);
 
-  --card-act-bg:       rgba(59, 130, 246, 0.06);
-  --card-act-border:   rgba(59, 130, 246, 0.14);
-  --card-act-tag:      #2563eb;
-  --card-act-value:    #1d4ed8;
-  --card-act-accent:   #3b82f6;
-  --card-act-glow:     rgba(59, 130, 246, 0.08);
+  --card-exp-bg:       rgba(168, 85, 247, 0.12);
+  --card-exp-border:   rgba(168, 85, 247, 0.24);
+  --card-exp-tag:      #6b21a8;
+  --card-exp-value:    #3f0f5c;
+  --card-exp-accent:   #9333ea;
+  --card-exp-glow:     rgba(168, 85, 247, 0.16);
 
-  --card-rec-bg:       rgba(239, 68, 68, 0.05);
-  --card-rec-border:   rgba(239, 68, 68, 0.14);
-  --card-rec-tag:      #b91c1c;
-  --card-rec-value:    #991b1b;
-  --card-rec-accent:   #ef4444;
-  --card-rec-glow:     rgba(239, 68, 68, 0.07);
+  --card-act-bg:       rgba(37, 99, 235, 0.12);
+  --card-act-border:   rgba(37, 99, 235, 0.24);
+  --card-act-tag:      #1e40af;
+  --card-act-value:    #172554;
+  --card-act-accent:   #2563eb;
+  --card-act-glow:     rgba(37, 99, 235, 0.16);
+
+  --card-rec-bg:       rgba(239, 68, 68, 0.10);
+  --card-rec-border:   rgba(239, 68, 68, 0.24);
+  --card-rec-tag:      #991b1b;
+  --card-rec-value:    #450a0a;
+  --card-rec-accent:   #dc2626;
+  --card-rec-glow:     rgba(239, 68, 68, 0.14);
 }
 
 /* ════ RESET ════ */
@@ -327,7 +309,6 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Scroll smooth solo dove serve — non forziamo su tutto */
   scroll-behavior: smooth;
 }
 html:not(.light) { color-scheme: dark; }
@@ -481,10 +462,7 @@ ul, ol { list-style: none; }
   background: var(--accent);
 }
 
-/* ════ BENTO GRID ════
-  Helper class for bento grids. Use with gap and
-  inline grid-template-columns for maximum flexibility.
-   ─────────────────────────────────────────────────────── */
+/* ════ BENTO GRID ════ */
 .bento-grid {
   display: grid;
   gap: 1rem;
@@ -494,7 +472,6 @@ ul, ol { list-style: none; }
 .bento-grid--4 { grid-template-columns: repeat(4, 1fr); }
 .bento-grid--auto { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 
-/* Span helpers */
 .col-span-2 { grid-column: span 2; }
 .col-span-3 { grid-column: span 3; }
 .row-span-2 { grid-row: span 2; }
@@ -514,7 +491,6 @@ ul, ol { list-style: none; }
     transform var(--transition-slow);
 }
 .sidebar.open { transform: translateX(0); }
-/* Striscia accent in cima */
 .sidebar::before {
   content: '';
   display: block; height: 2px; flex-shrink: 0;
@@ -632,16 +608,7 @@ ul, ol { list-style: none; }
   box-shadow: var(--shadow-glow-sm);
 }
 
-/* ════ THEME TOGGLE ════
-   HTML:
-  <button class="theme-toggle" data-theme-toggle aria-label="Change theme">
-     <span class="theme-toggle__icon" aria-hidden="true"></span>
-     <span class="theme-toggle__track" aria-hidden="true">
-       <span class="theme-toggle__thumb"></span>
-     </span>
-     <span class="theme-toggle__label">Dark</span>
-   </button>
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ════ THEME TOGGLE ════ */
 .theme-toggle {
   display: flex; align-items: center; gap: var(--space-2);
   background: var(--bg-surface-2); border: 1px solid var(--border);
@@ -722,7 +689,6 @@ ul, ol { list-style: none; }
 }
 .card:hover { border-color: rgba(59,110,255,0.22); box-shadow: var(--shadow-md); }
 
-/* Linea riflesso in cima */
 .card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
@@ -733,7 +699,6 @@ ul, ol { list-style: none; }
   background: linear-gradient(90deg, transparent, rgba(59,110,255,0.18), rgba(122,167,255,0.16), transparent);
 }
 
-/* Alert card variant — bordo rosso + glow, es. per gauge con CPU alta */
 .card--alert {
   border-color: rgba(255, 71, 87, 0.28) !important;
   box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.06), var(--shadow-sm) !important;
@@ -741,8 +706,6 @@ ul, ol { list-style: none; }
 .card--alert::before {
   background: linear-gradient(90deg, transparent, rgba(255,71,87,0.20), transparent);
 }
-
-/* Flat variant — senza hover glow, per card dentro bento */
 .card--flat:hover { box-shadow: none; }
 
 .card-header {
@@ -778,9 +741,7 @@ ul, ol { list-style: none; }
 }
 :root.light .card-footer { background: rgba(248,250,252,0.92); }
 
-/* ════ PANEL STRIP ════
-   Striscia dati orizzontale usata nelle device info row
-   ─────────────────────────────────────────────────────── */
+/* ════ PANEL STRIP ════ */
 .panel-strip {
   display: flex; align-items: center; gap: var(--space-6);
   flex-wrap: wrap; padding: var(--space-4) var(--space-5);
@@ -866,7 +827,7 @@ ul, ol { list-style: none; }
   transition: color var(--transition-base);
 }
 
-/* ════ STATUS DOT — LED effect ════ */
+/* ════ STATUS DOT ════ */
 .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .dot--green  { background: var(--color-success); box-shadow: 0 0 0 2px rgba(0,255,136,0.15), 0 0 8px var(--glow-success); }
 .dot--red    { background: var(--color-danger);  box-shadow: 0 0 0 2px rgba(255,71,87,0.15),  0 0 8px var(--glow-danger);  }
@@ -894,7 +855,6 @@ ul, ol { list-style: none; }
 .badge--danger  { color: var(--color-danger);  border-color: rgba(255,71,87,0.30);  background: rgba(255,71,87,0.08); }
 .badge--muted   { color: var(--text-secondary); border-color: var(--border-strong); background: var(--bg-surface-2); }
 
-/* Light mode badge overrides for readability */
 :root.light .badge--accent  { color: #0055aa; }
 :root.light .badge--success { color: #007a42; border-color: rgba(0,176,96,0.30);  background: rgba(0,176,96,0.08);  }
 :root.light .badge--warning { color: #945200; border-color: rgba(224,128,0,0.30); background: rgba(224,128,0,0.08); }
@@ -919,7 +879,9 @@ ul, ol { list-style: none; }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-/* Primary */
+/* v4.3 — forza sfondo trasparente in light per non ereditare --bg-surface-2 grigio */
+:root.light .btn { background: transparent; }
+
 .btn--primary {
   background: linear-gradient(135deg, var(--accent), #6f8dff); color: #ffffff;
   border-color: transparent; font-weight: 700;
@@ -928,17 +890,33 @@ ul, ol { list-style: none; }
   background: linear-gradient(135deg, var(--accent-hover), #5e7dff);
   box-shadow: 0 12px 24px rgba(59,110,255,0.18);
 }
-:root.light .btn--primary { color: #ffffff; }
+:root.light .btn--primary { color: #ffffff; background: linear-gradient(135deg, var(--accent), #4f80ff); }
+:root.light .btn--primary:hover { background: linear-gradient(135deg, var(--accent-hover), #3b6ef5); }
 
-/* Ghost */
+/* v4.3 — .btn--ghost usa --cyan (token sempre definito) + override light corretto */
 .btn--ghost {
-  background: rgba(255,255,255,0.72); color: var(--text-secondary); border-color: rgba(148,163,184,0.20);
+  background: rgba(6, 182, 212, 0.10);
+  color: var(--cyan);
+  border-color: rgba(6, 182, 212, 0.28);
 }
 .btn--ghost:hover {
-  background: rgba(255,255,255,0.95); color: var(--text-primary); border-color: rgba(59,130,246,0.20);
+  background: rgba(6, 182, 212, 0.18);
+  color: var(--cyan);
+  border-color: rgba(6, 182, 212, 0.46);
+  box-shadow: 0 8px 22px rgba(6, 182, 212, 0.18);
+}
+:root.light .btn--ghost {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--accent);
+  border-color: rgba(37, 99, 235, 0.22);
+}
+:root.light .btn--ghost:hover {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(37, 99, 235, 0.40);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.14);
+  color: var(--accent-hover);
 }
 
-/* Danger */
 .btn--danger {
   background: rgba(239,68,68,0.08); color: var(--color-danger);
   border-color: rgba(239,68,68,0.20);
@@ -949,7 +927,6 @@ ul, ol { list-style: none; }
 }
 :root.light .btn--danger { color: #d93025; }
 
-/* Success */
 .btn--success {
   background: rgba(22,163,74,0.08); color: var(--color-success);
   border-color: rgba(22,163,74,0.20);
@@ -967,7 +944,6 @@ ul, ol { list-style: none; }
   box-shadow: 0 10px 22px rgba(22,163,74,0.12);
 }
 
-/* Warning — NEW in v4.1 ─────────────────────────── */
 .btn--warning {
   background: rgba(245,184,75,0.08); color: var(--color-warning);
   border-color: rgba(245,184,75,0.24);
@@ -985,13 +961,42 @@ ul, ol { list-style: none; }
   box-shadow: 0 10px 22px rgba(245,184,75,0.12);
 }
 
-/* Sizes */
 .btn--xs   { padding: 0.25rem 0.55rem; font-size: var(--text-2xs); }
 .btn--xs svg { width: 12px; height: 12px; }
 .btn--sm   { padding: 0.40rem 0.85rem;  font-size: var(--text-sm);  }
 .btn--sm svg { width: 13px; height: 13px; }
 .btn--lg   { padding: 0.80rem 1.6rem;   font-size: var(--text-md);  }
 .btn--full { width: 100%; }
+
+/* v4.3 — .btn--icon: pulsante solo icona (es. ⚙ impostazioni) */
+.btn--icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.btn--icon svg { width: 17px; height: 17px; }
+.btn--icon:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: var(--shadow-glow-sm);
+}
+:root.light .btn--icon {
+  background: rgba(37, 99, 235, 0.07);
+  border-color: rgba(37, 99, 235, 0.20);
+  color: var(--accent);
+}
+:root.light .btn--icon:hover {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(37, 99, 235, 0.38);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.14);
+  color: var(--accent-hover);
+}
 
 /* ════ FORM ════ */
 .field { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -1062,35 +1067,14 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   color: var(--text-primary) !important;
   box-shadow: 0 12px 30px rgba(15,23,42,0.10) !important;
 }
-
 .recharts-cartesian-axis-line,
 .recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line {
-  stroke: rgba(148,163,184,0.16);
-}
-
-.recharts-cartesian-axis-tick-value {
-  fill: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-.recharts-legend-wrapper {
-  padding-top: 0 !important;
-}
-
-.recharts-default-legend {
-  display: flex !important;
-  gap: 0.75rem !important;
-}
-
-.recharts-default-legend .recharts-legend-item {
-  margin-right: 0 !important;
-}
-
-.recharts-tooltip-label {
-  color: var(--text-secondary) !important;
-  margin-bottom: 0.35rem !important;
-}
+.recharts-cartesian-grid-vertical line { stroke: rgba(148,163,184,0.16); }
+.recharts-cartesian-axis-tick-value { fill: var(--text-muted); font-family: var(--font-mono); }
+.recharts-legend-wrapper { padding-top: 0 !important; }
+.recharts-default-legend { display: flex !important; gap: 0.75rem !important; }
+.recharts-default-legend .recharts-legend-item { margin-right: 0 !important; }
+.recharts-tooltip-label { color: var(--text-secondary) !important; margin-bottom: 0.35rem !important; }
 
 /* ════ TOAST ════ */
 .toast {
@@ -1236,9 +1220,9 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
 .overflow-x  { overflow-x: auto; }
 .sr-only     { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .glow-text   { text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow-lg); }
-.min-w-0     { min-width: 0; }  /* fix per flex children con truncate */
+.min-w-0     { min-width: 0; }
 
-/* ════ ANIMAZIONI ════ */
+/* ════ ANIMATIONS ════ */
 .animate-fade { animation: fade-in 0.25s ease both; }
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
@@ -1262,7 +1246,6 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   100% { left: 120%;  }
 }
 
-/* Pop — usato da SensorDetail e popover */
 @keyframes pop-in {
   from { opacity: 0; transform: scale(0.90) translateY(6px); }
   to   { opacity: 1; transform: scale(1)    translateY(0);   }
@@ -1279,13 +1262,11 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
 @media (max-width: 1200px) {
   .bento-grid--4 { grid-template-columns: repeat(2, 1fr); }
 }
-
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
   .bento-grid--3 { grid-template-columns: repeat(2, 1fr); }
 }
-
 @media (max-width: 768px) {
   .layout-shell { overflow-x: hidden; }
   .main-shell { margin-left: 0; }
@@ -1308,8 +1289,6 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   .bento-grid--3 { grid-template-columns: 1fr; }
   .col-span-2,
   .col-span-3 { grid-column: span 1; }
-
-  /* Mobile UX improvements: larger touch targets, responsive images, smaller floorplan */
   .btn { padding: 0.9rem 1rem; font-size: var(--text-sm); border-radius: 12px; }
   .btn--full { width: 100%; }
   .topbar-menu-btn { width: 44px; height: 44px; }
@@ -1327,7 +1306,6 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
-
 @media (max-width: 480px) {
   .grid-4 { grid-template-columns: 1fr; }
   .bento-grid--4 { grid-template-columns: repeat(2, 1fr); }
@@ -1352,47 +1330,30 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   box-shadow: 0 18px 34px rgba(18, 42, 78, 0.16), inset 0 1px 0 rgba(255,255,255,0.72);
   background: linear-gradient(145deg, #eef3fb 0%, #e6edf7 100%);
 }
-
 .fp .fp-map-canvas {
   background: linear-gradient(165deg, #f2f6fd 0%, #e9f0fa 58%, #e2ebf8 100%) !important;
   border: 1px solid #c7d4e7 !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.78), 0 14px 32px rgba(17, 40, 74, 0.14) !important;
 }
-
-.fp .fp-map-svg {
-  filter: saturate(1.08) contrast(1.03);
-}
-
-.fp .fp-header .page-title {
-  letter-spacing: -0.7px;
-}
-
-.fp .fp-header .page-subtitle {
-  font-weight: 500;
-}
-
+.fp .fp-map-svg { filter: saturate(1.08) contrast(1.03); }
+.fp .fp-header .page-title { letter-spacing: -0.7px; }
+.fp .fp-header .page-subtitle { font-weight: 500; }
 :root.light .fp .fp-map-section {
   border-color: rgba(90, 116, 156, 0.24);
   box-shadow: 0 16px 30px rgba(15, 36, 67, 0.12), inset 0 1px 0 rgba(255,255,255,0.8);
   background: linear-gradient(145deg, #eef3fb 0%, #e8eff9 100%);
 }
-
 :root.light .fp .fp-map-canvas {
   background: linear-gradient(165deg, #f4f8fe 0%, #eaf1fb 58%, #e5edf9 100%) !important;
   border-color: #c3d1e6 !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.82), 0 14px 30px rgba(18, 42, 78, 0.11) !important;
 }
 
-/* ════ FLOORPLAN SENSORS — Minimal design ════
-   Clean circles with center value display.
-   Pulses subtly when not selected. Uses color coding by sensor type.
- ────────────────────────────────────────────── */
-
+/* ════ FLOORPLAN SENSORS ════ */
 @keyframes fp-pulse {
   0%, 100% { opacity: 0.08; r: 2.6px; }
   50%      { opacity: 0.02; r: 3.4px; }
 }
-
 .fp-sensor-pulse {
   fill-opacity: 0.08;
   animation: fp-pulse 2.8s ease-in-out infinite;
@@ -1455,6 +1416,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   font: inherit;
 }
 
+/* ── v4.2 FLOORPLAN BUTTONS — accent-tinted glass ── */
 .floorplan-header__actions button,
 .floorplan-filters__refresh,
 .floorplan-sidebar__actions button,
@@ -1465,13 +1427,20 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: rgba(122, 167, 255, 0.08);
+  border: 1px solid rgba(122, 167, 255, 0.28);
+  color: var(--accent);
   border-radius: var(--radius-md);
   padding: 0.7rem 0.95rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.1px;
   cursor: pointer;
-  transition: border-color var(--transition-fast), transform var(--transition-fast), background var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .floorplan-header__actions button:hover,
@@ -1481,8 +1450,61 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
 .floorplan-add-sensor__toggle:hover,
 .floorplan-add-sensor__actions button:hover,
 .floorplan-widget-card__actions button:hover {
-  border-color: var(--border-strong);
+  background: rgba(122, 167, 255, 0.14);
+  border-color: rgba(122, 167, 255, 0.46);
+  box-shadow: 0 0 18px rgba(122, 167, 255, 0.16);
   transform: translateY(-1px);
+}
+
+/* Light mode */
+:root.light .floorplan-header__actions button,
+:root.light .floorplan-filters__refresh,
+:root.light .floorplan-sidebar__actions button,
+:root.light .floorplan-sidebar__position button,
+:root.light .floorplan-add-sensor__toggle,
+:root.light .floorplan-add-sensor__actions button,
+:root.light .floorplan-widget-card__actions button {
+  background: rgba(37, 99, 235, 0.07);
+  border-color: rgba(37, 99, 235, 0.24);
+  color: var(--accent);
+}
+
+:root.light .floorplan-header__actions button:hover,
+:root.light .floorplan-filters__refresh:hover,
+:root.light .floorplan-sidebar__actions button:hover,
+:root.light .floorplan-sidebar__position button:hover,
+:root.light .floorplan-add-sensor__toggle:hover,
+:root.light .floorplan-add-sensor__actions button:hover,
+:root.light .floorplan-widget-card__actions button:hover {
+  background: rgba(37, 99, 235, 0.13);
+  border-color: rgba(37, 99, 235, 0.40);
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.14);
+}
+
+/* v4.3 — btn--icon dentro contesti floorplan */
+.floorplan-header__actions .btn--icon,
+.floorplan-filters .btn--icon {
+  background: rgba(122, 167, 255, 0.08);
+  border-color: rgba(122, 167, 255, 0.28);
+  color: var(--accent);
+}
+.floorplan-header__actions .btn--icon:hover,
+.floorplan-filters .btn--icon:hover {
+  background: rgba(122, 167, 255, 0.16);
+  border-color: rgba(122, 167, 255, 0.48);
+  box-shadow: 0 0 18px rgba(122, 167, 255, 0.18);
+}
+:root.light .floorplan-header__actions .btn--icon,
+:root.light .floorplan-filters .btn--icon {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.22);
+  color: var(--accent);
+}
+:root.light .floorplan-header__actions .btn--icon:hover,
+:root.light .floorplan-filters .btn--icon:hover {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.16);
 }
 
 .floorplan-stats {
@@ -1966,22 +1988,9 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   align-items: center;
 }
 
-.floorplan-api-health__item strong {
-  display: block;
-  margin: 0;
-}
-
-.floorplan-api-health__item p {
-  margin: 0.2rem 0 0;
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
-
-.floorplan-api-health__item span {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
+.floorplan-api-health__item strong { display: block; margin: 0; }
+.floorplan-api-health__item p { margin: 0.2rem 0 0; font-size: 0.72rem; color: var(--text-secondary); }
+.floorplan-api-health__item span { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); }
 
 .floorplan-api-health__item.is-ok {
   border-color: rgba(34, 197, 94, 0.34);
@@ -2000,10 +2009,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   padding: 0.9rem;
 }
 
-.floorplan-api-widget header h3 {
-  margin: 0;
-}
-
+.floorplan-api-widget header h3 { margin: 0; }
 .floorplan-api-widget header p {
   margin: 0.2rem 0 0;
   color: var(--text-secondary);
@@ -2011,11 +2017,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   font-size: 0.72rem;
 }
 
-.floorplan-api-widget__chart {
-  height: 210px;
-  margin-top: 0.75rem;
-}
-
+.floorplan-api-widget__chart { height: 210px; margin-top: 0.75rem; }
 .floorplan-api-widget__empty {
   margin: 0;
   height: 100%;
@@ -2031,10 +2033,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   gap: 1rem;
 }
 
-.floorplan-climate-panel {
-  display: grid;
-  gap: 0.85rem;
-}
+.floorplan-climate-panel { display: grid; gap: 0.85rem; }
 
 .floorplan-climate-panel__header {
   display: flex;
@@ -2043,10 +2042,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   gap: 0.75rem;
 }
 
-.floorplan-climate-panel__header h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
+.floorplan-climate-panel__header h2 { margin: 0; font-size: 1.05rem; }
 
 .floorplan-integration-controls {
   margin-top: 1rem;
@@ -2060,10 +2056,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   gap: 0.75rem;
 }
 
-.floorplan-integration-controls h2 {
-  margin: 0;
-  font-size: 1rem;
-}
+.floorplan-integration-controls h2 { margin: 0; font-size: 1rem; }
 
 .floorplan-integration-controls__actions {
   display: flex;
@@ -2071,9 +2064,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   gap: 0.65rem;
 }
 
-.sensor-history-panel__header {
-  align-items: flex-start;
-}
+.sensor-history-panel__header { align-items: flex-start; }
 
 .sensor-history-panel__legend {
   display: flex;
@@ -2088,10 +2079,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   font-size: 0.72rem;
 }
 
-.sensor-history-panel__chart {
-  height: 340px;
-  margin-top: 1rem;
-}
+.sensor-history-panel__chart { height: 340px; margin-top: 1rem; }
 
 .sensor-history-panel__empty {
   height: 100%;
@@ -2108,11 +2096,8 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   place-items: center;
 }
 
-/* ===== Floorplan Professional Overrides ===== */
-.floorplan-page {
-  gap: 1.2rem;
-  padding-bottom: 1.2rem;
-}
+/* ════ FLOORPLAN PROFESSIONAL OVERRIDES ════ */
+.floorplan-page { gap: 1.2rem; padding-bottom: 1.2rem; }
 
 .floorplan-header {
   background:
@@ -2122,22 +2107,11 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   box-shadow: 0 16px 38px rgba(7, 20, 35, 0.34);
 }
 
-.floorplan-header__eyebrow {
-  color: rgba(214, 234, 255, 0.75);
-}
+.floorplan-header__eyebrow { color: rgba(214, 234, 255, 0.75); }
+.floorplan-header h1, .floorplan-header p { color: #e9f3ff; }
+.floorplan-header p { opacity: 0.84; }
 
-.floorplan-header h1,
-.floorplan-header p {
-  color: #e9f3ff;
-}
-
-.floorplan-header p {
-  opacity: 0.84;
-}
-
-.floorplan-stats {
-  gap: 0.95rem;
-}
+.floorplan-stats { gap: 0.95rem; }
 
 .floorplan-stat-card {
   background: linear-gradient(168deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
@@ -2145,13 +2119,8 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   box-shadow: 0 10px 22px rgba(10, 26, 45, 0.18);
 }
 
-.floorplan-filters label {
-  border-color: rgba(131, 166, 201, 0.22);
-}
-
-.floorplan-grid {
-  gap: 1.15rem;
-}
+.floorplan-filters label { border-color: rgba(131, 166, 201, 0.22); }
+.floorplan-grid { gap: 1.15rem; }
 
 .floorplan-map,
 .floorplan-sidebar__card,
@@ -2195,13 +2164,8 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   box-shadow: 0 14px 24px rgba(2, 12, 22, 0.42);
 }
 
-.floorplan-marker.is-offline {
-  opacity: 0.66;
-}
-
-.floorplan-marker.is-online {
-  opacity: 1;
-}
+.floorplan-marker.is-offline { opacity: 0.66; }
+.floorplan-marker.is-online  { opacity: 1; }
 
 .floorplan-list__item {
   border-bottom-color: rgba(140, 169, 199, 0.15);
@@ -2210,20 +2174,12 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   padding-right: 0.4rem;
 }
 
-.floorplan-list__item:hover {
-  background: rgba(125, 171, 214, 0.1);
-}
-
-.floorplan-list__item.is-active {
-  color: #8ad5ff;
-  background: rgba(106, 182, 236, 0.12);
-}
+.floorplan-list__item:hover { background: rgba(125, 171, 214, 0.1); }
+.floorplan-list__item.is-active { color: #8ad5ff; background: rgba(106, 182, 236, 0.12); }
 
 .floorplan-widget-grid,
 .floorplan-api-widget-grid,
-.floorplan-climate-grid {
-  margin-top: 0.75rem;
-}
+.floorplan-climate-grid { margin-top: 0.75rem; }
 
 .floorplan-block {
   background: linear-gradient(165deg, rgba(7, 20, 35, 0.76), rgba(8, 22, 38, 0.62));
@@ -2240,36 +2196,16 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   margin-bottom: 0.75rem;
 }
 
-.floorplan-block__header h2 {
-  margin: 0;
-  font-size: 1.12rem;
-  letter-spacing: 0.01em;
-}
+.floorplan-block__header h2 { margin: 0; font-size: 1.12rem; letter-spacing: 0.01em; }
+.floorplan-block__header p { margin: 0.25rem 0 0; color: var(--text-secondary); max-width: 86ch; }
 
-.floorplan-block__header p {
-  margin: 0.25rem 0 0;
-  color: var(--text-secondary);
-  max-width: 86ch;
-}
+.floorplan-integration-controls { margin-top: 0; }
 
-.floorplan-integration-controls {
-  margin-top: 0;
-}
+.floorplan-api-health__item { border-color: rgba(137, 173, 208, 0.22); }
+.floorplan-api-health__item.is-ok { border-color: rgba(46, 209, 116, 0.3); background: rgba(46, 209, 116, 0.08); }
+.floorplan-api-health__item.is-error { border-color: rgba(255, 99, 99, 0.3); background: rgba(255, 99, 99, 0.08); }
 
-.floorplan-api-health__item {
-  border-color: rgba(137, 173, 208, 0.22);
-}
-
-.floorplan-api-health__item.is-ok {
-  border-color: rgba(46, 209, 116, 0.3);
-  background: rgba(46, 209, 116, 0.08);
-}
-
-.floorplan-api-health__item.is-error {
-  border-color: rgba(255, 99, 99, 0.3);
-  background: rgba(255, 99, 99, 0.08);
-}
-
+/* ── Light mode floorplan overrides ── */
 :root.light .floorplan-header {
   background:
     radial-gradient(circle at 10% 15%, rgba(17, 141, 194, 0.11), transparent 38%),
@@ -2280,9 +2216,7 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
 
 :root.light .floorplan-header h1,
 :root.light .floorplan-header p,
-:root.light .floorplan-header__eyebrow {
-  color: #0f2946;
-}
+:root.light .floorplan-header__eyebrow { color: #0f2946; }
 
 :root.light .floorplan-map,
 :root.light .floorplan-sidebar__card,
@@ -2314,38 +2248,17 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   border-color: rgba(117, 152, 188, 0.4);
 }
 
-:root.light .floorplan-marker.is-offline {
-  opacity: 0.72;
-}
+:root.light .floorplan-marker.is-offline { opacity: 0.72; }
 
 @media (max-width: 1100px) {
   .floorplan-stats,
   .floorplan-filters,
-  .floorplan-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .floorplan-map {
-    min-height: 580px;
-  }
-
-  .floorplan-climate-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .floorplan-integration-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .floorplan-api-health header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .floorplan-map__grid {
-    min-height: 540px;
-  }
+  .floorplan-grid { grid-template-columns: 1fr; }
+  .floorplan-map { min-height: 580px; }
+  .floorplan-climate-grid { grid-template-columns: 1fr; }
+  .floorplan-integration-controls { flex-direction: column; align-items: flex-start; }
+  .floorplan-api-health header { flex-direction: column; align-items: flex-start; }
+  .floorplan-map__grid { min-height: 540px; }
 }
 
 @media (max-width: 720px) {
@@ -2353,56 +2266,29 @@ tbody tr:hover td { background: rgba(0,229,255,0.03); }
   .floorplan-header__actions,
   .floorplan-sidebar__card-header,
   .sensor-history-panel__header,
-  .floorplan-sidebar__position {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .floorplan-sidebar__metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .floorplan-marker {
-    max-width: 180px;
-  }
-
+  .floorplan-sidebar__position { flex-direction: column; align-items: stretch; }
+  .floorplan-sidebar__metrics { grid-template-columns: 1fr; }
+  .floorplan-marker { max-width: 180px; }
   .floorplan-add-sensor__coords,
-  .floorplan-add-sensor__actions {
-    grid-template-columns: 1fr;
-  }
+  .floorplan-add-sensor__actions { grid-template-columns: 1fr; }
 }
 
 /* ================================================================
-   THEME TOGGLE — snippet JS da incollare prima di </body>
+   THEME TOGGLE — JS snippet (incolla prima di </body>)
    ─────────────────────────────────────────────────────────────────
    <script>
    (function(){
      var root = document.documentElement;
      var saved = localStorage.getItem('sh-theme');
      if (saved === 'light') root.classList.add('light');
-
      document.querySelectorAll('[data-theme-toggle]').forEach(function(btn){
        btn.addEventListener('click', function(){
          root.classList.toggle('light');
-         localStorage.setItem(
-           'sh-theme',
-           root.classList.contains('light') ? 'light' : 'dark'
-         );
-         // Aggiorna label se presente
+         localStorage.setItem('sh-theme', root.classList.contains('light') ? 'light' : 'dark');
          var label = btn.querySelector('.theme-toggle__label');
          if (label) label.textContent = root.classList.contains('light') ? 'Light' : 'Dark';
        });
      });
    })();
    </script>
-
-   HTML del toggle (mettilo nella topbar):
-   ─────────────────────────────────────────
-  <button class="theme-toggle" data-theme-toggle aria-label="Change theme">
-     <span class="theme-toggle__icon" aria-hidden="true"></span>
-     <span class="theme-toggle__track" aria-hidden="true">
-       <span class="theme-toggle__thumb"></span>
-     </span>
-     <span class="theme-toggle__label">Dark</span>
-   </button>
    ================================================================ */

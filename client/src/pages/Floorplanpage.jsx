@@ -816,7 +816,7 @@ function BoilerBlackoutModal({ onClose, onSaved, showToast }) {
         const data = await res.json()
         setEnabled(!!data.enabled); setStartMonth(data.start_month || 4); setStartDay(data.start_day || 1)
         setEndMonth(data.end_month || 9); setEndDay(data.end_day || 30)
-        setReason(data.reason || 'Boiler disabled during warm season'); setCurrentlyBlocked(!!data.currently_blocked)
+        setReason(data.reason || 'Boiler disabled during this period'); setCurrentlyBlocked(!!data.currently_blocked)
       } catch { showToast('Failed to load blackout config', 'error') }
       finally { setLoading(false) }
     }
@@ -978,7 +978,7 @@ const KpiCard = ({ label, value, unit, icon, color }) => (
 // ════════════════════════════════════════════════════════════════════════════
 // ║ SENSOR CARD (grid view)
 // ════════════════════════════════════════════════════════════════════════════
-const SensorCard = ({ sensor, isSelected, onSelect, onDelete, onConfigureApi }) => {
+const SensorCard = ({ sensor, isSelected, onSelect, onDelete, onConfigureApi, onEdit }) => {
   const meta = TYPE_META[sensor.type] || TYPE_META['temp_hum']
   const hasAlert = sensor.temperature > 28 || sensor.humidity > 75
   const hasApi = !!sensor.live_api?.endpoint
@@ -1019,10 +1019,16 @@ const SensorCard = ({ sensor, isSelected, onSelect, onDelete, onConfigureApi }) 
       )}
       {!hasApi && sensor.last_seen && <div style={{ fontSize: '0.58rem', color: T.textMuted, fontFamily: T.mono, marginBottom: '0.75rem' }}>{relativeTs(sensor.last_seen)}</div>}
       <div style={{ display: 'flex', gap: '0.4rem' }}>
-        <button onClick={e => { e.stopPropagation(); onConfigureApi(sensor) }} style={{ flex: 1, fontSize: '0.65rem', fontWeight: 600, fontFamily: T.sans, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', padding: '0.5rem', color: hasApi ? '#34d399' : T.textSecondary, borderRadius: T.radiusSm, border: `1px solid ${hasApi ? 'rgba(52,211,153,0.25)' : T.border}`, background: hasApi ? 'rgba(52,211,153,0.07)' : 'transparent', cursor: 'pointer', transition: 'all 0.14s' }}>
+        <button onClick={e => { e.stopPropagation(); onConfigureApi(sensor) }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.5rem 0.6rem', borderRadius: T.radiusSm, border: `1px solid ${T.border}`, background: T.surface2, color: hasApi ? '#34d399' : T.textSecondary, cursor: 'pointer' }}>
           <Settings size={11} />{hasApi ? 'Edit API' : 'Set API'}
         </button>
-        <button onClick={e => { e.stopPropagation(); onDelete(sensor.id) }} style={{ padding: '0.5rem 0.6rem', borderRadius: T.radiusSm, border: '1px solid rgba(239,68,68,0.20)', background: 'rgba(239,68,68,0.05)', color: '#f87171', cursor: 'pointer', transition: 'all 0.14s' }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(sensor) }}
+          style={{ padding: '0.5rem 0.6rem', borderRadius: T.radiusSm, border: `1px solid ${T.border}`, background: T.surface2, color: T.textSecondary, cursor: 'pointer' }}>
+          <Save size={11} />
+        </button>
+        <button onClick={e => { e.stopPropagation(); onDelete(sensor.id) }}
+          style={{ padding: '0.5rem 0.6rem', borderRadius: T.radiusSm, border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#f87171', cursor: 'pointer' }}>
           <Trash2 size={11} />
         </button>
       </div>
@@ -1051,9 +1057,7 @@ const MobileSensorRow = ({ s, onTap, onConfigureApi }) => {
       }}
     >
       {hasAlert && <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 3, borderRadius: '0 2px 2px 0', background: '#ef4444' }} />}
-      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: `${meta.color}14`, border: `1px solid ${meta.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-        {meta.icon}
-      </div>
+      <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: `${meta.color}14`, border: `1px solid ${meta.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>{meta.icon}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '0.88rem', fontWeight: 600, color: T.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
         <div style={{ fontSize: '0.65rem', color: T.textSecondary, marginTop: 1 }}>{meta.label} · {s.room_name || '—'}</div>
@@ -1081,7 +1085,7 @@ const MobileSensorRow = ({ s, onTap, onConfigureApi }) => {
 // ════════════════════════════════════════════════════════════════════════════
 // ║ SIDEBAR SENSOR ROW (desktop)
 // ════════════════════════════════════════════════════════════════════════════
-const SidebarSensorRow = ({ s, isSelected, onSelect, onConfigureApi }) => {
+const SidebarSensorRow = ({ s, isSelected, onSelect, onConfigureApi, onEdit }) => {
   const meta = TYPE_META[s.type] || TYPE_META['temp_hum']
   const hasApi = !!s.live_api?.endpoint
   const hasAlert = s.temperature > 28 || s.humidity > 75
@@ -1100,6 +1104,10 @@ const SidebarSensorRow = ({ s, isSelected, onSelect, onConfigureApi }) => {
         {s.temperature != null && <span style={{ color: s.temperature > 28 ? '#f87171' : T.textPrimary }}>{s.temperature.toFixed(1)}°</span>}
         {s.humidity != null && <span style={{ color: s.humidity > 75 ? '#f87171' : T.textSecondary }}>{s.humidity.toFixed(0)}%</span>}
       </div>
+      <button onClick={e => { e.stopPropagation(); onEdit(s) }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: T.textMuted, lineHeight: 1, flexShrink: 0 }}>
+        <Save size={11} />
+      </button>
       <button onClick={e => { e.stopPropagation(); onConfigureApi(s) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: hasApi ? '#34d399' : T.textMuted, lineHeight: 1, flexShrink: 0 }}>
         <Settings size={11} />
       </button>
@@ -1463,6 +1471,39 @@ const FloorplanMap = ({
                 )}
                 <text textAnchor="middle" dominantBaseline="central" fontSize={1.5} style={{ userSelect: 'none', pointerEvents: 'none' }}>{meta.icon}</text>
                 <SensorLiveValueTag liveApi={sensor.live_api} compact offsetY={-9.1} theme="light" />
+                  {!sensor.live_api?.endpoint && (sensor.temperature != null || sensor.humidity != null) && (
+                    <g transform="translate(0, -9.5)" style={{ pointerEvents: 'none' }}>
+                      {(() => {
+                        const parts = []
+                        if (sensor.temperature != null) parts.push(`${sensor.temperature.toFixed(1)}°`)
+                        if (sensor.humidity != null) parts.push(`${sensor.humidity.toFixed(0)}%`)
+                        const label = parts.join('  ')
+                        const w = label.length * 1.18 + 2.4
+                        return (
+                          <>
+                            <rect
+                              x={-w / 2} y={-2.1} width={w} height={3.9}
+                              rx={2.0}
+                              fill="rgba(249,115,22,0.10)"
+                              stroke="rgba(249,115,22,0.45)"
+                              strokeWidth={0.35}
+                            />
+                            <text
+                              x={0} y={1.25}
+                              textAnchor="middle"
+                              fontSize={1.65}
+                              fontFamily="var(--font-mono)"
+                              fontWeight="700"
+                              fill="#f97316"
+                              style={{ userSelect: 'none' }}
+                            >
+                              {label}
+                            </text>
+                          </>
+                        )
+                      })()}
+                    </g>
+                  )}
               </g>
             )
           })}
@@ -1930,6 +1971,7 @@ export default function FloorplanPage() {
           ::-webkit-scrollbar { width: 4px; }
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.25); border-radius: 4px; }
+          ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.40); }
           select option { background: #0d1226; color: #f0f4ff; }
         `}</style>
       </div>
@@ -2088,7 +2130,8 @@ export default function FloorplanPage() {
                 <BoilerControlCard isOn={isOn} thermostat={thermostat} currentTemp={currentTemp} targetTemp={targetTemp}
                   onToggleBoiler={toggleBoiler} onToggleThermostat={toggleThermostat} onAdjustTarget={adjustTarget}
                   onOpenBlackout={() => setBlackoutOpen(true)}
-                  statusLabel={thermostat ? 'Automatic mode' : (isOn ? 'Manual on' : 'Manual off')} />
+                  statusLabel={thermostat ? 'Automatic mode' : (isOn ? 'Manual on' : 'Manual off')}
+                />
               </div>
             )}
 
@@ -2136,14 +2179,16 @@ export default function FloorplanPage() {
                                 <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite', color: T.textMuted }} />
                               </div>
                             ) : sensors.length === 0 ? (
-                              <div style={{ padding: '2rem 1rem', textAlign: 'center', color: T.textSecondary, fontSize: '0.72rem' }}>
-                                No sensors yet.<br />
-                                <button onClick={() => setAddMode(true)} style={{ marginTop: '0.5rem', background: 'none', border: `1px solid ${T.border}`, borderRadius: T.radiusSm, padding: '0.35rem 0.75rem', color: T.accent, fontSize: '0.68rem', cursor: 'pointer' }}>+ Add first</button>
+                              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', color: T.textSecondary, fontSize: '0.80rem' }}>
+                                No sensors yet.
+                                <div style={{ marginTop: '0.75rem' }}><Btn onClick={() => setAddMode(true)}>+ Add first</Btn></div>
                               </div>
                             ) : sensors.map(s => (
                               <SidebarSensorRow key={s.id} s={s} isSelected={selectedSensor?.id === s.id}
                                 onSelect={s => { setSelectedSensor(s); setEditMode(false); setAddMode(false); setRoomsEditMode(false) }}
-                                onConfigureApi={sensor => setApiModal(sensor)} />
+                                onConfigureApi={sensor => setApiModal(sensor)} 
+                                onEdit={sensor => setModal({ sensor })}
+                                />
                             ))}
                           </AnimatePresence>
                         </div>
@@ -2165,7 +2210,8 @@ export default function FloorplanPage() {
                           </div>
                         ) : sensors.map(s => (
                           <SensorCard key={s.id} sensor={s} isSelected={selectedSensor?.id === s.id}
-                            onSelect={setSelectedSensor} onDelete={deleteSensor} onConfigureApi={sensor => setApiModal(sensor)} />
+                            onSelect={setSelectedSensor} onDelete={deleteSensor} onConfigureApi={sensor => setApiModal(sensor)} 
+                            onEdit={sensor => setModal({ sensor })} />
                         ))}
                       </AnimatePresence>
                     </div>
