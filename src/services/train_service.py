@@ -63,12 +63,13 @@ class TrainService:
             results = cur.fetchall()
 
             def serialize_row(row):
+                platform = (row[4] or '').strip()
                 return {
                     "train_number": row[0],
                     "destination":  row[1],
                     "time":         row[2].strftime('%H:%M'),
                     "delay":        row[3],
-                    "platform":     row[4],
+                    "platform":     platform,
                     "stops":        row[5],
                     "timestamp":    row[6].isoformat(),
                 }

@@ -1,4 +1,59 @@
 services:
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - smarthouse-net
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./zigbee2mqtt/data:/app/data
+      - /run/udev:/run/udev:ro
+    environment:
+      - TZ=Europe/Rome
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    networks:
+      - smarthouse-net
+
+  geoipupdate:
+    image: maxmindinc/geoipupdate
+    env_file:
+      - ./src/.env
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID
+      - GEOIPUPDATE_LICENSE_KEY
+      - GEOIPUPDATE_EDITION_IDS
+      - GEOIPUPDATE_FREQUENCY
+    volumes:
+      - /opt/geoip:/usr/share/GeoIP
+
+  cowrie:
+      image: cowrie/cowrie:latest
+      container_name: cowrie
+      network_mode: host
+      networks: []
+      volumes:
+        - cowrie_etc:/cowrie/cowrie-git/etc
+        - cowrie_var:/cowrie/cowrie-git/var
+        - /home/orion/cowrie-logs:/cowrie/cowrie-git/var/log/cowrie
+      restart: unless-stopped
+
   db:
     image: postgres:16
     environment:
@@ -11,6 +66,8 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
   mongodb:
     image: mongo:4.4.18
@@ -23,6 +80,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
       - mongo-data:/data/db
+    networks:
+      - smarthouse-net
 
   main:
     build:
@@ -35,28 +94,32 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=db
+      - DB_HOST=localhost
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
       - TZ=Europe/Rome
+    volumes:
+      - ./src:/app
+      - ./zigbee2mqtt/data:/zigbee2mqtt/data:ro
     restart: unless-stopped
+    network_mode: host
 
   app:
     build:
       context: ./src
       dockerfile: Dockerfile
     command: python3 app.py
-    ports:
-      - "5000:5000"
     depends_on:
       - db
       - main
       - mongodb
       - redis
     environment:
-      - MONGO_URI=mongodb://root:example@mongodb:27017/
-      - DB_HOST=db
+      - MONGO_URI=mongodb://root:example@localhost:27017/
+      - DB_HOST=localhost
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
@@ -65,13 +128,24 @@ services:
       - TESSERACT_CMD=/usr/bin/tesseract
       - NETWORK_SUBNET=192.168.178.0/24
       - FRITZ_IP=192.168.178.1
+      - GEOIP_DB_PATH=/usr/share/GeoIP/GeoLite2-City.mmdb
+      - RASPI_HOST_IP=127.0.0.1
+      - RASPI_HOST_USER=orion
+      - RASPI_HOST_KEY_PATH=/run/secrets/id_rsa
+      - COWRIE_LOG_PATH=/var/log/cowrie/cowrie.json
     volumes:
+      - ./src:/app
       - ./backup:/backup
       - ./src/static:/app/static
       - ./uploads:/app/uploads
+      - ./uploads/GeoLite2-City.mmdb:/usr/share/GeoIP/GeoLite2-City.mmdb:ro
       - ./src/credentials/gcredentials.json:/app/gcredentials.json:ro
       - ./src/credentials/gcredentials_new.json:/app/gcredentials_new.json:ro
-
+      # Stessa cartella host che Cowrie usa per scrivere i log
+      - /home/orion/cowrie-logs:/var/log/cowrie:ro
+      - /var/lib/fail2ban/fail2ban.sqlite3:/var/lib/fail2ban/fail2ban.sqlite3:ro
+      - /home/orion/.ssh/id_rsa_dashboard:/run/secrets/id_rsa:ro
+    network_mode: host
     user: "1000:1000"
     restart: unless-stopped
     env_file:
@@ -82,11 +156,11 @@ services:
       context: ./src
       dockerfile: Dockerfile.scanner
     privileged: true
-    network_mode: host   # necessario per arp-scan
+    network_mode: host
     command: python3 scanner_service.py
     environment:
       - NETWORK_SUBNET=192.168.178.0/24
-      - DB_HOST=192.168.178.101  # IP host reale, non "db", perché usi host network
+      - DB_HOST=192.168.178.101
       - REDIS_HOST=127.0.0.1
     depends_on:
       - redis
@@ -95,7 +169,6 @@ services:
       - NET_ADMIN
       - NET_RAW
 
-
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -103,6 +176,8 @@ services:
       - "8081:80"
       - "4443:443"
       - "8888:8888"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/smarthouse-ecc.crt:/etc/nginx/certs/smarthouse-ecc.crt:ro
@@ -110,13 +185,33 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
     restart: unless-stopped
+    networks:
+      - smarthouse-net
 
 volumes:
   postgres_data:
   mongo-data:
+  # Volumi named esistenti di Cowrie — Docker li riutilizzerà automaticamente
+  # tramite i loro ID completi. Se vuoi usare nomi leggibili, vedi nota sotto.
+  cowrie_etc:
+    external: false
+  cowrie_var:
+    external: false
+
+networks:
+  smarthouse-net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-smarthouse
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

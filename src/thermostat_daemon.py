@@ -34,16 +34,16 @@ class ThermostatDaemon:
                         self.logger.info(f"Azione termostato: {result}")
                     self.last_check = now
                 except Exception as e:
-                    self.logger.error(f"Errore controllo termostato: {e}")
+                    self.logger.error(f"Thermostat check error: {e}")
 
-            # SYNC SHELLY
+            # Sync Shelly
             if now - self.last_sync >= self.sync_interval:
                 try:
-                    self.logger.info("🔄 Sincronizzazione con Shelly...")
+                    self.logger.info("🔄 Synchronizing with Shelly...")
                     self.sensor_service.sync_boiler_with_shelly()
                     self.last_sync = now
                 except Exception as e:
-                    self.logger.error(f"Errore sync Shelly: {e}")
+                    self.logger.error(f"Shelly sync error: {e}")
 
             time.sleep(1)  # 🔴 OBBLIGATORIO per non saturare CPU
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class PostgresHandler:
     def __init__(self, db_config):
-        """Inizializza la connessione al database PostgreSQL e crea la tabella se non esiste."""
+        """Initialize the PostgreSQL database connection and create the table if it does not exist."""
         self.db_config = db_config
         self.connection = None
         self.cursor = None
@@ -25,21 +25,21 @@ class PostgresHandler:
         return psycopg2.connect(**self.db_config)
 
     def _ensure_connection(self):
-        """Verifica e ripristina la connessione se necessario."""
+        """Check and restore the connection if necessary."""
         try:
             if self.connection is None or self.connection.closed:
-                logger.warning("Connessione chiusa, riconnessione in corso...")
+                logger.warning("Connection closed, reconnecting...")
                 self.connect_to_db()
             else:
-                # Test della connessione con una query semplice
+                # Test the connection with a simple query
                 self.cursor.execute("SELECT 1")
                 self.cursor.fetchone()
         except (Error, psycopg2.OperationalError) as e:
-            logger.error(f"Problema di connessione rilevato: {e}")
+            logger.error(f"Connection problem detected: {e}")
             self.connect_to_db()
 
     def connect_to_db(self):
-        """Stabilisce la connessione al database con retry logic."""
+        """Establish the database connection with retry logic."""
         max_retries = 3
         retry_delay = 1
 
@@ -47,7 +47,7 @@ class PostgresHandler:
             try:
                 self.connection = psycopg2.connect(**self.db_config)
                 self.cursor = self.connection.cursor()
-                logger.info("Connessione al database stabilita con successo")
+                logger.info("Database connection established successfully")
                 return
             except Error as e:
                 logger.error(f"Tentativo {attempt + 1}/{max_retries} fallito: {e}")
@@ -55,11 +55,11 @@ class PostgresHandler:
                     time.sleep(retry_delay)
                     retry_delay *= 2
                 else:
-                    logger.error("Impossibile connettersi al database dopo tutti i tentativi")
+                    logger.error("Unable to connect to the database after all attempts")
                     raise
 
     def create_table_if_not_exists(self):
-        """Crea la tabella se non esiste già."""
+        """Create the table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS sensor_readings (
@@ -72,11 +72,11 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella: {e}")
+            print(f"Error creating table: {e}")
             exit(1)
 
     def save_to_db(self, temperature, humidity):
-        """Salva i dati nel database."""
+        """Save data to the database."""
         try:
             now = datetime.now()
             query = """
@@ -87,18 +87,18 @@ class PostgresHandler:
             self.cursor.execute(query, values)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante l'inserimento dei dati: {e}")
+            print(f"Error inserting data: {e}")
 
     def close(self):
-        """Chiude la connessione al database e il cursore."""
+        """Close the database connection and cursor."""
         if self.cursor:
             self.cursor.close()
         if self.connection:
             self.connection.close()
-        print("Connessione al database chiusa.")
+        print("Database connection closed.")
 
     def create_table_if_not_exists_devices(self):
-        """Crea la tabella se non esiste già."""
+        """Create the table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS network_devices (
@@ -111,11 +111,11 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella: {e}")
+            print(f"Error creating table: {e}")
             exit(1)
 
     def save_devices_to_db(self, devices):
-        """Salva le informazioni sui dispositivi di rete nel database."""
+        """Save network device information to the database."""
         try:
             query_insert_or_update = """
             INSERT INTO network_devices (ip_address, hostname, status, timestamp)
@@ -137,13 +137,13 @@ class PostgresHandler:
                 self.cursor.execute(query_insert_or_update, values)
 
             self.connection.commit()
-            print("Dispositivi di rete inseriti o aggiornati nel database.")
+            print("Network devices inserted or updated in the database.")
 
         except Error as e:
-            print(f"Errore durante l'inserimento o l'aggiornamento dei dati: {e}")
+            print(f"Error inserting or updating data: {e}")
 
     def get_devices_from_db(self):
-        """Recupera i dispositivi salvati più recentemente dal database."""
+        """Retrieve the most recently saved devices from the database."""
         try:
             query = """
             SELECT ip_address, hostname, status, timestamp 
@@ -162,11 +162,11 @@ class PostgresHandler:
                 }
             return devices
         except Error as e:
-            print(f"Errore durante il recupero dei dispositivi: {e}")
+            print(f"Error retrieving devices: {e}")
             return {}
 
     def save_trains_to_db(self, trains):
-        """Salva le informazioni sui treni nel database."""
+        """Save train information to the database."""
         try:
             now = datetime.now()
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -199,13 +199,13 @@ class PostgresHandler:
                 self.cursor.execute(query, values)
 
             self.connection.commit()
-            print("Treni inseriti o aggiornati nel database.")
+            print("Trains inserted or updated in the database.")
 
         except Error as e:
-            print(f"Errore durante l'inserimento o l'aggiornamento dei dati dei treni: {e}")
+            print(f"Error inserting or updating train data: {e}")
 
     def create_table_if_not_exists_trains(self):
-        """Crea la tabella per i treni se non esiste già."""
+        """Create the trains table if it does not already exist."""
         try:
             create_table_query = """
             CREATE TABLE IF NOT EXISTS trains (
@@ -221,7 +221,7 @@ class PostgresHandler:
             self.cursor.execute(create_table_query)
             self.connection.commit()
         except Error as e:
-            print(f"Errore durante la creazione della tabella trains: {e}")
+            print(f"Error creating trains table: {e}")
             exit(1)
 
     def save_alarm_status_to_db(self, status):
@@ -274,7 +274,7 @@ class PostgresHandler:
             return None
 
     def create_temp_table_and_aggregate_data(self):
-        """Crea una tabella temporanea per le medie orarie."""
+        """Create a temporary table for hourly averages."""
         try:
             create_temp_table_query = """
             CREATE TEMP TABLE IF NOT EXISTS temp_sensor_averages (
@@ -322,11 +322,11 @@ class PostgresHandler:
             print("Dati aggregati inseriti correttamente nella tabella originale.")
 
         except Error as e:
-            print(f"Errore durante l'aggregazione dei dati: {e}")
+            print(f"Error aggregating data: {e}")
             self.connection.rollback()
 
     def create_table_if_not_exists_air_quality(self):
-        """Crea la tabella per i dati di qualità dell'aria se non esiste già."""
+        """Create the table for air quality data if it does not already exist."""
         try:
             self._ensure_connection()
             create_table_query = """
@@ -349,13 +349,13 @@ class PostgresHandler:
             self.connection.commit()
             logger.info("Tabella air_quality creata/verificata correttamente.")
         except Error as e:
-            logger.error(f"Errore durante la creazione della tabella air_quality: {e}")
+            logger.error(f"Error creating air_quality table: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def save_air_quality_to_db(self, smoke_value, lpg_value, methane_value, hydrogen_value, air_quality_index, air_quality_description):
-        """Salva i dati di qualità dell'aria nel database."""
+        """Save air quality data to the database."""
         try:
             self._ensure_connection()
 
@@ -384,17 +384,17 @@ class PostgresHandler:
 
             record_id = self.cursor.fetchone()[0]
             self.connection.commit()
-            logger.info(f"Dati di qualità dell'aria salvati con ID: {record_id}")
+            logger.info(f"Air quality data saved with ID: {record_id}")
             return record_id
 
         except (Error, ValueError) as e:
-            logger.error(f"Errore durante l'inserimento dei dati di qualità dell'aria: {e}")
+            logger.error(f"Error inserting air quality data: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def get_last_air_quality(self):
-        """Recupera l'ultimo valore di qualità dell'aria dal database."""
+        """Retrieve the latest air quality value from the database."""
         try:
             self._ensure_connection()
             query = """
@@ -422,7 +422,7 @@ class PostgresHandler:
                 return None
 
         except Error as e:
-            logger.error(f"Errore durante il recupero del valore di qualità dell'aria: {e}")
+            logger.error(f"Error retrieving air quality value: {e}")
             return None
 
     def create_temp_table_and_aggregate_air_quality(self):
@@ -432,7 +432,7 @@ class PostgresHandler:
 
             self.connection.autocommit = False
 
-            logger.info("Inizio aggregazione dati qualità dell'aria...")
+            logger.info("Starting air quality data aggregation...")
 
             check_query = "SELECT COUNT(*) FROM air_quality WHERE timestamp >= CURRENT_DATE - INTERVAL '1 day'"
             self.cursor.execute(check_query)
@@ -534,14 +534,14 @@ class PostgresHandler:
             return True
 
         except Error as e:
-            logger.error(f"Errore durante l'aggregazione dei dati: {e}")
+            logger.error(f"Error aggregating data: {e}")
             if self.connection:
                 self.connection.rollback()
                 self.connection.autocommit = True
             return False
 
     def get_data_stats(self):
-        """Ottieni statistiche sui dati per debugging."""
+        """Get statistics on the data for debugging."""
         try:
             self._ensure_connection()
             stats_query = """
@@ -567,19 +567,19 @@ class PostgresHandler:
             return None
 
         except Error as e:
-            logger.error(f"Errore durante il recupero delle statistiche: {e}")
+            logger.error(f"Error retrieving statistics: {e}")
             return None
 
     def close(self):
-        """Chiudi connessione e cursor."""
+        """Close the connection and cursor."""
         try:
             if self.cursor:
                 self.cursor.close()
             if self.connection and not self.connection.closed:
                 self.connection.close()
-            logger.info("Connessione database chiusa")
+            logger.info("Database connection closed")
         except Error as e:
-            logger.error(f"Errore durante la chiusura della connessione: {e}")
+            logger.error(f"Error closing the connection: {e}")
 
     def __enter__(self):
         return self
@@ -598,7 +598,7 @@ class PostgresHandler:
 
     @contextmanager
     def get_connection(self):
-        """Context manager per la connessione al DB"""
+        """Context manager for the DB connection"""
         conn = None
         try:
             conn = psycopg2.connect(**self.db_config)
@@ -620,7 +620,7 @@ class PostgresHandler:
                     cur.execute(query, (value,))
             return True
         except Exception as e:
-            logger.error(f"Errore set_target_temperature: {e}")
+            logger.error(f"Error set_target_temperature: {e}")
             return False
 
     def get_target_temperature(self):
@@ -636,14 +636,14 @@ class PostgresHandler:
                 return float(row['value'])
             return None
         except Exception as e:
-            logger.error(f"Errore get_target_temperature: {e}")
+            logger.error(f"Error get_target_temperature: {e}")
             return None
         finally:
             if cur: cur.close()
             if conn: conn.close()
 
     def get_thermostat_status(self):
-        """Ottiene lo stato corrente del termostato (abilitato/disabilitato)."""
+        """Get the current thermostat state (enabled/disabled)."""
         query = "SELECT enabled FROM thermostat_status WHERE id = 1;"
         try:
             with self.get_connection() as conn:
@@ -652,11 +652,11 @@ class PostgresHandler:
                     row = cur.fetchone()
                     return bool(row[0]) if row else False
         except Exception as e:
-            logger.error(f"Errore get_thermostat_status: {e}")
+            logger.error(f"Error get_thermostat_status: {e}")
             return False
 
     def set_thermostat_status(self, enabled):
-        """Imposta lo stato del termostato (abilitato/disabilitato)."""
+        """Set the thermostat state (enabled/disabled)."""
         query = """
         INSERT INTO thermostat_status (id, enabled, updated_at)
         VALUES (1, %s, NOW())
@@ -667,10 +667,10 @@ class PostgresHandler:
             with self.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute(query, (enabled,))
-            logger.info(f"Stato termostato impostato: {enabled}")
+            logger.info(f"Thermostat state set: {enabled}")
             return True
         except Exception as e:
-            logger.error(f"Errore set_thermostat_status: {e}")
+            logger.error(f"Error set_thermostat_status: {e}")
             return False
 
     def get_boiler_status(self):
@@ -683,7 +683,7 @@ class PostgresHandler:
                     row = cur.fetchone()
                     return bool(row[0]) if row else False
         except Exception as e:
-            logger.error(f"Errore get_boiler_status: {e}")
+            logger.error(f"Error get_boiler_status: {e}")
             return False
 
     def set_boiler_status(self, is_on):
@@ -701,7 +701,7 @@ class PostgresHandler:
             logger.info(f"Stato caldaia impostato: {is_on}")
             return True
         except Exception as e:
-            logger.error(f"Errore set_boiler_status: {e}")
+            logger.error(f"Error set_boiler_status: {e}")
             return False
 
     def get_current_temperature(self):
@@ -720,11 +720,11 @@ class PostgresHandler:
                 return float(row[0])
             return None
         except Exception as e:
-            logger.error(f"Errore get_current_temperature: {e}")
+            logger.error(f"Error get_current_temperature: {e}")
             return None
 
     def create_thermostat_tables(self):
-        """Crea le tabelle necessarie per il termostato se non esistono."""
+        """Create the thermostat tables if they do not exist."""
         try:
             self._ensure_connection()
 
@@ -806,16 +806,16 @@ class PostgresHandler:
             self.cursor.execute(create_boiler_blackout_query)
 
             self.connection.commit()
-            logger.info("Tabelle termostato (incluso blackout) create/verificate correttamente")
+            logger.info("Thermostat tables (including blackout) created/verified successfully")
 
         except Exception as e:
-            logger.error(f"Errore durante la creazione delle tabelle termostato: {e}")
+            logger.error(f"Error creating thermostat tables: {e}")
             if self.connection:
                 self.connection.rollback()
             raise
 
     def log_thermostat_action(self, action, current_temp=None, target_temp=None, boiler_status=None):
-        """Registra un'azione del termostato nel log."""
+        """Log a thermostat action."""
         query = """
         INSERT INTO thermostat_log (action, current_temp, target_temp, boiler_status, timestamp)
         VALUES (%s, %s, %s, %s, NOW())
@@ -825,12 +825,12 @@ class PostgresHandler:
             self.cursor.execute(query, (action, current_temp, target_temp, boiler_status))
             self.connection.commit()
         except Exception as e:
-            logger.error(f"Errore log_thermostat_action: {e}")
+            logger.error(f"Error log_thermostat_action: {e}")
             if self.connection:
                 self.connection.rollback()
 
     def get_thermostat_log(self, limit=50):
-        """Ottiene gli ultimi N record del log del termostato."""
+        """Get the latest N records from the thermostat log."""
         query = """
         SELECT action, current_temp, target_temp, boiler_status, timestamp
         FROM thermostat_log
@@ -851,7 +851,7 @@ class PostgresHandler:
             } for row in rows]
 
         except Exception as e:
-            logger.error(f"Errore get_thermostat_log: {e}")
+            logger.error(f"Error get_thermostat_log: {e}")
             return []
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -888,7 +888,7 @@ class PostgresHandler:
                         }
             return fallback
         except Exception as e:
-            logger.error(f"Errore get_boiler_blackout: {e}")
+            logger.error(f"Error get_boiler_blackout: {e}")
             return fallback
 
     def set_boiler_blackout(self, enabled, start_month, start_day,
@@ -912,7 +912,7 @@ class PostgresHandler:
                                         end_month, end_day, reason))
             return True
         except Exception as e:
-            logger.error(f"Errore set_boiler_blackout: {e}")
+            logger.error(f"Error set_boiler_blackout: {e}")
             return False
 
     def is_in_blackout_period(self) -> tuple[bool, str]:
@@ -950,6 +950,655 @@ class PostgresHandler:
             return False, ''
 
         except Exception as e:
-            logger.error(f"Errore is_in_blackout_period: {e}")
-            # In caso di errore DB non blocchiamo l'utente
+            logger.error(f"Error is_in_blackout_period: {e}")
+            # Do not block the user in case of a DB error
             return False, ''
+
+# ══════════════════════════════════════════════════════════════════════════
+# ZIGBEE SENSORS - PostgresHandler Extension
+# ══════════════════════════════════════════════════════════════════════════
+
+import logging
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any
+import json
+
+logger = logging.getLogger(__name__)
+
+
+class ZigbeeSensorMixin:
+    """
+    Mixin da aggiungere alla classe PostgresHandler esistente.
+    Contiene tutti i metodi per gestire i sensori Zigbee.
+    """
+    
+    # ──────────────────────────────────────────────────────────────────────
+    # DEVICE REGISTRY - CRUD Operations
+    # ──────────────────────────────────────────────────────────────────────
+    
+    def get_all_zigbee_devices(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
+        """Recupera tutti i dispositivi Zigbee dal registry."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                id, device_id, device_name, device_type, mqtt_topic,
+                manufacturer, model, room_id, room_name,
+                x_position, y_position, enabled, alert_enabled,
+                alert_min_temp, alert_max_temp, alert_min_humidity, alert_max_humidity,
+                online, last_seen, battery_level, signal_quality,
+                live_api_endpoint, created_at, updated_at
+            FROM zigbee_device_registry
+            """
+            
+            if enabled_only:
+                query += " WHERE enabled = TRUE"
+                
+            query += " ORDER BY room_id, device_name"
+            
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+            
+            devices = []
+            for row in rows:
+                devices.append({
+                    'id': row[0],
+                    'device_id': row[1],
+                    'device_name': row[2],
+                    'device_type': row[3],
+                    'mqtt_topic': row[4],
+                    'manufacturer': row[5],
+                    'model': row[6],
+                    'room_id': row[7],
+                    'room_name': row[8],
+                    'x_position': float(row[9]) if row[9] else 50.0,
+                    'y_position': float(row[10]) if row[10] else 50.0,
+                    'enabled': bool(row[11]),
+                    'alert_enabled': bool(row[12]),
+                    'alert_min_temp': float(row[13]) if row[13] else None,
+                    'alert_max_temp': float(row[14]) if row[14] else None,
+                    'alert_min_humidity': float(row[15]) if row[15] else None,
+                    'alert_max_humidity': float(row[16]) if row[16] else None,
+                    'online': bool(row[17]),
+                    'last_seen': row[18].isoformat() if row[18] else None,
+                    'battery_level': row[19],
+                    'signal_quality': row[20],
+                    'live_api_endpoint': row[21],
+                    'created_at': row[22].isoformat() if row[22] else None,
+                    'updated_at': row[23].isoformat() if row[23] else None,
+                })
+            
+            return devices
+            
+        except Exception as e:
+            logger.error(f"Error get_all_zigbee_devices: {e}")
+            return []
+    
+    
+    def get_zigbee_device_by_id(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Recupera un singolo dispositivo per device_id."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                id, device_id, device_name, device_type, mqtt_topic,
+                manufacturer, model, room_id, room_name,
+                x_position, y_position, enabled, alert_enabled,
+                alert_min_temp, alert_max_temp, alert_min_humidity, alert_max_humidity,
+                online, last_seen, battery_level, signal_quality,
+                live_api_endpoint, created_at, updated_at
+            FROM zigbee_device_registry
+            WHERE device_id = %s
+            """
+            
+            self.cursor.execute(query, (device_id,))
+            row = self.cursor.fetchone()
+            
+            if not row:
+                return None
+            
+            return {
+                'id': row[0],
+                'device_id': row[1],
+                'device_name': row[2],
+                'device_type': row[3],
+                'mqtt_topic': row[4],
+                'manufacturer': row[5],
+                'model': row[6],
+                'room_id': row[7],
+                'room_name': row[8],
+                'x_position': float(row[9]) if row[9] else 50.0,
+                'y_position': float(row[10]) if row[10] else 50.0,
+                'enabled': bool(row[11]),
+                'alert_enabled': bool(row[12]),
+                'alert_min_temp': float(row[13]) if row[13] else None,
+                'alert_max_temp': float(row[14]) if row[14] else None,
+                'alert_min_humidity': float(row[15]) if row[15] else None,
+                'alert_max_humidity': float(row[16]) if row[16] else None,
+                'online': bool(row[17]),
+                'last_seen': row[18].isoformat() if row[18] else None,
+                'battery_level': row[19],
+                'signal_quality': row[20],
+                'live_api_endpoint': row[21],
+                'created_at': row[22].isoformat() if row[22] else None,
+                'updated_at': row[23].isoformat() if row[23] else None,
+            }
+            
+        except Exception as e:
+            logger.error(f"Error get_zigbee_device_by_id: {e}")
+            return None
+    
+    
+    def create_zigbee_device(self, device_data: Dict[str, Any]) -> Optional[str]:
+        """Crea un nuovo dispositivo Zigbee nel registry."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            INSERT INTO zigbee_device_registry (
+                device_id, device_name, device_type, mqtt_topic,
+                manufacturer, model, room_id, room_name,
+                x_position, y_position, enabled, alert_enabled,
+                alert_min_temp, alert_max_temp, alert_min_humidity, alert_max_humidity,
+                live_api_endpoint
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING device_id
+            """
+            
+            values = (
+                device_data['device_id'],
+                device_data.get('device_name', 'New Sensor'),
+                device_data.get('device_type', 'temperature'),
+                device_data.get('mqtt_topic'),
+                device_data.get('manufacturer'),
+                device_data.get('model'),
+                device_data.get('room_id'),
+                device_data.get('room_name'),
+                device_data.get('x_position', 50.0),
+                device_data.get('y_position', 50.0),
+                device_data.get('enabled', True),
+                device_data.get('alert_enabled', False),
+                device_data.get('alert_min_temp'),
+                device_data.get('alert_max_temp'),
+                device_data.get('alert_min_humidity'),
+                device_data.get('alert_max_humidity'),
+                device_data.get('live_api_endpoint'),
+            )
+            
+            self.cursor.execute(query, values)
+            device_id = self.cursor.fetchone()[0]
+            self.connection.commit()
+            
+            logger.info(f"Created Zigbee device: {device_id}")
+            return device_id
+            
+        except Exception as e:
+            logger.error(f"Error create_zigbee_device: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return None
+    
+    
+    def update_zigbee_device(self, device_id: str, updates: Dict[str, Any]) -> bool:
+        """Aggiorna un dispositivo esistente."""
+        try:
+            self._ensure_connection()
+            
+            # Costruisci dinamicamente la query UPDATE
+            allowed_fields = {
+                'device_name', 'device_type', 'mqtt_topic', 'manufacturer', 'model',
+                'room_id', 'room_name', 'x_position', 'y_position', 'enabled',
+                'alert_enabled', 'alert_min_temp', 'alert_max_temp',
+                'alert_min_humidity', 'alert_max_humidity', 'online',
+                'last_seen', 'battery_level', 'signal_quality', 'live_api_endpoint'
+            }
+            
+            update_fields = {k: v for k, v in updates.items() if k in allowed_fields}
+            
+            if not update_fields:
+                logger.warning("No valid fields to update")
+                return False
+            
+            set_clause = ", ".join([f"{k} = %s" for k in update_fields.keys()])
+            query = f"UPDATE zigbee_device_registry SET {set_clause} WHERE device_id = %s"
+            
+            values = list(update_fields.values()) + [device_id]
+            
+            self.cursor.execute(query, values)
+            self.connection.commit()
+            
+            logger.info(f"Updated Zigbee device: {device_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error update_zigbee_device: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    
+    def delete_zigbee_device(self, device_id: str) -> bool:
+        """Elimina un dispositivo (cascade su history e alerts)."""
+        try:
+            self._ensure_connection()
+            
+            query = "DELETE FROM zigbee_device_registry WHERE device_id = %s"
+            self.cursor.execute(query, (device_id,))
+            self.connection.commit()
+            
+            logger.info(f"Deleted Zigbee device: {device_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error delete_zigbee_device: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    
+    def update_device_position(self, device_id: str, x: float, y: float) -> bool:
+        """Aggiorna la posizione di un sensore sulla mappa."""
+        return self.update_zigbee_device(device_id, {
+            'x_position': max(0, min(100, x)),
+            'y_position': max(0, min(100, y))
+        })
+    
+    
+    # ──────────────────────────────────────────────────────────────────────
+    # SENSOR HISTORY - Letture storiche
+    # ──────────────────────────────────────────────────────────────────────
+    
+    def save_zigbee_reading(self, device_id: str, temperature: Optional[float] = None,
+                           humidity: Optional[float] = None, battery: Optional[int] = None,
+                           signal_quality: Optional[int] = None,
+                           extra_data: Optional[Dict] = None) -> bool:
+        """Salva una nuova lettura del sensore nello storico."""
+        try:
+            self._ensure_connection()
+            
+            # Verifica che il device esista
+            device = self.get_zigbee_device_by_id(device_id)
+            if not device:
+                logger.error(f"Device {device_id} not found in registry")
+                return False
+            
+            query = """
+            INSERT INTO zigbee_sensor_history (
+                device_id, temperature, humidity, battery, signal_quality, extra_data, timestamp
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            """
+            
+            extra_json = json.dumps(extra_data) if extra_data else None
+            
+            self.cursor.execute(query, (
+                device_id, temperature, humidity, battery, signal_quality, extra_json
+            ))
+            self.connection.commit()
+            
+            # Aggiorna lo stato online e last_seen nel registry
+            self.update_zigbee_device(device_id, {
+                'online': True,
+                'last_seen': datetime.now(),
+                'battery_level': battery if battery is not None else device.get('battery_level'),
+                'signal_quality': signal_quality if signal_quality is not None else device.get('signal_quality')
+            })
+            
+            # Verifica alert
+            self._check_sensor_alerts(device_id, temperature, humidity)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error save_zigbee_reading: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    
+    def get_sensor_history(self, device_id: str, hours: int = 24, limit: int = 1000) -> List[Dict[str, Any]]:
+        """Recupera lo storico di un sensore."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                id, device_id, temperature, humidity, battery, 
+                signal_quality, extra_data, timestamp
+            FROM zigbee_sensor_history
+            WHERE device_id = %s 
+              AND timestamp > NOW() - INTERVAL '%s hours'
+            ORDER BY timestamp DESC
+            LIMIT %s
+            """
+            
+            self.cursor.execute(query, (device_id, hours, limit))
+            rows = self.cursor.fetchall()
+            
+            history = []
+            for row in rows:
+                history.append({
+                    'id': row[0],
+                    'device_id': row[1],
+                    'temperature': float(row[2]) if row[2] is not None else None,
+                    'humidity': float(row[3]) if row[3] is not None else None,
+                    'battery': row[4],
+                    'signal_quality': row[5],
+                    'extra_data': row[6] if row[6] else {},
+                    'timestamp': row[7].isoformat() if row[7] else None,
+                })
+            
+            return history
+            
+        except Exception as e:
+            logger.error(f"Error get_sensor_history: {e}")
+            return []
+    
+    
+    def get_latest_readings(self) -> List[Dict[str, Any]]:
+        """Recupera l'ultima lettura di tutti i sensori usando la vista."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                id, device_id, device_name, device_type, room_id, room_name,
+                x, y, enabled, online, last_seen, battery, signal_quality,
+                alert_enabled, topic, live_api_endpoint,
+                temperature, humidity, reading_timestamp
+            FROM zigbee_latest_readings
+            ORDER BY room_id, device_name
+            """
+            
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+            
+            readings = []
+            for row in rows:
+                readings.append({
+                    'id': row[0],
+                    'device_id': row[1],
+                    'name': row[2],
+                    'type': row[3],
+                    'room_id': row[4],
+                    'room_name': row[5],
+                    'x': float(row[6]) if row[6] else 50.0,
+                    'y': float(row[7]) if row[7] else 50.0,
+                    'enabled': bool(row[8]),
+                    'online': bool(row[9]),
+                    'last_seen': row[10].isoformat() if row[10] else None,
+                    'battery': row[11],
+                    'signal_quality': row[12],
+                    'alert_enabled': bool(row[13]),
+                    'topic': row[14],
+                    'live_api': {'endpoint': row[15]} if row[15] else None,
+                    'temperature': float(row[16]) if row[16] is not None else None,
+                    'humidity': float(row[17]) if row[17] is not None else None,
+                    'reading_timestamp': row[18].isoformat() if row[18] else None,
+                })
+            
+            return readings
+            
+        except Exception as e:
+            logger.error(f"Error get_latest_readings: {e}")
+            return []
+    
+    
+    # ──────────────────────────────────────────────────────────────────────
+    # ALERTS - Gestione alert
+    # ──────────────────────────────────────────────────────────────────────
+    
+    def _check_sensor_alerts(self, device_id: str, temperature: Optional[float], 
+                            humidity: Optional[float]) -> None:
+        """Verifica se generare alert per il sensore (chiamata interna)."""
+        try:
+            device = self.get_zigbee_device_by_id(device_id)
+            if not device or not device.get('alert_enabled'):
+                return
+            
+            alerts_to_create = []
+            
+            # Check temperatura
+            if temperature is not None:
+                if device.get('alert_min_temp') and temperature < device['alert_min_temp']:
+                    alerts_to_create.append({
+                        'type': 'temperature_low',
+                        'message': f"Temperature too low: {temperature}°C (min: {device['alert_min_temp']}°C)",
+                        'value': temperature,
+                        'threshold': device['alert_min_temp'],
+                        'severity': 'warning'
+                    })
+                elif device.get('alert_max_temp') and temperature > device['alert_max_temp']:
+                    alerts_to_create.append({
+                        'type': 'temperature_high',
+                        'message': f"Temperature too high: {temperature}°C (max: {device['alert_max_temp']}°C)",
+                        'value': temperature,
+                        'threshold': device['alert_max_temp'],
+                        'severity': 'warning'
+                    })
+            
+            # Check umidità
+            if humidity is not None:
+                if device.get('alert_min_humidity') and humidity < device['alert_min_humidity']:
+                    alerts_to_create.append({
+                        'type': 'humidity_low',
+                        'message': f"Humidity too low: {humidity}% (min: {device['alert_min_humidity']}%)",
+                        'value': humidity,
+                        'threshold': device['alert_min_humidity'],
+                        'severity': 'info'
+                    })
+                elif device.get('alert_max_humidity') and humidity > device['alert_max_humidity']:
+                    alerts_to_create.append({
+                        'type': 'humidity_high',
+                        'message': f"Humidity too high: {humidity}% (max: {device['alert_max_humidity']}%)",
+                        'value': humidity,
+                        'threshold': device['alert_max_humidity'],
+                        'severity': 'info'
+                    })
+            
+            # Crea gli alert
+            for alert in alerts_to_create:
+                self.create_sensor_alert(device_id, alert['type'], alert['message'],
+                                        alert['value'], alert['threshold'], alert['severity'])
+            
+        except Exception as e:
+            logger.error(f"Error checking sensor alerts: {e}")
+    
+    
+    def create_sensor_alert(self, device_id: str, alert_type: str, message: str,
+                           value: float, threshold: float, severity: str = 'warning') -> bool:
+        """Crea un nuovo alert."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            INSERT INTO zigbee_sensor_alerts (
+                device_id, alert_type, alert_message, alert_value, 
+                threshold_value, severity
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            self.cursor.execute(query, (device_id, alert_type, message, value, threshold, severity))
+            self.connection.commit()
+            
+            logger.info(f"Created alert for {device_id}: {alert_type}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error create_sensor_alert: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    
+    def get_sensor_alerts(self, device_id: Optional[str] = None, 
+                         acknowledged: Optional[bool] = None, 
+                         limit: int = 50) -> List[Dict[str, Any]]:
+        """Recupera gli alert."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                a.id, a.device_id, r.device_name, a.alert_type, 
+                a.alert_message, a.alert_value, a.threshold_value,
+                a.severity, a.acknowledged, a.acknowledged_at, 
+                a.acknowledged_by, a.created_at
+            FROM zigbee_sensor_alerts a
+            JOIN zigbee_device_registry r ON a.device_id = r.device_id
+            WHERE 1=1
+            """
+            
+            params = []
+            
+            if device_id:
+                query += " AND a.device_id = %s"
+                params.append(device_id)
+            
+            if acknowledged is not None:
+                query += " AND a.acknowledged = %s"
+                params.append(acknowledged)
+            
+            query += " ORDER BY a.created_at DESC LIMIT %s"
+            params.append(limit)
+            
+            self.cursor.execute(query, params)
+            rows = self.cursor.fetchall()
+            
+            alerts = []
+            for row in rows:
+                alerts.append({
+                    'id': row[0],
+                    'device_id': row[1],
+                    'device_name': row[2],
+                    'alert_type': row[3],
+                    'message': row[4],
+                    'value': float(row[5]) if row[5] else None,
+                    'threshold': float(row[6]) if row[6] else None,
+                    'severity': row[7],
+                    'acknowledged': bool(row[8]),
+                    'acknowledged_at': row[9].isoformat() if row[9] else None,
+                    'acknowledged_by': row[10],
+                    'created_at': row[11].isoformat() if row[11] else None,
+                })
+            
+            return alerts
+            
+        except Exception as e:
+            logger.error(f"Error get_sensor_alerts: {e}")
+            return []
+    
+    
+    def acknowledge_alert(self, alert_id: int, acknowledged_by: str = 'system') -> bool:
+        """Marca un alert come gestito."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            UPDATE zigbee_sensor_alerts
+            SET acknowledged = TRUE, 
+                acknowledged_at = NOW(),
+                acknowledged_by = %s
+            WHERE id = %s
+            """
+            
+            self.cursor.execute(query, (acknowledged_by, alert_id))
+            self.connection.commit()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error acknowledge_alert: {e}")
+            if self.connection:
+                self.connection.rollback()
+            return False
+    
+    
+    # ──────────────────────────────────────────────────────────────────────
+    # STATISTICS - Statistiche e aggregazioni
+    # ──────────────────────────────────────────────────────────────────────
+    
+    def get_sensor_summary(self) -> Dict[str, Any]:
+        """Recupera un riepilogo generale dei sensori."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE online = TRUE) as online,
+                COUNT(*) FILTER (WHERE alert_enabled = TRUE) as alert_enabled,
+                ROUND(AVG(temperature)::numeric, 1) as avg_temp,
+                ROUND(AVG(humidity)::numeric, 1) as avg_hum,
+                MIN(battery) as min_battery
+            FROM zigbee_latest_readings
+            WHERE enabled = TRUE
+            """
+            
+            self.cursor.execute(query)
+            row = self.cursor.fetchone()
+            
+            if not row:
+                return {
+                    'total': 0, 'online': 0, 'alerts': 0,
+                    'avg_temp': None, 'avg_hum': None, 'min_battery': None
+                }
+            
+            # Conta alert non gestiti
+            self.cursor.execute("SELECT COUNT(*) FROM zigbee_sensor_alerts WHERE acknowledged = FALSE")
+            alerts_count = self.cursor.fetchone()[0]
+            
+            return {
+                'total': row[0] or 0,
+                'online': row[1] or 0,
+                'alert_enabled': row[2] or 0,
+                'alerts': alerts_count,
+                'avg_temp': float(row[3]) if row[3] else None,
+                'avg_hum': float(row[4]) if row[4] else None,
+                'min_battery': row[5],
+            }
+            
+        except Exception as e:
+            logger.error(f"Error get_sensor_summary: {e}")
+            return {'total': 0, 'online': 0, 'alerts': 0, 
+                   'avg_temp': None, 'avg_hum': None, 'min_battery': None}
+    
+    
+    def get_room_statistics(self) -> List[Dict[str, Any]]:
+        """Recupera statistiche per stanza."""
+        try:
+            self._ensure_connection()
+            
+            query = """
+            SELECT 
+                room_id, room_name, total_sensors, online_sensors,
+                avg_temperature, avg_humidity, min_battery, active_alerts
+            FROM zigbee_room_statistics
+            ORDER BY room_id
+            """
+            
+            self.cursor.execute(query)
+            rows = self.cursor.fetchall()
+            
+            stats = []
+            for row in rows:
+                stats.append({
+                    'room_id': row[0],
+                    'room_name': row[1],
+                    'total_sensors': row[2],
+                    'online_sensors': row[3],
+                    'avg_temperature': float(row[4]) if row[4] else None,
+                    'avg_humidity': float(row[5]) if row[5] else None,
+                    'min_battery': row[6],
+                    'active_alerts': row[7],
+                })
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error get_room_statistics: {e}")
+            return []

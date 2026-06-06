@@ -120,7 +120,7 @@ export default function AirQualityExternalWidget() {
           </div>
           <div>
             <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Aria esterna
+              Outdoor air
             </div>
             {city && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: 2 }}>
@@ -157,7 +157,7 @@ export default function AirQualityExternalWidget() {
             justifyContent: 'center', gap: '0.4rem', color: 'var(--text-muted)', minHeight: 80 }}>
             <AlertCircle size={20}/>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>
-              {API_KEY ? 'Errore caricamento' : 'VITE_OWM_KEY mancante'}
+              {API_KEY ? 'Error loading' : 'VITE_OWM_KEY missing'}
             </span>
           </div>
         ) : (

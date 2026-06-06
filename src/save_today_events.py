@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Salva tutti gli eventi di oggi dal Google Calendar usando un service account.
+Saves all of today's events from Google Calendar using a service account.
 """
 
 import os
@@ -12,15 +12,15 @@ from googleapiclient.discovery import build
 
 # ===== CONFIG =====
 CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), 'gcredentials.json')
-# Metti qui l'email del tuo calendario condiviso con il service account
+# Put the email of the calendar shared with the service account here
 CALENDAR_ID = "alexandruandrei659.aa@gmail.com"
 
-# Fuso orario locale (CET/CEST)
+# Local time zone (CET/CEST)
 LOCAL_UTC_OFFSET = 2  # +1 inverno, +2 estate
 
 # ===== FUNZIONI =====
 def get_calendar_service():
-    """Crea il client Google Calendar usando il service account"""
+    """Create the Google Calendar client using the service account"""
     scopes = ['https://www.googleapis.com/auth/calendar.readonly']
     credentials = service_account.Credentials.from_service_account_file(
         CREDENTIALS_FILE, scopes=scopes
@@ -29,7 +29,7 @@ def get_calendar_service():
     return service
 
 def get_today_events(service):
-    """Recupera tutti gli eventi di oggi"""
+    """Fetch all of today's events"""
     today = datetime.now()
     tz_offset = timedelta(hours=LOCAL_UTC_OFFSET)
     start_of_day = datetime.combine(today, time.min).astimezone(timezone(tz_offset))
@@ -50,27 +50,27 @@ def get_today_events(service):
     return events
 
 def main():
-    print("📅 Recupero eventi di oggi dal Google Calendar...")
+    print("📅 Fetching today's events from Google Calendar...")
 
     service = get_calendar_service()
     events = get_today_events(service)
 
     if not events:
-        print("⚠️ Nessun evento trovato per oggi.")
+        print("⚠️ No events found for today.")
         return
 
-    print(f"✓ Trovati {len(events)} eventi oggi:")
+    print(f"✓ Found {len(events)} events today:")
     for i, event in enumerate(events, 1):
         start = event['start'].get('dateTime', event['start'].get('date'))
         end = event['end'].get('dateTime', event['end'].get('date'))
         print(f"{i}. {start} → {end} | {event.get('summary', '(nessun titolo)')}")
 
-    # Salva su file JSON
+    # Save to JSON file
     output_file = os.path.join(os.path.dirname(__file__), f'today_events_{datetime.now().date()}.json')
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(events, f, ensure_ascii=False, indent=4)
 
-    print(f"\n✓ Eventi salvati in {output_file}")
+    print(f"\n✓ Events saved in {output_file}")
 
 if __name__ == '__main__':
     main()

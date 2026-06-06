@@ -102,7 +102,7 @@ def enrich_with_cached_data(devices: list) -> list:
 
 
 def enrich_with_os(devices: list, scanner) -> list:
-    """Rileva OS se non già in cache Redis (24h)."""
+    """Detect the OS if it is not already in the Redis cache (24h)."""
     enriched = []
     for d in devices:
         mac = d.get("mac", "")

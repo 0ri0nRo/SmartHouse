@@ -43,7 +43,7 @@ function StatCard({ label, value, accent }) {
 }
 
 // ── Receipt item ───────────────────────────────────────────
-function ReceiptItem({ item, index, onComplete, onDelete, completing, deleting }) {
+function ReceiptItem({ item, onComplete, onDelete, completing, deleting }) {
   return (
     <li style={{
       display:'flex', alignItems:'flex-start', gap:'0.75rem',
@@ -158,7 +158,7 @@ function AddItemForm({ onAdd, loading }) {
       <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
 
         {/* Name + Quantity */}
-        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:'0.75rem' }}>
+        <div style={{ display:'grid', gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 860 ? '1fr' : '2fr 1fr', gap:'0.75rem' }}>
           <div className="field">
             <label className="field-label">Item Name</label>
             <input className="input" value={form.name} onChange={set('name')}
@@ -173,7 +173,7 @@ function AddItemForm({ onAdd, loading }) {
         </div>
 
         {/* Store + Priority */}
-        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:'0.75rem' }}>
+        <div style={{ display:'grid', gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 860 ? '1fr' : '2fr 1fr', gap:'0.75rem' }}>
           <div className="field">
             <label className="field-label">Store</label>
             <input className="input" value={form.store} onChange={set('store')}
@@ -246,7 +246,7 @@ function HistorySection() {
         <span className="card-header-title">Purchase History</span>
       </div>
       <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.75rem' }}>
+        <div style={{ display:'grid', gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 860 ? '1fr' : '1fr 1fr', gap:'0.75rem' }}>
           {[{label:'From',val:startDate,set:setStartDate},{label:'To',val:endDate,set:setEndDate}].map(f=>(
             <div key={f.label} className="field">
               <label className="field-label">{f.label}</label>
@@ -295,9 +295,15 @@ export default function ShoppingPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [showToast])
 
-  useEffect(() => { loadItems() }, [loadItems])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) loadItems()
+    })
+    return () => { cancelled = true }
+  }, [loadItems])
 
   // Keyboard shortcut
   useEffect(() => {

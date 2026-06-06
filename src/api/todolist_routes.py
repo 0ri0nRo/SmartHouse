@@ -3,6 +3,7 @@ from services.todolist_service import TodolistService
 from config.settings import get_config
 from bson import ObjectId
 from datetime import datetime
+from utils.redis_cache import cache_json_response, invalidate_cached_paths
 
 todolist_bp = Blueprint('todolist', __name__)
 config = get_config()
@@ -35,6 +36,7 @@ def todolist_insert():
             documents['timestamp'],
             documents.get('priority', 'medium')
         )
+        invalidate_cached_paths('/todolist', '/api/shopping-list')
         
         return jsonify({"message": "Item inserted successfully", "id": str(result)}), 201
         
@@ -42,6 +44,7 @@ def todolist_insert():
         return jsonify({"message": f"Error inserting item: {str(e)}"}), 500
 
 @todolist_bp.route('/todolist/today', methods=['GET'])
+@cache_json_response(ttl_seconds=120)
 def todolist_today():
     """API to get current active (not purchased) items from the todolist."""
     try:
@@ -59,12 +62,14 @@ def todolist_delete(item_id):
     try:
         res = todolist_service.delete_item(item_id)
         if res.get("deleted_count", 0) > 0:
+            invalidate_cached_paths('/todolist', '/api/shopping-list')
             return jsonify({"message": "Item deleted successfully"}), 200
         return jsonify({"message": "Item not found"}), 404
     except Exception as e:
         return jsonify({"message": f"Error deleting item: {str(e)}"}), 500
 
 @todolist_bp.route('/todolist/update/<start_timestamp>/<end_timestamp>', methods=['GET'])
+@cache_json_response(ttl_seconds=300)
 def todolist_search_by_timestamp(start_timestamp, end_timestamp):
     """API to search purchased items within a timestamp range for history."""
     try:
@@ -92,6 +97,7 @@ def mark_item_complete(item_id):
         result = todolist_service.mark_as_purchased(item_id, data)
         
         if result:
+            invalidate_cached_paths('/todolist', '/api/shopping-list')
             return jsonify({"message": "Item marked as purchased successfully"}), 200
         else:
             return jsonify({"message": "Item not found"}), 404
@@ -109,6 +115,7 @@ def mark_item_uncomplete(item_id):
         result = todolist_service.mark_as_unpurchased(item_id)
         
         if result:
+            invalidate_cached_paths('/todolist', '/api/shopping-list')
             return jsonify({"message": "Item marked as not purchased successfully"}), 200
         else:
             return jsonify({"message": "Item not found"}), 404
@@ -117,6 +124,7 @@ def mark_item_uncomplete(item_id):
         return jsonify({"message": f"Error unmarking item: {str(e)}"}), 500
 
 @todolist_bp.route('/api/shopping-list/current', methods=['GET'])
+@cache_json_response(ttl_seconds=60)
 def shopping_list_current():
     """API to get all current (not purchased) items."""
     try:
@@ -126,6 +134,7 @@ def shopping_list_current():
         return jsonify({"message": f"Error retrieving current items: {str(e)}"}), 500
 
 @todolist_bp.route('/api/shopping-list/history', methods=['GET'])
+@cache_json_response(ttl_seconds=300)
 def shopping_list_history():
     """API to get purchased items history with optional date filtering."""
     start_timestamp = request.args.get('start')
@@ -143,6 +152,7 @@ def shopping_list_history():
         return jsonify({"message": f"Error retrieving history: {str(e)}"}), 500
 
 @todolist_bp.route('/api/shopping-list/stats', methods=['GET'])
+@cache_json_response(ttl_seconds=120)
 def shopping_list_stats():
     """API to get shopping list statistics."""
     try:
@@ -156,6 +166,7 @@ def clear_completed_items():
     """API to permanently delete all purchased items."""
     try:
         result = todolist_service.clear_purchased_items()
+        invalidate_cached_paths('/todolist', '/api/shopping-list')
         return jsonify({
             "message": f"Cleared {result} completed items successfully",
             "cleared_count": result
@@ -179,6 +190,7 @@ def bulk_complete_items():
                 return jsonify({"message": f"Invalid item ID: {item_id}"}), 400
         
         result = todolist_service.bulk_mark_purchased(item_ids)
+        invalidate_cached_paths('/todolist', '/api/shopping-list')
         
         return jsonify({
             "message": f"Marked {result} items as purchased",

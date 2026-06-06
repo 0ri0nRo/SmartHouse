@@ -1,0 +1,33 @@
+homeassistant:
+  enabled: false
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://mqtt-broker
+frontend:
+  enabled: true
+  port: 8080
+serial:
+  port: /dev/ttyUSB0
+advanced:
+  log_level: info
+  network_key:
+    - 42
+    - 153
+    - 186
+    - 153
+    - 183
+    - 18
+    - 70
+    - 212
+    - 69
+    - 165
+    - 143
+    - 68
+    - 122
+    - 123
+    - 64
+    - 71
+version: 5
+devices:
+  '0x983268fffe8fd65a':
+    friendly_name: '0x983268fffe8fd65a'

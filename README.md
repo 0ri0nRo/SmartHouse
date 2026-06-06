@@ -106,6 +106,24 @@ This command will:
 - Create and start a container based on the built image.
 - Expose the application on port 5000.
 
+### Frontend (client) build
+
+The repository includes a modern React + Vite client in `client/`. When running the server build or running locally you may need to build the client assets separately:
+
+```bash
+# from repo root
+cd client
+pnpm install
+# development with HMR
+pnpm dev
+# build for production
+pnpm run build
+# preview the built site
+pnpm run preview
+```
+
+Note: recent UI updates introduced a new token-based theme (see `client/src/styles/global.css`). Builds succeed locally but may trigger a bundle-size warning for large chunks; consider code-splitting or raising `build.chunkSizeWarningLimit` in `client/vite.config.js` if needed.
+
 ## Restoring the SQL Backup
 
 If you need to restore your PostgreSQL database from a `.sql` backup file, follow these steps:

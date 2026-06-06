@@ -14,12 +14,11 @@ Refactored Flask application with a modular structure to handle:
 - Service Worker for offline functionality
 """
 
-from flask import Flask, send_from_directory # pyright: ignore[reportMissingImports]
+from flask import Flask, render_template, send_from_directory # pyright: ignore[reportMissingImports]
 from flask_cors import CORS # type: ignore
 from flask_socketio import SocketIO # type: ignore
 import os
 import logging
-
 # Local project imports (refactored structure)
 from config.settings import get_config, setup_logging
 from utils.json_encoder import CustomJSONEncoder
@@ -34,6 +33,8 @@ from api.calendar_routes import calendar_bp
 from api.recipe_routes          import recipe_bp
 from api.sunmoon_routes         import sunmoon_bp
 from api.news_routes import news_bp
+from api.honeypot_routes import honeypot_bp
+from api.honeypot_geoip_route import honeypot_geo_bp
 
 def create_app():
     """
@@ -120,6 +121,8 @@ def create_app():
     app.register_blueprint(recipe_bp)
     app.register_blueprint(sunmoon_bp)
     app.register_blueprint(news_bp)
+    app.register_blueprint(honeypot_bp)
+    app.register_blueprint(honeypot_geo_bp)
 
     # Health check endpoint
     @app.route('/health')
@@ -127,11 +130,16 @@ def create_app():
         """Health check endpoint for monitoring and load balancers."""
         return {'status': 'healthy', 'service': 'raspberry-pi-dashboard'}, 200
 
+    @app.route('/zigbee', methods=['GET'])
+    def zigbee_dashboard():
+        """Render the Zigbee sensor dashboard."""
+        return render_template('zigbee.html')
+
     # Serve React frontend for all non-API routes.
     # This must be the LAST route registered so it does not
     # shadow any of the API blueprints above.
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
+    @app.route('/', defaults={'path': ''}, methods=['GET', 'HEAD'])
+    @app.route('/<path:path>', methods=['GET', 'HEAD'])
     def serve_react(path):
         """Return the React index.html for every unknown route so that
         React Router can handle client-side navigation."""

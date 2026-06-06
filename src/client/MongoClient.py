@@ -10,16 +10,16 @@ class MongoDBHandler:
             self.db = self.client[db_name]
             self.collection = self.db[collection_name]
         except errors.ServerSelectionTimeoutError as e:
-           print(f"Errore di connessione al database MongoDB: {e}")
+           print(f"MongoDB connection error: {e}")
         except errors.ConfigurationError as e:
-            print(f"Errore di configurazione: {e}")
+            print(f"Configuration error: {e}")
 
     def insert_document(self, document):
         try:
             result = self.collection.insert_one(document)
             return result.inserted_id  # Aggiunto per verificare il risultato
         except Exception as e:
-            print(f"Errore durante l'inserimento del documento: {e}")
+            print(f"Error inserting document: {e}")
             return None
     
     def read_first_10_documents(self):
@@ -27,7 +27,7 @@ class MongoDBHandler:
             documents = self.collection.find().limit(10)
             return [{**doc, "_id": str(doc["_id"])} for doc in documents] 
         except Exception as e:
-            print(f"Errore durante la lettura dei documenti: {e}")
+            print(f"Error reading documents: {e}")
             return []  # Assicuriamoci di restituire sempre una lista
 
 
@@ -36,7 +36,7 @@ class MongoDBHandler:
             # Convertire la stringa timestamp in un oggetto datetime
             timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d")
         except ValueError as e:
-            print(f"Errore nel parsing del timestamp: {e}")
+            print(f"Error parsing timestamp: {e}")
             return
 
         document = {
@@ -62,13 +62,13 @@ class MongoDBHandler:
             print(result)
             return result
         except Exception as e:
-            print(f"Errore durante la lettura degli item di oggi: {e}")
+            print(f"Error reading today's items: {e}")
             return []
         
     def delete_item(self, item_id):
         """Elimina un item dalla collezione in base al suo ID."""
         try:
-            # Verifica che l'ID sia un ObjectId valido
+            # Verify that the ID is a valid ObjectId
             if not ObjectId.is_valid(item_id):
                 return {"message": "Invalid item ID format", "deleted_count": 0}
 
@@ -109,17 +109,17 @@ class MongoDBHandler:
 
         except Exception as e:
             print(f"Error querying database: {e}")
-            return []  # Restituiamo una lista vuota in caso di errore
+            return []  # Return an empty list in case of error
 
     def read_all_items(self):
         try:
             documents = self.collection.find()
             return [{**doc, "_id": str(doc["_id"])} for doc in documents]
         except Exception as e:
-            print(f"Errore durante la lettura di tutti gli item: {e}")
+            print(f"Error reading all items: {e}")
             return []
 
-        # Aggiungi questi metodi alla tua classe MongoDBHandler esistente
+        # Add these methods to your existing MongoDBHandler class
 
     def add_document(self, document):
         """Insert a single document into the collection"""

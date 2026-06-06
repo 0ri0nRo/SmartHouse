@@ -8,7 +8,7 @@ import sys
 import os
 from datetime import datetime, timedelta
 
-# Aggiungi la directory corrente al path
+# Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from client.GoogleCalendarClient import GoogleCalendarClient
@@ -29,105 +29,105 @@ def main():
     print("=" * 60)
     print()
     
-    # Step 1: Test connessione PostgreSQL
-    print("📦 Step 1: Test connessione database...")
+    # Step 1: Test PostgreSQL connection
+    print("📦 Step 1: Testing database connection...")
     try:
         pg_client = PostgresHandler(db_config=db_config)
-        print("✓ Connessione PostgreSQL OK")
+        print("✓ PostgreSQL connection OK")
     except Exception as e:
-        print(f"✗ Errore connessione database: {e}")
+        print(f"✗ Database connection error: {e}")
         return
     
-    # Step 2: Test connessione Google Calendar
-    print("\n📅 Step 2: Test connessione Google Calendar...")
+    # Step 2: Test Google Calendar connection
+    print("\n📅 Step 2: Testing Google Calendar connection...")
     try:
         gcal_client = GoogleCalendarClient(credentials_path='gcredentials.json')
         
-        # Chiedi l'email all'utente
-        print("\n⚠️  IMPORTANTE: Inserisci la tua email Google")
+        # Ask the user for their email
+        print("\n⚠️  IMPORTANT: Enter your Google email")
         user_email = input("Email Google: ").strip()
         
         if user_email:
             gcal_client.set_user_email(user_email)
         
         if not gcal_client.test_connection():
-            print("✗ Errore connessione Google Calendar")
+            print("✗ Google Calendar connection error")
             return
             
-        print("✓ Connessione Google Calendar OK")
+        print("✓ Google Calendar connection OK")
     except FileNotFoundError as e:
-        print(f"✗ File credentials non trovato: {e}")
-        print("\nPer configurare Google Calendar:")
+        print(f"✗ Credentials file not found: {e}")
+        print("\nTo configure Google Calendar:")
         print("1. Vai su https://console.cloud.google.com")
-        print("2. Crea un nuovo progetto o seleziona uno esistente")
-        print("3. Abilita Google Calendar API")
-        print("4. Crea credenziali OAuth 2.0")
-        print("5. Scarica il file JSON e rinominalo in 'gcredentials.json'")
-        print("6. Metti il file nella directory del progetto")
+        print("2. Create a new project or select an existing one")
+        print("3. Enable the Google Calendar API")
+        print("4. Create OAuth 2.0 credentials")
+        print("5. Download the JSON file and rename it to 'gcredentials.json'")
+        print("6. Place the file in the project directory")
         return
     except Exception as e:
-        print(f"✗ Errore: {e}")
+        print(f"✗ Error: {e}")
         return
     
-    # Step 3: Crea service
-    print("\n⚙️  Step 3: Inizializzazione service...")
+    # Step 3: Create service
+    print("\n⚙️  Step 3: Initializing service...")
     try:
         service = ActivityService(pg_client, gcal_client)
-        print("✓ Service creato")
+        print("✓ Service created")
     except Exception as e:
-        print(f"✗ Errore: {e}")
+        print(f"✗ Error: {e}")
         return
     
-    # Step 4: Crea tabelle database
-    print("\n🗄️  Step 4: Creazione tabelle database...")
+    # Step 4: Create database tables
+    print("\n🗄️  Step 4: Creating database tables...")
     try:
         service.initialize_database()
-        print("✓ Tabelle create")
+        print("✓ Tables created")
     except Exception as e:
-        print(f"✗ Errore: {e}")
+        print(f"✗ Error: {e}")
         return
     
-    # Step 5: Carica categorie
-    print("\n📂 Step 5: Caricamento categorie...")
+    # Step 5: Load categories
+    print("\n📂 Step 5: Loading categories...")
     try:
         categories_path = 'config/categories.json'
         if not os.path.exists(categories_path):
-            print(f"✗ File categorie non trovato: {categories_path}")
+            print(f"✗ Categories file not found: {categories_path}")
             return
         
         service.load_categories_from_json(categories_path)
         
-        # Mostra categorie caricate
+        # Show loaded categories
         categories = service.get_all_categories()
-        print(f"✓ Caricate {len(categories)} categorie")
+        print(f"✓ Loaded {len(categories)} categories")
         
-        # Raggruppa per macro
+        # Group by macro category
         from collections import defaultdict
         by_macro = defaultdict(list)
         for cat in categories:
             by_macro[cat.macro_category].append(cat)
         
-        print("\nCategorie disponibili:")
+        print("\nAvailable categories:")
         for macro, cats in by_macro.items():
-            print(f"  {macro}: {len(cats)} microcategorie")
+            print(f"  {macro}: {len(cats)} microcategories")
         
     except Exception as e:
-        print(f"✗ Errore: {e}")
+        print(f"✗ Error: {e}")
         return
     
-    # Step 6: Sincronizzazione iniziale
-    print("\n🔄 Step 6: Sincronizzazione iniziale...")
-    print("Vuoi sincronizzare gli eventi adesso? (s/n): ", end='')
+    # Step 6: Initial synchronization
+    print("\n🔄 Step 6: Initial synchronization...")
+    print("Do you want to sync events now? (y/n): ", end='')
     
     choice = input().strip().lower()
     
     if choice == 's':
-        print("\nQuanti giorni di storico vuoi sincronizzare?")
-        print("1. Ultimi 7 giorni")
-        print("2. Ultimi 30 giorni")
-        print("3. Ultimi 90 giorni")
-        print("4. Personalizzato")
-        print("\nScelta (1-4): ", end='')
+        print("\nHow many days of history do you want to sync?")
+        print("1. Last 7 days")
+        print("2. Last 30 days")
+        print("3. Last 90 days")
+        print("4. Custom")
+        print("\nChoice (1-4): ", end='')
         
         days_choice = input().strip()
         
@@ -138,52 +138,52 @@ def main():
         elif days_choice == '3':
             days = 90
         elif days_choice == '4':
-            print("Numero di giorni: ", end='')
+            print("Number of days: ", end='')
             try:
                 days = int(input().strip())
             except ValueError:
-                print("Valore non valido, uso 30 giorni")
+                print("Invalid value, using 30 days")
                 days = 30
         else:
             days = 30
         
         start_date = datetime.now() - timedelta(days=days)
         
-        print(f"\nSincronizzazione eventi da {start_date.date()} a oggi...")
-        print("Questo potrebbe richiedere alcuni minuti...")
+        print(f"\nSyncing events from {start_date.date()} to today...")
+        print("This may take a few minutes...")
         
         try:
             stats = service.sync_events(start_date=start_date)
-            print(f"\n✓ Sincronizzazione completata!")
-            print(f"  - Eventi aggiunti: {stats['added']}")
-            print(f"  - Eventi aggiornati: {stats['updated']}")
-            print(f"  - Eventi saltati: {stats['skipped']}")
-            print(f"  - Errori: {stats['errors']}")
+            print(f"\n✓ Sync completed!")
+            print(f"  - Events added: {stats['added']}")
+            print(f"  - Events updated: {stats['updated']}")
+            print(f"  - Events skipped: {stats['skipped']}")
+            print(f"  - Errors: {stats['errors']}")
             
-            # Calcola statistiche per gli ultimi 7 giorni
-            print("\n�� Calcolo statistiche...")
+            # Calculate statistics for the last 7 days
+            print("\n📊 Calculating statistics...")
             today = datetime.now().date()
             for i in range(min(7, days)):
                 date = today - timedelta(days=i)
                 service.calculate_daily_stats(date)
             
-            print("✓ Statistiche calcolate")
+            print("✓ Statistics calculated")
             
         except Exception as e:
-            print(f"✗ Errore durante sincronizzazione: {e}")
+            print(f"✗ Error during sync: {e}")
             import traceback
             traceback.print_exc()
     
-    # Step 7: Riepilogo
+    # Step 7: Summary
     print("\n" + "=" * 60)
     print("✓ INIZIALIZZAZIONE COMPLETATA!")
     print("=" * 60)
-    print("\nProssimi passi:")
-    print("1. Avvia il server Flask: python app.py")
-    print("2. Apri il browser: http://localhost:5000/api/activity/dashboard")
-    print("3. Usa il formato [CODICE] nel titolo degli eventi Google Calendar")
-    print("   Esempio: '[L.1] Sviluppo backend'")
-    print("\nEndpoint API disponibili:")
+    print("\nNext steps:")
+    print("1. Start the Flask server: python app.py")
+    print("2. Open the browser: http://localhost:5000/api/activity/dashboard")
+    print("3. Use the [CODE] format in Google Calendar event titles")
+    print("   Example: '[L.1] Backend development'")
+    print("\nAvailable API endpoints:")
     print("  - GET  /api/activity/categories")
     print("  - POST /api/activity/sync")
     print("  - GET  /api/activity/stats/daily?date=YYYY-MM-DD")
@@ -197,8 +197,8 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nOperazione annullata dall'utente")
+        print("\n\nOperation cancelled by the user")
     except Exception as e:
-        print(f"\n✗ Errore imprevisto: {e}")
+        print(f"\n✗ Unexpected error: {e}")
         import traceback
         traceback.print_exc()

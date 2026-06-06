@@ -1,6 +1,6 @@
 """
 Activity Service
-Business logic per il monitoraggio delle attività
+Business logic for activity monitoring
 """
 
 import re
@@ -24,15 +24,15 @@ db_config = {
 }
 
 class ActivityService:
-    """Service per gestire attività e statistiche"""
+    """Service for managing activities and statistics"""
     
     def __init__(self, pg_client: PostgresHandler, gcal_client: GoogleCalendarClient):
         """
-        Inizializza il service
-        
+        Initialize the service
+
         Args:
-            pg_client: Client PostgreSQL
-            gcal_client: Client Google Calendar
+            pg_client: PostgreSQL client
+            gcal_client: Google Calendar client
         """
         self.pg = pg_client
         self.gcal = gcal_client
@@ -173,7 +173,7 @@ class ActivityService:
                 category_id = self.classify_event(event)
                 event.category_id = category_id
                 
-                # Verifica se esiste già
+                # Check whether it already exists
                 check_query = "SELECT id FROM activity_events WHERE google_event_id = %s"
                 existing = self.pg.execute_query(check_query, (event.google_event_id,), fetch=True)
                 

@@ -1,5 +1,5 @@
 """
-Receipt Service - Fix per import error DATABASE_CONFIG - VERSIONE MIGLIORATA
+Receipt Service - Fix for DATABASE_CONFIG import error - IMPROVED VERSION
 """
 import os
 import re
@@ -17,32 +17,32 @@ from config.settings import UPLOAD_FOLDER, RECEIPTS_DB_CONFIG
 logger = logging.getLogger(__name__)
 
 class ReceiptService(BaseService):
-    """Servizio per la gestione e analisi degli scontrini - VERSIONE MIGLIORATA"""
+    """Service for receipt management and analysis - IMPROVED VERSION"""
     
     def __init__(self, db_config=None):
-        """Inizializza il servizio"""
-        # Usa RECEIPTS_DB_CONFIG dal tuo settings.py
+        """Initialize the service"""
+        # Use RECEIPTS_DB_CONFIG from your settings.py
         if db_config is None:
             db_config = RECEIPTS_DB_CONFIG
         
-        # Inizializza BaseService con la configurazione del database
+        # Initialize BaseService with the database configuration
         super().__init__(db_config)
         
         self.upload_folder = UPLOAD_FOLDER
         os.makedirs(self.upload_folder, exist_ok=True)
         
-        # Configurazione Tesseract per italiano
+        # Tesseract configuration for Italian
         self.tesseract_config = r'--oem 3 --psm 6 -l ita+eng'
         
-        # Pattern migliorati per il parsing
+        # Improved parsing patterns
         self.price_patterns = [
-            # Pattern specifico per scontrini tipo Azzurro (nome su più righe + prezzo alla fine)
+            # Specific pattern for Azzurro-style receipts (name on multiple lines + price at the end)
             r'([A-Za-z\s\u00C0-\u017F\+\-\*]{3,})\s+(\d+[,.]\d{2})\s*€?\s*$',
-            # Pattern con quantità
+            # Pattern with quantity
             r'([A-Za-z\s\u00C0-\u017F]+)\s+(\d+[,.]?\d*)\s*[Xx×]\s*(\d+[,.]\d{2})\s*€?',
-            # Pattern standard
+            # Standard pattern
             r'([A-Za-z\s\u00C0-\u017F]+)\s+(\d+[,.]\d{2})\s*€?',
-            # Pattern più flessibile per nomi complessi
+            # More flexible pattern for complex names
             r'^([A-Za-z\s\u00C0-\u017F\+\-\*]{3,})\s+(\d+[,.]\d{2})$'
         ]
         
@@ -60,58 +60,58 @@ class ReceiptService(BaseService):
         ]
         
         self.supermarket_patterns = [
-            # Pattern specifici per catene conosciute
+            # Specific patterns for known chains
             r'(AZZURRO\s*CONVENIENZA|COOP|ESSELUNGA|CARREFOUR|CONAD|POLI|LIDL|EUROSPIN|IPER|SIMPLY|TIGOTÀ|ACQUA\s*&\s*SAPONE)',
-            # Pattern generico per nomi di supermercati
+            # Generic pattern for supermarket names
             r'^([A-Z\s]{5,25})$'
         ]
 
     def extract_text_from_image(self, image_path: str) -> str:
-        """Estrai testo da immagine usando OCR"""
+        """Extract text from an image using OCR"""
         try:
             if image_path.lower().endswith('.pdf'):
-                # Converti PDF in immagini
+                # Convert PDF to images
                 images = convert_from_path(image_path)
                 text = ""
                 for image in images:
                     text += pytesseract.image_to_string(image, config=self.tesseract_config)
             else:
-                # Elabora immagine diretta
+                # Process image directly
                 image = Image.open(image_path)
                 text = pytesseract.image_to_string(image, config=self.tesseract_config)
             
             return text.strip()
         except Exception as e:
-            logger.error(f"Errore OCR per {image_path}: {e}")
+            logger.error(f"OCR error for {image_path}: {e}")
             return ""
 
     def clean_product_name(self, name: str) -> str:
-        """Pulisce e normalizza il nome del prodotto"""
-        # Rimuovi caratteri speciali e numeri iniziali
+        """Clean and normalize the product name"""
+        # Remove special characters and leading numbers
         name = re.sub(r'^\d+\s*[\.:]?\s*', '', name)
-        # Rimuovi asterischi e simboli speciali
+        # Remove asterisks and special symbols
         name = re.sub(r'[\*\+]{2,}', '', name)
-        # Pulisci spazi multipli
+        # Clean up repeated spaces
         name = re.sub(r'\s{2,}', ' ', name)
-        # Rimuovi parole comuni che non servono
+        # Remove common words that are not useful
         name = re.sub(r'\s*(BACK\s*TO\s*SCHOOL|IVA|€)\s*', '', name, flags=re.IGNORECASE)
         
         return name.strip()
 
     def parse_multiline_products(self, lines: List[str]) -> List[Dict[str, Any]]:
-        """Parsing specifico per prodotti su più righe (come negli scontrini Azzurro)"""
+        """Specific parsing for multi-line products (such as Azzurro receipts)"""
         products = []
         i = 0
         
         while i < len(lines):
             line = lines[i].strip()
             
-            # Skip righe vuote o troppo corte
+            # Skip empty or too-short lines
             if len(line) < 3:
                 i += 1
                 continue
             
-            # Skip righe di intestazione, totali, etc.
+            # Skip header lines, totals, etc.
             if any(keyword in line.upper() for keyword in [
                 'AZZURRO', 'CONVENIENZA', 'COLLEGEN', 'DOCUMENTO', 'COMMERCIALE',
                 'DESCRIZIONE', 'SUBTOTALE', 'TOTALE', 'PAGAMENTO', 'IVA', 'CARTA'
@@ -119,26 +119,26 @@ class ReceiptService(BaseService):
                 i += 1
                 continue
             
-            # Cerca un prezzo nella riga corrente
+            # Look for a price in the current line
             price_match = re.search(r'(\d+[,.]\d{2})\s*€?\s*$', line)
             
             if price_match:
                 price = float(price_match.group(1).replace(',', '.'))
                 
-                # Il nome del prodotto potrebbe essere nella stessa riga o nelle righe precedenti
+                # The product name may be on the same line or in previous lines
                 product_name = re.sub(r'\s*\d+[,.]\d{2}\s*€?\s*$', '', line).strip()
                 
-                # Se il nome nella riga attuale è troppo corto, cerca nelle righe precedenti
+                # If the current line name is too short, look at previous lines
                 if len(product_name) < 5 and i > 0:
-                    # Combina con la riga precedente
+                    # Combine with the previous line
                     prev_line = lines[i-1].strip()
                     if len(prev_line) > 2 and not re.search(r'\d+[,.]\d{2}', prev_line):
                         product_name = prev_line + " " + product_name
                 
-                # Pulisci il nome del prodotto
+                # Clean the product name
                 product_name = self.clean_product_name(product_name)
                 
-                # Verifica che il nome sia valido
+                # Verify that the name is valid
                 if len(product_name) >= 3 and not product_name.upper() in ['TOTALE', 'TOTAL', 'TOT', 'SUBTOTALE']:
                     products.append({
                         'name': product_name,
@@ -152,28 +152,28 @@ class ReceiptService(BaseService):
         return products
 
     def parse_receipt_text(self, text: str) -> Dict[str, Any]:
-        """Parsing intelligente del testo dello scontrino - VERSIONE MIGLIORATA"""
+        """Intelligent receipt text parsing - IMPROVED VERSION"""
         lines = text.split('\n')
         
         receipt_date = None
         total = None
         supermarket = "Supermercato Generico"
         
-        # Cerca supermercato nelle prime righe
+        # Look for the supermarket in the first lines
         for i, line in enumerate(lines[:15]):
             line_upper = line.strip().upper()
             for pattern in self.supermarket_patterns:
                 match = re.search(pattern, line_upper)
                 if match:
                     supermarket = match.group(1).strip()
-                    # Sostituisci nomi comuni
+                    # Replace common names
                     if 'AZZURRO' in supermarket:
                         supermarket = "Azzurro Convenienza"
                     break
             if supermarket != "Supermercato Generico":
                 break
         
-        # Cerca data
+    # Look for the date
         for line in lines:
             for pattern in self.date_patterns:
                 match = re.search(pattern, line)
@@ -189,7 +189,7 @@ class ReceiptService(BaseService):
             if receipt_date:
                 break
         
-        # Cerca totale
+        # Look for the total
         for line in lines:
             for pattern in self.total_patterns:
                 match = re.search(pattern, line.upper())
@@ -203,10 +203,10 @@ class ReceiptService(BaseService):
             if total:
                 break
         
-        # Parsing dei prodotti usando il metodo migliorato
+        # Parse products using the improved method
         products = self.parse_multiline_products(lines)
         
-        # Se non trova prodotti con il metodo multiriga, prova con i pattern standard
+        # If no products are found with the multi-line method, try the standard patterns
         if not products:
             for line in lines:
                 line = line.strip()
@@ -250,14 +250,14 @@ class ReceiptService(BaseService):
 
     @handle_db_error
     def save_receipt_to_db(self, parsed_data: Dict[str, Any], file_path: str) -> int:
-        """Salva lo scontrino nel database usando il metodo BaseService"""
+        """Save the receipt to the database using the BaseService method"""
         conn = None
         cur = None
         try:
             conn = self._connect()
             cur = conn.cursor()
             
-            # Trova o crea supermercato
+            # Find or create supermarket
             cur.execute("SELECT id FROM supermercati WHERE nome = %s", (parsed_data['supermarket'],))
             supermarket_row = cur.fetchone()
             
@@ -267,7 +267,7 @@ class ReceiptService(BaseService):
                 cur.execute("INSERT INTO supermercati (nome) VALUES (%s) RETURNING id", (parsed_data['supermarket'],))
                 supermarket_id = cur.fetchone()[0]
             
-            # Inserisci scontrino
+            # Insert receipt
             cur.execute("""
                 INSERT INTO scontrini (supermercato_id, data_acquisto, totale, file_path)
                 VALUES (%s, %s, %s, %s) RETURNING id
@@ -275,9 +275,9 @@ class ReceiptService(BaseService):
             
             receipt_id = cur.fetchone()[0]
             
-            # Inserisci prodotti
+            # Insert products
             for product in parsed_data['products']:
-                # Trova o crea prodotto
+                # Find or create product
                 cur.execute("SELECT id FROM prodotti WHERE nome = %s", (product['name'],))
                 product_row = cur.fetchone()
                 
@@ -287,7 +287,7 @@ class ReceiptService(BaseService):
                     cur.execute("INSERT INTO prodotti (nome) VALUES (%s) RETURNING id", (product['name'],))
                     product_id = cur.fetchone()[0]
                 
-                # Inserisci acquisto
+                # Insert purchase
                 cur.execute("""
                     INSERT INTO acquisti (scontrino_id, prodotto_id, nome_prodotto, quantita, prezzo_unitario, prezzo_totale)
                     VALUES (%s, %s, %s, %s, %s, %s)
@@ -299,7 +299,7 @@ class ReceiptService(BaseService):
         except Exception as e:
             if conn:
                 conn.rollback()
-            logger.error(f"Errore salvataggio scontrino: {e}")
+            logger.error(f"Error saving receipt: {e}")
             raise
         finally:
             if cur:
@@ -309,27 +309,27 @@ class ReceiptService(BaseService):
 
     @handle_db_error
     def get_prezzi_minimi(self) -> List[Dict[str, Any]]:
-        """Ottieni i prezzi minimi per prodotto - STATISTICA PRINCIPALE"""
+        """Get the minimum prices per product - MAIN STATISTIC"""
         try:
             rows = self._execute_query("SELECT * FROM prezzi_minimi ORDER BY prodotto", fetch_all=True)
             return [dict(row) for row in rows] if rows else []
         except Exception as e:
-            logger.error(f"Errore recupero prezzi minimi: {e}")
+            logger.error(f"Error retrieving minimum prices: {e}")
             raise
 
     @handle_db_error
     def get_statistiche_generali(self) -> Dict[str, Any]:
-        """Ottieni statistiche generali"""
+        """Get general statistics"""
         try:
-            # Statistiche generali
+            # General statistics
             general_row = self._execute_query("SELECT * FROM statistiche_generali", fetch_one=True)
             general_stats = dict(general_row) if general_row else {}
             
-            # Top prodotti
+            # Top products
             top_products_rows = self._execute_query("SELECT * FROM top_prodotti LIMIT 10", fetch_all=True)
             top_products = [dict(row) for row in top_products_rows] if top_products_rows else []
             
-            # Confronto supermercati
+            # Supermarket comparison
             supermarket_rows = self._execute_query("SELECT * FROM confronto_supermercati", fetch_all=True)
             supermarket_comparison = [dict(row) for row in supermarket_rows] if supermarket_rows else []
             
@@ -339,12 +339,12 @@ class ReceiptService(BaseService):
                 'supermarket_comparison': supermarket_comparison
             }
         except Exception as e:
-            logger.error(f"Errore recupero statistiche: {e}")
+            logger.error(f"Error retrieving statistics: {e}")
             raise
 
     @handle_db_error
     def get_scontrini_list(self) -> List[Dict[str, Any]]:
-        """Lista tutti gli scontrini"""
+        """List all receipts"""
         try:
             query = """
                 SELECT s.*, sup.nome as supermercato_nome
@@ -355,37 +355,37 @@ class ReceiptService(BaseService):
             rows = self._execute_query(query, fetch_all=True)
             return [dict(row) for row in rows] if rows else []
         except Exception as e:
-            logger.error(f"Errore recupero lista scontrini: {e}")
+            logger.error(f"Error retrieving receipt list: {e}")
             raise
 
     def process_receipt_file(self, file) -> Dict[str, Any]:
-        """Processa un file scontrino completo"""
+        """Process a complete receipt file"""
         try:
-            # Salva file
+            # Save file
             filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
             filepath = os.path.join(self.upload_folder, filename)
             file.save(filepath)
             
-            # Estrai testo
+            # Extract text
             text = self.extract_text_from_image(filepath)
             if not text:
                 raise Exception('Impossibile leggere il testo dall\'immagine')
             
-            # Parsing
+            # Parse
             parsed_data = self.parse_receipt_text(text)
             
-            # Salva nel database
+            # Save to the database
             receipt_id = self.save_receipt_to_db(parsed_data, filepath)
             
             return {
                 'success': True,
-                'message': 'Scontrino processato con successo',
+                'message': 'Receipt processed successfully',
                 'data': parsed_data,
                 'receipt_id': receipt_id
             }
             
         except Exception as e:
-            logger.error(f"Errore processamento scontrino: {e}")
+            logger.error(f"Error processing receipt: {e}")
             raise
 
 # Istanza globale del servizio

@@ -21,18 +21,18 @@ const TT = {
 
 function ChartCard({ title, icon: Icon, badge, controls, height=200, children }) {
   return (
-    <div className="card">
+    <div className="card card--flat" style={{ boxShadow: '0 10px 28px rgba(15,23,42,0.05)' }}>
       <div className="card-header">
         <div className="card-header-icon icon-blue"><Icon size={14}/></div>
         <span className="card-header-title">{title}</span>
         {badge && <span className="badge badge--muted" style={{marginLeft:'auto'}}>{badge}</span>}
       </div>
       {controls && (
-        <div style={{padding:'0.875rem 1rem',borderBottom:'1px solid var(--border)',background:'var(--bg-surface-2)',display:'flex',flexWrap:'wrap',gap:'0.6rem',alignItems:'flex-end'}}>
+        <div style={{padding:'0.7rem 1rem',borderBottom:'1px solid var(--border)',background:'linear-gradient(180deg, rgba(248,250,252,0.98), rgba(244,246,250,0.98))',display:'flex',flexWrap:'wrap',gap:'0.6rem',alignItems:'flex-end'}}>
           {controls}
         </div>
       )}
-      <div style={{padding:'1rem 0.5rem 0.75rem',height}}>
+      <div style={{padding:'0.85rem 0.85rem 0.95rem',height}}>
         {children}
       </div>
     </div>
@@ -158,8 +158,8 @@ export default function HumidityPage() {
   return (
     <div className="page animate-fade">
       <div className="page-header">
-        <h1 className="page-title">Humidity</h1>
-        <p className="page-subtitle">Real-time monitoring & historical data</p>
+        <h1 className="page-title">Indoor climate</h1>
+        <p className="page-subtitle">Humidity monitoring, comfort range, and historical trends</p>
       </div>
 
       <div style={{display:'flex',flexDirection:'column',gap:'1rem'}}>
@@ -222,13 +222,13 @@ export default function HumidityPage() {
         <ChartCard title="Today's readings" icon={Droplets} badge="Live">
           {todayData.length===0 ? <div className="empty-state" style={{padding:'1.5rem'}}><Droplets size={20}/><div>No data yet today</div></div> : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={todayData} margin={{left:-16,right:8}}>
-                <defs><linearGradient id="ght" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.18}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false}/>
-                <XAxis dataKey="hour" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false}/>
-                <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36}/>
+              <AreaChart data={todayData} margin={{top:8,right:12,left:0,bottom:0}}>
+                <defs><linearGradient id="ght" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.2}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
+                <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false}/>
+                <XAxis dataKey="hour" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false} tickMargin={10}/>
+                <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36} tickMargin={8}/>
                 <Tooltip {...TT} formatter={v=>[v!=null?`${v}%`:'N/A','Humidity']}/>
-                <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ght)" strokeWidth={2} dot={false} activeDot={{r:4,fill:'var(--card-hum-accent)',strokeWidth:0}} connectNulls/>
+                <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ght)" strokeWidth={2.3} dot={false} activeDot={{r:4,fill:'var(--card-hum-accent)',strokeWidth:0}} connectNulls/>
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -236,23 +236,23 @@ export default function HumidityPage() {
 
         <ChartCard title="Monthly average" icon={TrendingUp} badge={`${year}`}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyData} margin={{left:-16,right:8}}>
-              <defs><linearGradient id="ghm" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.12}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false}/>
-              <XAxis dataKey="month" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36}/>
+            <AreaChart data={monthlyData} margin={{top:8,right:12,left:0,bottom:0}}>
+              <defs><linearGradient id="ghm" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.15}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false}/>
+              <XAxis dataKey="month" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false} tickMargin={10}/>
+              <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36} tickMargin={8}/>
               <Tooltip {...TT} formatter={v=>[v!=null?`${v}%`:'N/A',`Avg ${year}`]}/>
-              <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ghm)" strokeWidth={2} dot={false} activeDot={{r:4}} connectNulls/>
+              <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ghm)" strokeWidth={2.3} dot={false} activeDot={{r:4}} connectNulls/>
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard title="Daily breakdown" icon={CalendarDays} controls={DailyControls}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyData.map((d,i)=>({...d,compare:compareData?compareData[i]:undefined}))} margin={{left:-16,right:8}} barGap={1}>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false}/>
-              <XAxis dataKey="day" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36}/>
+            <BarChart data={dailyData.map((d,i)=>({...d,compare:compareData?compareData[i]:undefined}))} margin={{top:8,right:12,left:0,bottom:0}} barGap={1}>
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false}/>
+              <XAxis dataKey="day" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false} tickMargin={10}/>
+              <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36} tickMargin={8}/>
               <Tooltip {...TT}/>
               {compareData && <Legend wrapperStyle={{fontFamily:'var(--font-mono)',fontSize:'0.65rem',color:'var(--text-secondary)'}}/>}
               <Bar dataKey="hum" name={`${MONTHS[month-1].substring(0,3)} ${year}`} fill="var(--card-hum-accent)" radius={[3,3,0,0]} maxBarSize={14}/>
@@ -266,7 +266,7 @@ export default function HumidityPage() {
             {[{label:'Start',val:startDate,set:setStartDate},{label:'End',val:endDate,set:setEndDate}].map(f=>(
               <div key={f.label} className="field" style={{flex:1,minWidth:150}}>
                 <label className="field-label">{f.label}</label>
-                <input type="datetime-local" className="input input--mono" style={{padding:'0.42rem 0.6rem',fontSize:'0.78rem'}} value={f.val} onChange={e=>f.set(e.target.value)}/>
+                <input type="datetime-local" className="input input--mono" style={{padding:'0.42rem 0.6rem',fontSize:'0.78rem',borderRadius:12}} value={f.val} onChange={e=>f.set(e.target.value)}/>
               </div>
             ))}
             <button className="btn btn--primary btn--sm" style={{alignSelf:'flex-end'}} onClick={fetchRange} disabled={loadingRange}>
@@ -278,13 +278,13 @@ export default function HumidityPage() {
             <div className="empty-state" style={{padding:'1.5rem'}}><LineChartIcon size={20}/><div>Pick a date range above</div></div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={rangeData} margin={{left:-16,right:8}}>
-                <defs><linearGradient id="ghr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.15}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false}/>
-                <XAxis dataKey="time" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
-                <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36}/>
+              <AreaChart data={rangeData} margin={{top:8,right:12,left:0,bottom:0}}>
+                  <defs><linearGradient id="ghr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.16}/><stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false}/>
+                  <XAxis dataKey="time" tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} axisLine={false} tickLine={false} interval="preserveStartEnd" tickMargin={10}/>
+                  <YAxis tick={{fontFamily:'var(--font-mono)',fontSize:9,fill:'var(--text-muted)'}} unit="%" axisLine={false} tickLine={false} width={36} tickMargin={8}/>
                 <Tooltip {...TT} formatter={v=>[`${v}%`,'Avg Humidity']}/>
-                <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ghr)" strokeWidth={2} dot={false} connectNulls/>
+                  <Area type="monotone" dataKey="hum" stroke="var(--card-hum-accent)" fill="url(#ghr)" strokeWidth={2.3} dot={false} connectNulls/>
               </AreaChart>
             </ResponsiveContainer>
           )}

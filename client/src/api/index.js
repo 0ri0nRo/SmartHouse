@@ -24,7 +24,36 @@ async function post(path, body) {
 
 // ── Sensors ───────────────────────────────────────────────
 export const api = {
+  // Legacy climate summary APIs used by TemperaturePage/HumidityPage/HomePage
   getSensors:          ()         => get('/api_sensors'),
+
+  // Sensor catalog APIs used by Floorplan and registry CRUD
+  getSensorCatalog:    ()         => get('/api/sensors'),
+  getSensorsSummary:   ()         => get('/api/sensors/summary'),
+  getSensorById:       (id)       => get(`/api/sensors/${id}`),
+  getSensorHistory:    (id, hours = 24, limit = 240) => get(`/api/sensors/${id}/history?hours=${hours}&limit=${limit}`),
+  createSensor:        (body)     => post('/api/sensors', body),
+  updateSensor:        (id, body) => fetch(`${BASE}/api/sensors/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`PUT /api/sensors/${id} → ${res.status}`)
+    return res.json()
+  }),
+  deleteSensor:        (id)       => fetch(`${BASE}/api/sensors/${id}`, { method: 'DELETE' }).then(async (res) => {
+    if (!res.ok) throw new Error(`DELETE /api/sensors/${id} → ${res.status}`)
+    return res.json()
+  }),
+  updateSensorPosition:(id, body)  => fetch(`${BASE}/api/sensors/${id}/position`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`PATCH /api/sensors/${id}/position → ${res.status}`)
+    return res.json()
+  }),
+  getZigbeeLatest:     ()         => get('/api/zigbee-sensors/latest'),
 
   // Temperature
   getTodayTemp:        ()         => get('/api/today_temperature'),
@@ -55,7 +84,9 @@ export const api = {
 
   // Air quality
   getAirQuality:       ()         => get('/api/last_air_quality_today'),
+  getLastAirQuality:   ()         => get('/api/last_air_quality'),
   getAirQualityHistory:()         => get('/api/air_quality/history'),
+  getGasToday:         ()         => get('/api/gas_concentration_today'),
 
   // Security & alarm
   getAlarm:            ()         => get('/security/alarm'),
