@@ -89,16 +89,17 @@ function WeekPill({ dateStr, count, active, onClick }) {
         padding: '0.5rem 0.6rem',
         borderRadius: 'var(--radius-md)',
         border: active
-          ? '1px solid var(--accent)'
+          ? '1px solid color-mix(in srgb, var(--accent) 60%, transparent)'
           : '1px solid var(--border)',
         background: active
-          ? 'var(--accent-light)'
+          ? 'color-mix(in srgb, var(--accent) 10%, var(--bg-surface))'
           : 'var(--bg-surface-2)',
         cursor: 'pointer',
         transition: 'all var(--transition)',
         minWidth: 44,
         flexShrink: 0,
         outline: 'none',
+        boxShadow: active ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
       }}
     >
       <span style={{
@@ -197,12 +198,13 @@ function EventCard({ event, compact }) {
 
   return (
     <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border)',
+      background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
+      border: '1px solid color-mix(in srgb, var(--border) 88%, transparent)',
       borderLeft: `3px solid ${color}`,
       borderRadius: 'var(--radius-md)',
       padding: '0.85rem 1rem',
       transition: 'border-color var(--transition)',
+      boxShadow: '0 10px 24px rgba(0,0,0,0.06)',
     }}>
       {/* top row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
@@ -521,6 +523,11 @@ export default function CalendarPage() {
         flexWrap: 'wrap',
         gap: '0.75rem',
         marginBottom: '1.5rem',
+        background: 'linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 94%, transparent), color-mix(in srgb, var(--bg-surface-2) 96%, transparent))',
+        border: '1px solid color-mix(in srgb, var(--border) 82%, transparent)',
+        borderRadius: 20,
+        padding: '1rem 1.1rem',
+        boxShadow: '0 14px 30px rgba(0,0,0,0.05)',
       }}>
         <div>
           <h1 className="page-title">Cale<span style={{ color: 'var(--accent)' }}>ndar</span></h1>
@@ -554,7 +561,8 @@ export default function CalendarPage() {
             display: 'flex',
             gap: '0.4rem',
             overflowX: 'auto',
-            borderBottom: '1px solid var(--border)',
+            borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
+            background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
           }}>
             {dates.map(d => (
               <WeekPill
@@ -570,11 +578,12 @@ export default function CalendarPage() {
           {/* Stats strip */}
           <div style={{
             padding: '0.75rem 1rem',
-            background: 'var(--bg-surface-2)',
+            background: 'linear-gradient(180deg, var(--bg-surface-2), color-mix(in srgb, var(--bg-surface-2) 92%, var(--bg-surface)))',
             display: 'flex',
             gap: '1.5rem',
             flexWrap: 'wrap',
             overflowX: 'auto',
+            borderTop: '1px solid color-mix(in srgb, var(--border) 72%, transparent)',
           }}>
             {[
               ['Total', `${total} events`],
@@ -639,6 +648,8 @@ export default function CalendarPage() {
                     fontSize: '0.72rem',
                     width: 150,
                     padding: `0 ${search ? '26px' : '10px'} 0 26px`,
+                    background: 'var(--bg-surface-2)',
+                    borderColor: 'color-mix(in srgb, var(--border) 85%, transparent)',
                   }}
                 />
                 {search && (
@@ -698,8 +709,8 @@ export default function CalendarPage() {
             <div style={{
               margin: '0.75rem 1rem',
               padding: '0.75rem 1rem',
-              background: 'rgba(255,59,48,0.08)',
-              border: '1px solid var(--color-danger)',
+              background: 'color-mix(in srgb, var(--color-danger) 8%, var(--bg-surface))',
+              border: '1px solid color-mix(in srgb, var(--color-danger) 25%, transparent)',
               borderRadius: 'var(--radius-md)',
               fontSize: '0.8rem',
               color: 'var(--color-danger)',
@@ -716,8 +727,8 @@ export default function CalendarPage() {
               fontSize: '0.72rem',
               color: 'var(--text-muted)',
               fontFamily: 'var(--font-mono)',
-              borderBottom: '1px solid var(--border)',
-              background: 'var(--bg-surface-2)',
+              borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
+              background: 'linear-gradient(180deg, var(--bg-surface-2), var(--bg-surface))',
             }}>
               {Object.values(filteredDays).flat().length} result{Object.values(filteredDays).flat().length !== 1 ? 's' : ''} for "{search}"
             </div>
@@ -730,8 +741,8 @@ export default function CalendarPage() {
               fontSize: '0.72rem',
               color: 'var(--accent)',
               fontFamily: 'var(--font-mono)',
-              borderBottom: '1px solid var(--border)',
-              background: 'var(--accent-light)',
+              borderBottom: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)',
+              background: 'color-mix(in srgb, var(--accent) 10%, var(--bg-surface))',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
@@ -805,7 +816,7 @@ export default function CalendarPage() {
                 <div key={i} style={{
                   height: 52,
                   borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-surface-2)',
+                  background: 'linear-gradient(180deg, var(--bg-surface-2), var(--bg-surface))',
                   animation: 'pulse 1.4s ease-in-out infinite',
                   animationDelay: `${i * 0.1}s`,
                   width: `${w}%`,

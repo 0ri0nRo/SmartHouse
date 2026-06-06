@@ -125,7 +125,7 @@ function BottomNav({
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-      background: 'var(--bg-surface)',
+        background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
       borderTop: '1px solid var(--border)',
       display: 'flex',
       paddingBottom: 'env(safe-area-inset-bottom)',

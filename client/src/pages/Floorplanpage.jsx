@@ -580,9 +580,9 @@ function FpGridLayout({ layout, setLayout, layoutEditMode, children }) {
 function FpWidgetShell({ item, layoutEditMode, onDragStart, onResizeStart, hidden, children }) {
   if (hidden) return null
   return (
-    <div style={{ gridColumn: `${item.col + 1} / span ${item.colSpan}`, gridRow: `${item.row + 1} / span ${item.rowSpan}`, position: 'relative', borderRadius: 16, overflow: 'hidden', outline: layoutEditMode ? '2px dashed var(--accent)' : 'none', outlineOffset: 3, touchAction: layoutEditMode ? 'none' : 'auto' }}>
+    <div style={{ gridColumn: `${item.col + 1} / span ${item.colSpan}`, gridRow: `${item.row + 1} / span ${item.rowSpan}`, position: 'relative', borderRadius: 22, overflow: 'hidden', outline: layoutEditMode ? '2px dashed var(--accent)' : 'none', outlineOffset: 3, touchAction: layoutEditMode ? 'none' : 'auto', background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
       {layoutEditMode && (
-        <div onPointerDown={onDragStart} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 32, zIndex: 30, cursor: 'grab', background: 'rgba(99,102,241,0.12)', borderBottom: '1px dashed rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backdropFilter: 'blur(4px)' }}>
+        <div onPointerDown={onDragStart} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 32, zIndex: 30, cursor: 'grab', background: 'rgba(59,130,246,0.08)', borderBottom: '1px dashed rgba(59,130,246,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backdropFilter: 'blur(6px)' }}>
           <GripVertical size={13} style={{ color: 'var(--accent)' }} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.60rem', color: 'var(--accent)', fontWeight: 700 }}>{FP_WIDGET_LABELS[item.id] || item.id}</span>
         </div>
@@ -599,12 +599,12 @@ function FpWidgetShell({ item, layoutEditMode, onDragStart, onResizeStart, hidde
 
 function FpVisibilityPanel({ hidden, onToggle }) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', padding: '0.6rem 1rem', marginBottom: '0.75rem', borderRadius: 10, background: 'rgba(99,102,241,0.06)', border: '1px dashed rgba(99,102,241,0.30)' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', padding: '0.6rem 1rem', marginBottom: '0.75rem', borderRadius: 16, background: 'rgba(59,130,246,0.06)', border: '1px dashed rgba(59,130,246,0.22)' }}>
       <span style={{ fontSize: '0.60rem', fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.8px', width: '100%', marginBottom: 2 }}>Widget Visibility</span>
       {Object.entries(FP_WIDGET_LABELS).map(([id, label]) => {
         const vis = !hidden.has(id)
         return (
-          <button key={id} onClick={() => onToggle(id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: vis ? 'rgba(99,102,241,0.14)' : T.surface2, border: `1px solid ${vis ? 'rgba(99,102,241,0.35)' : T.border}`, color: vis ? T.accent : T.textMuted, fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.14s' }}>
+          <button key={id} onClick={() => onToggle(id)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: vis ? 'rgba(59,130,246,0.12)' : T.surface2, border: `1px solid ${vis ? 'rgba(59,130,246,0.26)' : T.border}`, color: vis ? T.accent : T.textMuted, fontSize: '0.65rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.14s' }}>
             <span style={{ fontSize: '0.5rem' }}>{vis ? '●' : '○'}</span> {label}
           </button>
         )
@@ -678,8 +678,8 @@ function ClimateTrendCard({ compact }) {
       <div style={{ padding: compact ? '0.65rem 1rem' : '0.75rem 1rem', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Thermometer size={13} style={{ color: '#f97316' }} />
-            <Droplets size={13} style={{ color: '#38bdf8' }} />
+            <Thermometer size={13} style={{ color: 'var(--card-temp-accent)' }} />
+            <Droplets size={13} style={{ color: 'var(--card-hum-accent)' }} />
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.textPrimary }}>Climate trend</div>
@@ -689,11 +689,11 @@ function ClimateTrendCard({ compact }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
             <span style={{ fontSize: '0.55rem', color: T.textMuted, textTransform: 'uppercase', fontWeight: 700 }}>Temp</span>
-            <span style={{ fontFamily: T.mono, fontSize: '0.92rem', fontWeight: 700, color: '#f97316' }}>{tempLabel}</span>
+            <span style={{ fontFamily: T.mono, fontSize: '0.92rem', fontWeight: 700, color: 'var(--card-temp-accent)' }}>{tempLabel}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
             <span style={{ fontSize: '0.55rem', color: T.textMuted, textTransform: 'uppercase', fontWeight: 700 }}>Hum</span>
-            <span style={{ fontFamily: T.mono, fontSize: '0.92rem', fontWeight: 700, color: '#38bdf8' }}>{humLabel}</span>
+            <span style={{ fontFamily: T.mono, fontSize: '0.92rem', fontWeight: 700, color: 'var(--card-hum-accent)' }}>{humLabel}</span>
           </div>
         </div>
       </div>
@@ -721,15 +721,15 @@ function ClimateTrendCard({ compact }) {
             <AreaChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="climateTemp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--card-temp-accent)" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="var(--card-temp-accent)" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="climateHum" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                  <stop offset="5%" stopColor="var(--card-hum-accent)" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="var(--card-hum-accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(90,115,150,0.14)" vertical={false} />
               <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickMargin={10} />
               <YAxis yAxisId="temp" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} tickMargin={8} unit="°" domain={['auto', 'auto']} />
               <YAxis yAxisId="hum" orientation="right" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={34} tickMargin={8} unit="%" domain={['auto', 'auto']} />
@@ -738,8 +738,8 @@ function ClimateTrendCard({ compact }) {
                 return [name === 'temp' ? `${value}°C` : `${value}%`, name === 'temp' ? 'Temperature' : 'Humidity']
               }} />
               <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }} />
-              <Area yAxisId="temp" type="monotone" dataKey="temp" name="Temperature" stroke="#f97316" fill="url(#climateTemp)" strokeWidth={2.2} dot={false} activeDot={{ r: 4, fill: '#f97316', strokeWidth: 0 }} connectNulls />
-              <Area yAxisId="hum" type="monotone" dataKey="hum" name="Humidity" stroke="#38bdf8" fill="url(#climateHum)" strokeWidth={2.2} dot={false} activeDot={{ r: 4, fill: '#38bdf8', strokeWidth: 0 }} connectNulls />
+              <Area yAxisId="temp" type="monotone" dataKey="temp" name="Temperature" stroke="var(--card-temp-accent)" fill="url(#climateTemp)" strokeWidth={2.2} dot={false} activeDot={{ r: 4, fill: 'var(--card-temp-accent)', strokeWidth: 0 }} connectNulls />
+              <Area yAxisId="hum" type="monotone" dataKey="hum" name="Humidity" stroke="var(--card-hum-accent)" fill="url(#climateHum)" strokeWidth={2.2} dot={false} activeDot={{ r: 4, fill: 'var(--card-hum-accent)', strokeWidth: 0 }} connectNulls />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -1988,7 +1988,7 @@ export default function FloorplanPage() {
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', padding: '1.25rem 0 1rem', borderBottom: `1px solid ${T.border}`, marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: `linear-gradient(135deg, ${T.accent}18, rgba(245,158,11,0.18))`, border: `1px solid ${T.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '12px', background: 'linear-gradient(135deg, rgba(59,130,246,0.16), rgba(20,184,166,0.14))', border: '1px solid rgba(59,130,246,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Activity size={16} style={{ color: T.accent }} />
           </div>
           <div>
@@ -1999,7 +1999,7 @@ export default function FloorplanPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           {alerts.length > 0 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '3px 8px', borderRadius: T.radiusFull, fontSize: '0.62rem', fontWeight: 700, color: '#dc2626', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '3px 8px', borderRadius: T.radiusFull, fontSize: '0.62rem', fontWeight: 700, color: 'var(--color-danger)', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)' }}>
               <AlertTriangle size={10} /> {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
             </span>
           )}

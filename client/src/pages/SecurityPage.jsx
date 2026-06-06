@@ -76,11 +76,12 @@ function BottomNav({ active, onChange, alertCount }) {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 110,
-      background: 'var(--bg-surface)',
-      borderTop: '1px solid var(--border)',
+      background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
+      borderTop: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
       display: 'flex',
       paddingBottom: 'env(safe-area-inset-bottom)',
-      backdropFilter: 'blur(20px)',
+      backdropFilter: 'blur(18px)',
+      boxShadow: '0 -10px 30px rgba(0,0,0,0.10)',
     }}>
       {MAIN_TABS.map(tab => {
         const Icon = tab.icon
@@ -139,10 +140,13 @@ function DesktopTabBar({ active, onChange }) {
   return (
     <div style={{
       display: 'flex', gap: '0.15rem',
-      borderBottom: '1px solid var(--border)',
+      borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
       marginBottom: '1.5rem',
       overflowX: 'auto', WebkitOverflowScrolling: 'touch',
       scrollbarWidth: 'none', msOverflowStyle: 'none',
+      background: 'var(--bg-surface)',
+      padding: '0.2rem 0.2rem 0 0.2rem',
+      borderRadius: '16px 16px 0 0',
     }}>
       {MAIN_TABS.map(t => {
         const Icon = t.icon
@@ -321,11 +325,11 @@ function SettingsSheet({
         />
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
-          background: 'var(--bg-surface)',
+          background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
           borderTopLeftRadius: 24, borderTopRightRadius: 24,
           maxHeight: '85vh',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.35)',
+          boxShadow: '0 -12px 40px rgba(0,0,0,0.22)',
           animation: 'slideUp 0.28s cubic-bezier(.32,1.1,.42,1)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8, flexShrink: 0 }}>
@@ -474,7 +478,7 @@ function AlertPanel({ alerts, onClear, onClose }) {
     <div style={{
       position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 360,
       zIndex: 200, background: 'var(--bg-surface)', borderLeft: '1px solid var(--border)',
-      boxShadow: '-8px 0 32px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column',
+      boxShadow: '-8px 0 32px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', fontWeight: 600 }}>New Devices</span>
@@ -1131,7 +1135,7 @@ export default function SecurityPage() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '12px 16px',
-          background: 'var(--bg-surface)',
+          background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
           borderBottom: '1px solid var(--border)',
           position: 'sticky', top: 0, zIndex: 50,
           backdropFilter: 'blur(20px)',
@@ -1150,7 +1154,7 @@ export default function SecurityPage() {
                 Secu<span style={{ color: 'var(--accent)' }}>rity</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite', display: 'inline-block' }} />
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-success)', animation: 'pulse 2s infinite', display: 'inline-block' }} />
                 {online}/{devices.length} online · 30s
               </div>
             </div>
@@ -1215,20 +1219,22 @@ export default function SecurityPage() {
           </div>
         </div>
 
-        {/* Filter chip if onlyOnline is active */}
         {onlyOnline && (
           <div style={{ padding: '8px 12px 0', display: 'flex', gap: 6 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '4px 10px', borderRadius: 99, fontSize: '0.65rem', fontWeight: 600,
-              background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.25)',
-              color: '#22c55e',
+              background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-success) 25%, transparent)',
+              color: 'var(--color-success)',
             }}>
               <Wifi size={11} /> Online only
               <button
                 onClick={() => setOnlyOnline(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', padding: 0, display: 'flex', marginLeft: 2 }}
-              ><X size={10} /></button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-success)', padding: 0, display: 'flex', marginLeft: 2 }}
+              >
+                <X size={10} />
+              </button>
             </span>
           </div>
         )}
@@ -1286,11 +1292,11 @@ export default function SecurityPage() {
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
               padding: '3px 8px', borderRadius: 99, fontSize: '0.65rem', fontWeight: 600,
-              background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.25)',
-              color: '#22c55e',
+              background: 'color-mix(in srgb, var(--color-success) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 25%, transparent)',
+              color: 'var(--color-success)',
             }}>
               <Filter size={10} /> Online only
-              <button onClick={() => setOnlyOnline(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#22c55e', padding: 0, display: 'flex', marginLeft: 1 }}><X size={9} /></button>
+              <button onClick={() => setOnlyOnline(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-success)', padding: 0, display: 'flex', marginLeft: 1 }}><X size={9} /></button>
             </span>
           )}
           <span className="badge badge--success">

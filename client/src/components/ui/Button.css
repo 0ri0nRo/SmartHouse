@@ -7,13 +7,12 @@
   font-weight: 600;
   padding: 10px 18px;
   cursor: pointer;
-  border: 1px solid var(--border-strong);
-  transition: all 0.15s ease;
+  border: 1px solid var(--ha-border-2);
+  transition: all var(--t-fast);
   white-space: nowrap;
   font-family: var(--font-body);
-  background: rgba(16, 25, 46, 0.60);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--ha-card);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn:disabled {
@@ -22,42 +21,40 @@
 }
 
 .btn-default {
-  background: rgba(21, 31, 55, 0.70);
-  color: var(--text-secondary);
-  border-color: var(--border-strong);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  background: var(--ha-card-2);
+  color: var(--ha-text-2);
+  border-color: var(--ha-border-2);
 }
 
 .btn-default:hover:not(:disabled) {
-  background: rgba(29, 42, 70, 0.80);
-  color: var(--text-primary);
-  border-color: var(--border-glow);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: var(--ha-card-3);
+  color: var(--ha-text);
+  border-color: var(--ha-border-3);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, rgba(122, 167, 255, 0.20) 0%, rgba(122, 167, 255, 0.12) 100%);
-  color: #7aa7ff;
-  border-color: var(--accent-glow);
+  background: linear-gradient(135deg, var(--ha-blue) 0%, var(--ha-teal) 100%);
+  color: var(--ha-text-on-accent);
+  border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 0 12px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.18);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(122, 167, 255, 0.28) 0%, rgba(122, 167, 255, 0.18) 100%);
-  color: #96b9ff;
-  border-color: var(--accent-glow);
-  box-shadow: 0 0 20px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, var(--ha-blue-hover) 0%, var(--ha-teal-hover) 100%);
+  color: var(--ha-text-on-accent);
+  box-shadow: 0 14px 28px rgba(14, 165, 233, 0.22);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--ha-text-2);
   border-color: transparent;
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(29, 42, 70, 0.50);
-  color: var(--text-primary);
-  border-color: var(--border-strong);
+  background: var(--ha-card-2);
+  color: var(--ha-text);
+  border-color: var(--ha-border);
 }

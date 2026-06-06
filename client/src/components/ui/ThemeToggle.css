@@ -1,7 +1,7 @@
 .theme-toggle-btn {
-  background: var(--bg-offset);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
+  background: var(--ha-card-2);
+  border: 1px solid var(--ha-border);
+  color: var(--ha-text-2);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -9,11 +9,11 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-standard);
+  transition: all var(--t-fast);
 }
 
 .theme-toggle-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-hover);
-  color: var(--text-primary);
+  background: var(--ha-blue-light);
+  border-color: var(--ha-blue);
+  color: var(--ha-blue);
 }

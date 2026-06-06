@@ -259,8 +259,9 @@ function EmptyState({ icon: Icon, label }) {
 function MetricPill({ label, value, color, sub }) {
   return (
     <div style={{
-      background: 'var(--bg-surface)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '0.75rem 1rem', flex: '1 1 120px', minWidth: 0,
+      background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
+      borderRadius: 12, padding: '0.75rem 1rem', flex: '1 1 120px', minWidth: 0,
+      boxShadow: '0 10px 22px rgba(0,0,0,0.05)',
     }}>
       <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', fontWeight: 800, color: color || 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
@@ -633,18 +634,18 @@ function WidgetShell({ id, title, icon: Icon, size, onToggleSize, onDragStart, o
       onDrop={e => { e.preventDefault(); setIsDragOver(false); onDrop(id) }}
       style={{
         gridColumn: size === 'full' ? '1 / -1' : 'span 1',
-        background: 'var(--bg-surface)',
-        border: `1px solid ${isDragOver ? 'var(--accent)' : 'var(--border)'}`,
-        borderRadius: 12,
+        background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
+        border: `1px solid ${isDragOver ? 'color-mix(in srgb, var(--accent) 65%, transparent)' : 'color-mix(in srgb, var(--border) 85%, transparent)'}`,
+        borderRadius: 14,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         transition: 'border-color 0.15s, box-shadow 0.15s',
-        boxShadow: isDragOver ? '0 0 0 2px var(--accent)20' : 'none',
+        boxShadow: isDragOver ? '0 0 0 2px var(--accent)20, 0 14px 28px rgba(0,0,0,0.08)' : '0 10px 24px rgba(0,0,0,0.05)',
       }}
     >
       {/* Widget header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'var(--bg-surface-2)', borderBottom: '1px solid var(--border)', flexShrink: 0, userSelect: 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'linear-gradient(180deg, var(--bg-surface-2), color-mix(in srgb, var(--bg-surface-2) 90%, var(--bg-surface)))', borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', flexShrink: 0, userSelect: 'none' }}>
         {/* Drag handle */}
         <div style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', flexShrink: 0, opacity: 0.5 }}
           onMouseDown={e => e.currentTarget.style.cursor = 'grabbing'}
@@ -653,7 +654,7 @@ function WidgetShell({ id, title, icon: Icon, size, onToggleSize, onDragStart, o
         </div>
 
         {Icon && (
-          <div style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--card-air-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, background: 'color-mix(in srgb, var(--card-air-accent) 12%, var(--bg-surface))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon size={11} style={{ color: 'var(--card-air-accent)' }} />
           </div>
         )}
@@ -665,7 +666,7 @@ function WidgetShell({ id, title, icon: Icon, size, onToggleSize, onDragStart, o
         {/* Size toggle */}
         <button onClick={() => onToggleSize(id)}
           title={size === 'full' ? 'Make half-width' : 'Make full-width'}
-          style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.12s' }}
+          style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.12s' }}
           onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
           onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)';   e.currentTarget.style.borderColor = 'var(--border)' }}>
           {size === 'full' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
@@ -690,7 +691,7 @@ function LayoutManagerPanel({ layout, onToggleVisible, onReset, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)' }} />
-      <div style={{ position: 'relative', zIndex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: '16px 0 0 16px', padding: '1.25rem', width: 280, maxHeight: '80vh', overflowY: 'auto', boxShadow: '-8px 0 32px rgba(0,0,0,0.2)', marginTop: 'auto' }}>
+      <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', borderRadius: '16px 0 0 16px', padding: '1.25rem', width: 280, maxHeight: '80vh', overflowY: 'auto', boxShadow: '-8px 0 32px rgba(0,0,0,0.16)', marginTop: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <div>
             <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)' }}>Layout</div>
@@ -706,7 +707,7 @@ function LayoutManagerPanel({ layout, onToggleVisible, onReset, onClose }) {
             const def = defMap[w.id]
             if (!def) return null
             return (
-              <div key={w.id} onClick={() => onToggleVisible(w.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: `1px solid ${w.visible ? 'var(--border)' : 'var(--border)'}`, background: w.visible ? 'var(--bg-surface-2)' : 'transparent', cursor: 'pointer', opacity: w.visible ? 1 : 0.45, transition: 'all 0.15s' }}>
+              <div key={w.id} onClick={() => onToggleVisible(w.id)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: `1px solid ${w.visible ? 'color-mix(in srgb, var(--border) 85%, transparent)' : 'color-mix(in srgb, var(--border) 70%, transparent)'}`, background: w.visible ? 'var(--bg-surface-2)' : 'transparent', cursor: 'pointer', opacity: w.visible ? 1 : 0.45, transition: 'all 0.15s' }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: w.visible ? 'var(--color-success)' : 'var(--text-muted)', flexShrink: 0, transition: 'background 0.15s' }} />
                 <span style={{ flex: 1, fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>{def.title}</span>
                 <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{w.size}</span>
@@ -813,16 +814,16 @@ function WidgetGrid({ layout, onToggleSize, onReorder, data, histMonth, histYear
                 onDrop={e => { e.preventDefault(); handleDrop(w.id) }}
                 style={{
                   gridColumn: w.size === 'full' ? '1 / -1' : 'span 1',
-                  background: 'var(--bg-surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 12,
+                  background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))',
+                  border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)',
+                  borderRadius: 14,
                   overflow: 'hidden',
                 }}
               >
                 {/* Minimal header for range-chart */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'var(--bg-surface-2)', borderBottom: '1px solid var(--border)', userSelect: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'linear-gradient(180deg, var(--bg-surface-2), color-mix(in srgb, var(--bg-surface-2) 90%, var(--bg-surface)))', borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', userSelect: 'none' }}>
                   <div style={{ cursor: 'grab', color: 'var(--text-muted)', opacity: 0.5 }}><GripVertical size={13} /></div>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--card-air-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrendingUp size={11} style={{ color: 'var(--card-air-accent)' }} /></div>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: 'color-mix(in srgb, var(--card-air-accent) 12%, var(--bg-surface))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrendingUp size={11} style={{ color: 'var(--card-air-accent)' }} /></div>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>AQI Range</span>
                   <button onClick={() => onToggleSize(w.id)} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-surface)', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {w.size === 'full' ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
@@ -853,14 +854,14 @@ function BottomSheet({ open, onClose, title, children, maxHeight = '80vh' }) {
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: 'var(--bg-surface)', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight, display: 'flex', flexDirection: 'column', boxShadow: '0 -8px 40px rgba(0,0,0,0.35)', animation: 'slideUp 0.28s cubic-bezier(.32,1.1,.42,1)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201, background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight, display: 'flex', flexDirection: 'column', boxShadow: '0 -12px 40px rgba(0,0,0,0.22)', animation: 'slideUp 0.28s cubic-bezier(.32,1.1,.42,1)' }}>
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8, flexShrink: 0 }}>
           <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(148,163,184,0.35)' }} />
         </div>
         {title && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px', flexShrink: 0, borderBottom: '1px solid color-mix(in srgb, var(--border) 85%, transparent)' }}>
             <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</span>
-            <button onClick={onClose} style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 7px', cursor: 'pointer', color: 'var(--text-secondary)', lineHeight: 1 }}><X size={14} /></button>
+            <button onClick={onClose} style={{ background: 'var(--bg-surface-2)', border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', borderRadius: 8, padding: '5px 7px', cursor: 'pointer', color: 'var(--text-secondary)', lineHeight: 1 }}><X size={14} /></button>
           </div>
         )}
         <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{children}</div>
@@ -878,7 +879,7 @@ const NAV_TABS = [
 
 function BottomNav({ active, onChange }) {
   return (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--bg-surface)', borderTop: '1px solid var(--border)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)', backdropFilter: 'blur(20px)' }}>
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', borderTop: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)', backdropFilter: 'blur(18px)', boxShadow: '0 -10px 30px rgba(0,0,0,0.10)' }}>
       {NAV_TABS.map(tab => {
         const Icon = tab.icon
         const isActive = active === tab.id
@@ -931,7 +932,7 @@ function MobilePeriodNav({ month, year, onChangeMonth, onChangeYear, onApply }) 
 // Mobile metric card
 function MobileMetricCard({ label, value, sub, color }) {
   return (
-    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+    <div style={{ background: 'linear-gradient(180deg, var(--bg-surface), var(--bg-surface-2))', border: '1px solid color-mix(in srgb, var(--border) 85%, transparent)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 10px 22px rgba(0,0,0,0.05)' }}>
       <div style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1.6rem', fontWeight: 800, color: color || 'var(--text-primary)', lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
