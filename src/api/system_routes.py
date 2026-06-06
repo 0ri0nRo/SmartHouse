@@ -670,30 +670,17 @@ _nextcloud_state = {
 @system_bp.route('/api/system/nextcloud_update/start', methods=['POST'])
 @handle_db_error
 def api_nextcloud_update_start():
-    """
-    Aggiornamento Nextcloud via Docker Compose in 8 step con tracking avanzamento:
-      1. Pre-check (docker running, container raggiungibile)
-      2. Maintenance mode ON
-      3. Backup database (MariaDB dump → /tmp)
-      4. Backup volume dati (tar.gz)
-      5. Pull nuove immagini
-      6. Recreate container (up -d --force-recreate)
-      7. occ upgrade
-      8. Maintenance mode OFF + status check
-    In caso di errore ai passi 3-8 il maintenance mode viene riattivato/lasciato
-    attivo e viene riportato l'errore senza forzare uno stato inconsistente.
-    """
     global _nextcloud_state
 
     if _nextcloud_state['running']:
         return jsonify({'error': 'Nextcloud update already running'}), 409
 
     data = request.get_json(force=True, silent=True) or {}
-    compose_dir    = data.get('compose_dir', '~/nextcloud-docker')
-    db_service     = data.get('db_service', 'db')
-    app_service    = data.get('app_service', 'nextcloud')
-    db_root_pass   = data.get('db_root_pass', 'root_password')
-    backup_dir     = data.get('backup_dir', '/tmp/nextcloud-backups')
+    compose_dir  = data.get('compose_dir', '~/nextcloud-docker')
+    db_service   = data.get('db_service',  'db')
+    app_service  = data.get('app_service', 'nextcloud')
+    db_root_pass = data.get('db_root_pass', 'root_password')
+    backup_dir   = data.get('backup_dir',  '/tmp/nextcloud-backups')
 
     _nextcloud_state = {
         'running':     True,
@@ -718,7 +705,6 @@ def api_nextcloud_update_start():
         _nextcloud_state['progress'] = int(n / _nextcloud_state['total_steps'] * 100)
 
     def run_cmd(cmd: str, timeout: int = 120, critical: bool = True):
-        """Esegue un comando SSH, logga output e rilancia l'eccezione se critical."""
         log(f'$ {cmd}')
         try:
             stdout, stderr, rc = _ssh_exec_host(cmd, timeout=timeout)
@@ -745,17 +731,54 @@ def api_nextcloud_update_start():
             critical=False,
         )
 
+    def get_image_version() -> str:
+        out, _ = run_cmd(
+            f'docker inspect nextcloud:latest --format "{{{{index .Config.Env}}}}" 2>/dev/null '
+            f'| tr " " "\\n" | grep NEXTCLOUD_VERSION | cut -d= -f2',
+            critical=False,
+        )
+        return out.strip() or 'n/a'
+
+    def get_data_version() -> str:
+        out, _ = run_cmd(
+            f'cd {compose_dir} && docker compose exec -T {app_service} '
+            f'php /var/www/html/occ config:system:get version 2>/dev/null',
+            critical=False,
+        )
+        return out.strip() or 'n/a'
+
+    def align_version_php():
+        """
+        Copy version.php from the image into the volume after occ upgrade.
+
+        occ upgrade may increment the patch version in the data
+        (e.g. 33.0.5 → 33.0.5.1) while the Docker image stays on the
+        previous version. On the next container restart Nextcloud refuses
+        to start with:
+            "version of the data is higher than the docker image version"
+        Fix: overwrite version.php with the one shipped inside the image.
+        """
+        run_cmd(
+            f'docker run --rm '
+            f'--volumes-from $(cd {compose_dir} && docker compose ps -q {app_service}) '
+            f'nextcloud:latest '
+            f'sh -c "cp /usr/src/nextcloud/version.php /var/www/html/version.php"',
+            timeout=60,
+            critical=False,
+        )
+
     def run():
         global _nextcloud_state
         maintenance_was_enabled = False
         try:
+
             # ── STEP 1: Pre-check ────────────────────────────────────────────
             set_step('Pre-check', 1)
             log('═══ STEP 1/8: Pre-check ═══')
 
             out, rc = run_cmd('docker info --format "{{.ServerVersion}}"', critical=False)
             if rc != 0:
-                raise RuntimeError('Docker daemon non risponde. Controlla che Docker sia in esecuzione.')
+                raise RuntimeError('Docker daemon is not responding. Make sure Docker is running.')
             log(f'✓ Docker version: {out.strip()}')
 
             out, rc = run_cmd(
@@ -763,17 +786,21 @@ def api_nextcloud_update_start():
                 critical=False,
             )
             if not out.strip():
-                raise RuntimeError(f'Nessun container trovato in {compose_dir}. Verifica compose_dir.')
-            log('✓ Container rilevati')
+                raise RuntimeError(f'No containers found in {compose_dir}. Check compose_dir.')
+            log('✓ Containers detected')
+
+            # Log current versions before doing anything
+            current_data_version = get_data_version()
+            log(f'Current data version:  {current_data_version}')
 
             # ── STEP 2: Maintenance mode ON ──────────────────────────────────
-            set_step('Maintenance mode ON', 2)
+            set_step('Maintenance ON', 2)
             log('═══ STEP 2/8: Maintenance mode ON ═══')
             maintenance(on=True)
             maintenance_was_enabled = True
-            log('✓ Maintenance mode attivato')
+            log('✓ Maintenance mode enabled')
 
-            # ── STEP 3: DB backup ────────────────────────────────────────────
+            # ── STEP 3: Database backup ──────────────────────────────────────
             set_step('Database backup', 3)
             log('═══ STEP 3/8: Database backup ═══')
             ts = datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -786,12 +813,11 @@ def api_nextcloud_update_start():
                 timeout=300,
             )
             out, _ = run_cmd(f'du -sh {dump_file}', critical=False)
-            log(f'✓ DB backup: {out.strip() or dump_file}')
+            log(f'✓ DB backup saved: {out.strip() or dump_file}')
 
-            # ── STEP 4: Data volume backup (opzionale, non blocca) ───────────
-            set_step('Volume backup', 4)
+            # ── STEP 4: Data volume snapshot ─────────────────────────────────
+            set_step('Volume snapshot', 4)
             log('═══ STEP 4/8: Volume snapshot ═══')
-            vol_file = f'{backup_dir}/nc-data-{ts}.tar.gz'
             run_cmd(
                 f'docker run --rm '
                 f'--volumes-from $(cd {compose_dir} && docker compose ps -q {app_service}) '
@@ -800,22 +826,27 @@ def api_nextcloud_update_start():
                 timeout=600,
                 critical=False,
             )
-            log(f'✓ Volume snapshot in {backup_dir} (o già presente)')
+            log(f'✓ Volume snapshot saved to {backup_dir}')
 
-            # ── STEP 5: Pull immagini ─────────────────────────────────────────
+            # ── STEP 5: Pull images ───────────────────────────────────────────
             set_step('Pull images', 5)
             log('═══ STEP 5/8: docker compose pull ═══')
             run_cmd(f'cd {compose_dir} && docker compose pull', timeout=600)
-            log('✓ Immagini aggiornate')
+            log('✓ Images updated')
 
-            # ── STEP 6: Ricrea container ──────────────────────────────────────
+            # Log image version vs data version — useful for debugging
+            new_image_version = get_image_version()
+            log(f'Pulled image version:  {new_image_version}')
+            log(f'Current data version:  {current_data_version}')
+
+            # ── STEP 6: Recreate containers ───────────────────────────────────
             set_step('Recreate containers', 6)
             log('═══ STEP 6/8: docker compose up -d ═══')
             run_cmd(f'cd {compose_dir} && docker compose up -d --force-recreate', timeout=300)
-            log('✓ Container ricreati')
+            log('✓ Containers recreated')
 
-            # Attende che Nextcloud sia pronto (max 60s)
-            log('Attendo che Nextcloud sia pronto…')
+            # Wait until Nextcloud is ready (max 60s)
+            log('Waiting for Nextcloud to be ready…')
             run_cmd(
                 f'for i in $(seq 1 12); do '
                 f'  cd {compose_dir} && docker compose exec -T {app_service} '
@@ -834,13 +865,13 @@ def api_nextcloud_update_start():
                 f'php /var/www/html/occ upgrade --no-interaction',
                 timeout=600,
             )
-            log('✓ occ upgrade completato')
+            log('✓ occ upgrade completed')
 
-            # Esegui eventuali migrazioni aggiuntive (non bloccanti)
+            # Additional migrations (non-blocking)
             for extra_cmd, label in [
-                ('db:add-missing-indices', 'Indici DB'),
-                ('db:add-missing-columns', 'Colonne DB'),
-                ('db:convert-filecache-bigint', 'Bigint filecache'),
+                ('db:add-missing-indices',      'DB indices'),
+                ('db:add-missing-columns',      'DB columns'),
+                ('db:convert-filecache-bigint', 'Filecache bigint'),
             ]:
                 run_cmd(
                     f'cd {compose_dir} && docker compose exec -T {app_service} '
@@ -850,30 +881,47 @@ def api_nextcloud_update_start():
                 )
                 log(f'✓ {label} OK')
 
-            # ── STEP 8: Maintenance OFF + status ─────────────────────────────
-            set_step('Maintenance mode OFF', 8)
+            # ── VERSION ALIGNMENT FIX ─────────────────────────────────────────
+            # occ upgrade may bump the patch version in the data
+            # (e.g. 33.0.5 → 33.0.5.1) while the Docker image stays behind.
+            # On the next container restart Nextcloud would refuse to start.
+            # Fix: copy version.php from the image back into the volume so
+            # both sides stay in sync.
+            log('Checking version alignment after occ upgrade…')
+            post_upgrade_version = get_data_version()
+            log(f'Data version before upgrade: {current_data_version}')
+            log(f'Data version after upgrade:  {post_upgrade_version}')
+            log(f'Image version:               {new_image_version}')
+
+            if post_upgrade_version != current_data_version:
+                log(f'⚠ occ bumped data version: {current_data_version} → {post_upgrade_version}')
+                log('Aligning version.php with image to prevent startup block…')
+                align_version_php()
+                log('✓ version.php aligned — container restarts will work correctly')
+            else:
+                log('✓ Data version unchanged — no alignment needed')
+
+            # ── STEP 8: Maintenance OFF + status check ────────────────────────
+            set_step('Maintenance OFF', 8)
             log('═══ STEP 8/8: Maintenance mode OFF ═══')
             maintenance(on=False)
             maintenance_was_enabled = False
-            log('✓ Maintenance mode disattivato')
+            log('✓ Maintenance mode disabled')
 
             out, _ = run_cmd(
                 f'cd {compose_dir} && docker compose exec -T {app_service} '
                 f'php /var/www/html/occ status',
                 critical=False,
             )
-            log('═══ AGGIORNAMENTO COMPLETATO CON SUCCESSO ═══')
+            log('═══ UPDATE COMPLETED SUCCESSFULLY ═══')
             _nextcloud_state['progress'] = 100
 
         except Exception as e:
             err = str(e)
             _nextcloud_state['error'] = err
-            log(f'❌ ERRORE: {err}')
-
+            log(f'❌ ERROR: {err}')
             if maintenance_was_enabled:
-                log('⚠  Maintenance mode rimane ATTIVO per sicurezza. Verificare manualmente.')
-            # Non tentiamo di spegnere maintenance in caso di errore grave:
-            # lo stato del sistema potrebbe essere inconsistente.
+                log('⚠ Maintenance mode is still ACTIVE for safety. Please check manually.')
 
         finally:
             _nextcloud_state['running']  = False
@@ -884,7 +932,7 @@ def api_nextcloud_update_start():
                 start    = datetime.fromisoformat(_nextcloud_state['start_time'])
                 end      = datetime.fromisoformat(_nextcloud_state['end_time'])
                 duration = int((end - start).total_seconds())
-                log(f'Durata totale: {duration // 60}m {duration % 60}s')
+                log(f'Total duration: {duration // 60}m {duration % 60}s')
 
     threading.Thread(target=run, daemon=True).start()
     return jsonify({'message': 'Nextcloud update started'}), 202

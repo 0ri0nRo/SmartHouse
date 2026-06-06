@@ -26,8 +26,8 @@ const T = {
   bgSurf3:   'var(--bg-surface-3)',
   border:    'var(--border)',
   mono:      'var(--font-mono)',
-  r:         { sm: '5px', md: '9px', lg: '13px', xl: '18px', full: '99px' },
-  sp:        { xs: '0.25rem', sm: '0.5rem', md: '0.75rem', lg: '1rem' },
+  r:         { sm: '6px', md: '10px', lg: '14px', xl: '20px', full: '99px' },
+  sp:        { xs: '0.25rem', sm: '0.5rem', md: '0.75rem', lg: '1rem', xl: '1.5rem' },
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -55,16 +55,15 @@ const EMPTY_WF = {
   step: '', progress: 0, output: [], message: '',
 }
 
-// Nextcloud steps per la progress bar granulare
 const NC_STEPS = [
-  { n: 1, label: 'Pre-check',           color: T.cyan   },
-  { n: 2, label: 'Maintenance ON',      color: T.warning },
-  { n: 3, label: 'DB backup',           color: T.success },
-  { n: 4, label: 'Volume snapshot',     color: T.success },
-  { n: 5, label: 'Pull images',         color: T.purple  },
-  { n: 6, label: 'Recreate containers', color: T.purple  },
-  { n: 7, label: 'occ upgrade',         color: T.accent  },
-  { n: 8, label: 'Maintenance OFF',     color: T.success },
+  { n: 1, label: 'Pre-check',      color: T.cyan   },
+  { n: 2, label: 'Maintenance ON', color: T.warning },
+  { n: 3, label: 'DB backup',      color: T.success },
+  { n: 4, label: 'Snapshot',       color: T.success },
+  { n: 5, label: 'Pull images',    color: T.purple  },
+  { n: 6, label: 'Recreate',       color: T.purple  },
+  { n: 7, label: 'occ upgrade',    color: T.accent  },
+  { n: 8, label: 'Maint. OFF',     color: T.success },
 ]
 
 function useIsMobile(bp = 640) {
@@ -79,7 +78,10 @@ function useIsMobile(bp = 640) {
     const handler = e => setIsMobile(e.matches)
     if (mq.addEventListener) mq.addEventListener('change', handler)
     else mq.addListener(handler)
-    return () => { if (mq.removeEventListener) mq.removeEventListener('change', handler); else mq.removeListener(handler) }
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', handler)
+      else mq.removeListener(handler)
+    }
   }, [bp])
   return isMobile
 }
@@ -88,7 +90,7 @@ function useIsMobile(bp = 640) {
 function Dot({ color, pulse }) {
   return (
     <span style={{
-      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+      width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
       background: color, display: 'inline-block',
       animation: pulse ? 'shu-pulse 1.8s ease-in-out infinite' : 'none',
     }} />
@@ -98,9 +100,17 @@ function Dot({ color, pulse }) {
 function MiniBar({ pct = 0, color = T.accent, height = 4, bg }) {
   const p = clamp(pct, 0, 100)
   return (
-    <div style={{ height, background: bg || T.bgSurf3, borderRadius: T.r.full, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+    <div style={{
+      height,
+      background: bg || T.bgSurf3,
+      borderRadius: T.r.full,
+      overflow: 'hidden',
+      border: `1px solid ${T.border}`,
+    }}>
       <div style={{
-        height: '100%', width: `${p}%`, borderRadius: T.r.full,
+        height: '100%',
+        width: `${p}%`,
+        borderRadius: T.r.full,
         background: color,
         transition: 'width 0.6s cubic-bezier(.4,0,.2,1)',
       }} />
@@ -110,17 +120,25 @@ function MiniBar({ pct = 0, color = T.accent, height = 4, bg }) {
 
 function OutputLog({ lines = [], maxHeight = 180 }) {
   const ref = useRef(null)
-  useEffect(() => { if (ref.current) ref.current.scrollTop = ref.current.scrollHeight }, [lines])
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight
+  }, [lines])
   return (
     <div ref={ref} style={{
-      background: '#060d1f', borderRadius: T.r.md,
-      padding: '0.6rem 0.75rem', fontFamily: T.mono,
-      fontSize: '0.63rem', lineHeight: 1.7, color: '#6b8cb0',
-      maxHeight, minHeight: 48, overflowY: 'auto',
+      background: '#060d1f',
+      borderRadius: T.r.md,
+      padding: '0.75rem 1rem',
+      fontFamily: T.mono,
+      fontSize: '0.68rem',
+      lineHeight: 1.8,
+      color: '#6b8cb0',
+      maxHeight,
+      minHeight: 56,
+      overflowY: 'auto',
       border: '1px solid rgba(37,99,235,0.12)',
     }}>
       {lines.length === 0
-        ? <span style={{ color: 'rgba(255,255,255,0.12)' }}>Waiting for output…</span>
+        ? <span style={{ color: 'rgba(255,255,255,0.18)' }}>Waiting for output…</span>
         : lines.map((l, i) => {
             const isErr = /error|fail|errore|❌/i.test(l)
             const isOk  = /✓|success|completat/i.test(l)
@@ -129,7 +147,8 @@ function OutputLog({ lines = [], maxHeight = 180 }) {
             const isWrn = /⚠|warning/i.test(l)
             return (
               <div key={i} style={{
-                color: isErr ? '#f87171' : isOk ? '#34d399' : isCmd ? '#93c5fd' : isHdr ? '#60a5fa' : isWrn ? '#fbbf24' : '#6b8cb0',
+                color: isErr ? '#f87171' : isOk ? '#34d399' : isCmd ? '#93c5fd'
+                  : isHdr ? '#60a5fa' : isWrn ? '#fbbf24' : '#6b8cb0',
                 fontWeight: isHdr || isCmd ? 600 : 400,
               }}>{l}</div>
             )
@@ -138,147 +157,242 @@ function OutputLog({ lines = [], maxHeight = 180 }) {
   )
 }
 
-function Chip({ label, value, color, pulse }) {
+// ─── StatusBadge (replaces Chip) ──────────────────────────────────────────────
+function StatusBadge({ label, value, color, pulse }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 5,
-      padding: '0.28rem 0.55rem', borderRadius: T.r.md,
-      background: `color-mix(in srgb,${color} 8%,${T.bgSurf3})`,
-      border: `1px solid color-mix(in srgb,${color} 20%,${T.border})`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '0.35rem 0.7rem',
+      borderRadius: T.r.full,
+      background: `color-mix(in srgb,${color} 10%,${T.bgSurf3})`,
+      border: `1px solid color-mix(in srgb,${color} 22%,${T.border})`,
+      flexShrink: 0,
     }}>
       <Dot color={color} pulse={pulse} />
-      <span style={{ fontSize: '0.55rem', color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontFamily: T.mono, fontSize: '0.63rem', fontWeight: 800, color }}>{value}</span>
+      <span style={{
+        fontSize: '0.6rem',
+        color: T.textMuted,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        fontFamily: T.mono,
+      }}>{label}</span>
+      <span style={{
+        fontFamily: T.mono,
+        fontSize: '0.68rem',
+        fontWeight: 800,
+        color,
+      }}>{value}</span>
     </div>
   )
 }
 
+// ─── ActionCard ───────────────────────────────────────────────────────────────
 function ActionCard({ icon: Icon, label, sub, color = T.accent, primary, onClick, disabled, badge }) {
   const [hov, setHov] = useState(false)
   return (
     <button
-      onClick={onClick} disabled={disabled}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
       style={{
-        display: 'flex', alignItems: 'center', gap: '0.6rem',
-        width: '100%', textAlign: 'left',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.85rem',
+        width: '100%',
+        textAlign: 'left',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        padding: primary ? '0.72rem 0.85rem' : '0.48rem 0.7rem',
-        borderRadius: T.r.md, opacity: disabled ? 0.42 : 1,
+        padding: primary ? '1rem 1.1rem' : '0.7rem 0.9rem',
+        borderRadius: T.r.lg,
+        opacity: disabled ? 0.42 : 1,
         background: primary
-          ? hov ? `color-mix(in srgb,${color} 18%,${T.bgSurf2})` : `color-mix(in srgb,${color} 10%,${T.bgSurf2})`
+          ? hov
+            ? `color-mix(in srgb,${color} 16%,${T.bgSurf2})`
+            : `color-mix(in srgb,${color} 9%,${T.bgSurf2})`
           : hov ? T.bgSurf3 : T.bgSurf2,
-        border: `1px solid ${primary
-          ? `color-mix(in srgb,${color} ${hov ? 42 : 24}%,${T.border})`
-          : hov ? `color-mix(in srgb,${color} 26%,${T.border})` : T.border}`,
-        transition: 'all 0.14s ease',
-        boxShadow: primary && hov ? `0 4px 18px color-mix(in srgb,${color} 16%,transparent)` : 'none',
+        border: `1px solid ${
+          primary
+            ? `color-mix(in srgb,${color} ${hov ? 40 : 22}%,${T.border})`
+            : hov
+              ? `color-mix(in srgb,${color} 24%,${T.border})`
+              : T.border
+        }`,
+        transition: 'all 0.15s ease',
+        boxShadow: primary && hov
+          ? `0 4px 20px color-mix(in srgb,${color} 14%,transparent)`
+          : 'none',
       }}
     >
       <span style={{
-        width: primary ? 30 : 24, height: primary ? 30 : 24,
-        borderRadius: '50%', flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: primary ? 36 : 30,
+        height: primary ? 36 : 30,
+        borderRadius: '50%',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         background: `color-mix(in srgb,${color} 14%,transparent)`,
-        border: `1.5px solid color-mix(in srgb,${color} 28%,transparent)`, color,
+        border: `1.5px solid color-mix(in srgb,${color} 28%,transparent)`,
+        color,
       }}>
-        {createElement(Icon, { size: primary ? 13 : 10 })}
+        {createElement(Icon, { size: primary ? 15 : 13 })}
       </span>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: primary ? '0.71rem' : '0.66rem', fontWeight: 700, color: T.textPri, lineHeight: 1.2 }}>{label}</div>
-        {sub && <div style={{ fontSize: '0.56rem', color: T.textMuted, marginTop: 1, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
+        <div style={{
+          fontSize: primary ? '0.78rem' : '0.72rem',
+          fontWeight: 700,
+          color: T.textPri,
+          lineHeight: 1.3,
+          marginBottom: sub ? '0.2rem' : 0,
+        }}>{label}</div>
+        {sub && (
+          <div style={{
+            fontSize: '0.62rem',
+            color: T.textMuted,
+            lineHeight: 1.4,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>{sub}</div>
+        )}
       </div>
+
       {badge && (
-        <span style={{ padding: '1px 7px', borderRadius: T.r.full, background: `color-mix(in srgb,${color} 14%,transparent)`, color, fontFamily: T.mono, fontSize: '0.55rem', fontWeight: 800, border: `1px solid color-mix(in srgb,${color} 24%,transparent)`, flexShrink: 0 }}>
+        <span style={{
+          padding: '3px 9px',
+          borderRadius: T.r.full,
+          background: `color-mix(in srgb,${color} 14%,transparent)`,
+          color,
+          fontFamily: T.mono,
+          fontSize: '0.6rem',
+          fontWeight: 800,
+          border: `1px solid color-mix(in srgb,${color} 24%,transparent)`,
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}>
           {badge}
         </span>
       )}
-      <ChevronRight size={9} style={{ color: T.textMuted, flexShrink: 0, opacity: hov ? 1 : 0.3, transition: 'opacity 0.14s' }} />
+
+      <ChevronRight
+        size={12}
+        style={{
+          color: T.textMuted,
+          flexShrink: 0,
+          opacity: hov ? 1 : 0.25,
+          transition: 'opacity 0.14s',
+        }}
+      />
     </button>
   )
 }
 
-// ── StepBadge generico ────────────────────────────────────────────────────────
+// ─── StepBadge ────────────────────────────────────────────────────────────────
 function StepBadge({ step, progress, running, color }) {
   if (!step || !running) return null
   const c = color || T.cyan
   return (
     <div style={{
-      padding: '0.38rem 0.65rem', borderRadius: T.r.sm,
-      background: `color-mix(in srgb,${c} 6%,${T.bgSurf3})`,
-      border: `1px solid color-mix(in srgb,${c} 15%,${T.border})`,
-      display: 'flex', flexDirection: 'column', gap: '0.25rem',
+      padding: '0.6rem 0.85rem',
+      borderRadius: T.r.md,
+      background: `color-mix(in srgb,${c} 7%,${T.bgSurf3})`,
+      border: `1px solid color-mix(in srgb,${c} 16%,${T.border})`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.4rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <RefreshCw size={8} style={{ color: c, animation: 'shu-spin 0.9s linear infinite' }} />
-          <span style={{ fontFamily: T.mono, fontSize: '0.59rem', color: c, fontWeight: 700 }}>{step}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <RefreshCw size={10} style={{ color: c, animation: 'shu-spin 0.9s linear infinite', flexShrink: 0 }} />
+          <span style={{ fontFamily: T.mono, fontSize: '0.65rem', color: c, fontWeight: 700 }}>{step}</span>
         </div>
-        <span style={{ fontFamily: T.mono, fontSize: '0.59rem', color: T.textMuted }}>{progress}%</span>
+        <span style={{ fontFamily: T.mono, fontSize: '0.65rem', color: T.textMuted, fontWeight: 700 }}>{progress}%</span>
       </div>
-      <MiniBar pct={progress} color={c} height={2} bg={`color-mix(in srgb,${c} 8%,transparent)`} />
+      <MiniBar pct={progress} color={c} height={3} bg={`color-mix(in srgb,${c} 10%,transparent)`} />
     </div>
   )
 }
 
-// ── Nextcloud step stepper ─────────────────────────────────────────────────────
+// ─── Nextcloud stepper ────────────────────────────────────────────────────────
 function NextcloudStepper({ workflow }) {
-  const running  = workflow.running && !workflow.done && !workflow.error
-  const done     = workflow.done && !workflow.error
-  const pct      = clamp(workflow.progress || 0, 0, 100)
-  const curStep  = Math.ceil(pct / (100 / NC_STEPS.length))
+  const running = workflow.running && !workflow.done && !workflow.error
+  const done    = workflow.done && !workflow.error
+  const pct     = clamp(workflow.progress || 0, 0, 100)
+  const curStep = Math.ceil(pct / (100 / NC_STEPS.length))
 
   return (
     <div style={{
-      background: T.bgSurf2, borderRadius: T.r.md, padding: '0.65rem 0.75rem',
-      border: `1px solid color-mix(in srgb,${T.purple} 18%,${T.border})`,
-      display: 'flex', flexDirection: 'column', gap: '0.45rem',
+      background: T.bgSurf2,
+      borderRadius: T.r.lg,
+      padding: '1rem 1.1rem',
+      border: `1px solid color-mix(in srgb,${T.purple} 20%,${T.border})`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Cloud size={10} style={{ color: T.purple, flexShrink: 0 }} />
-        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: T.purple, flex: 1 }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Cloud size={13} style={{ color: T.purple, flexShrink: 0 }} />
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: T.purple, flex: 1 }}>
           Nextcloud Update
         </span>
         {running && (
-          <span style={{ fontFamily: T.mono, fontSize: '0.57rem', color: T.textMuted }}>
+          <span style={{ fontFamily: T.mono, fontSize: '0.65rem', color: T.textMuted, fontWeight: 700 }}>
             {pct}%
           </span>
         )}
-        {done && <CheckCircle size={10} style={{ color: T.success }} />}
-        {workflow.error && <XCircle size={10} style={{ color: T.danger }} />}
+        {done && <CheckCircle size={13} style={{ color: T.success }} />}
+        {workflow.error && <XCircle size={13} style={{ color: T.danger }} />}
       </div>
 
+      {/* Progress bar */}
       <MiniBar
         pct={pct}
         color={workflow.error ? T.danger : done ? T.success : T.purple}
-        height={3}
-        bg={`color-mix(in srgb,${T.purple} 10%,${T.bgSurf3})`}
+        height={4}
+        bg={`color-mix(in srgb,${T.purple} 12%,${T.bgSurf3})`}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.28rem' }}>
+      {/* Steps grid — 4 columns, wraps to 2 rows of 4 */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '0.4rem',
+      }}>
         {NC_STEPS.map(s => {
           const isPast    = pct >= (s.n / NC_STEPS.length * 100)
           const isCurrent = running && curStep === s.n
           const isError   = workflow.error && curStep === s.n
           const dotColor  = isError ? T.danger : isPast || isCurrent ? s.color : T.textMuted
+
           return (
             <div key={s.n} style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '0.2rem 0.3rem', borderRadius: T.r.sm,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '0.28rem 0.4rem',
+              borderRadius: T.r.sm,
               background: isCurrent
-                ? `color-mix(in srgb,${s.color} 10%,${T.bgSurf3})`
+                ? `color-mix(in srgb,${s.color} 12%,${T.bgSurf3})`
                 : 'transparent',
               border: isCurrent
-                ? `1px solid color-mix(in srgb,${s.color} 22%,${T.border})`
+                ? `1px solid color-mix(in srgb,${s.color} 24%,${T.border})`
                 : '1px solid transparent',
               transition: 'all 0.2s',
             }}>
               <Dot color={dotColor} pulse={isCurrent} />
               <span style={{
-                fontFamily: T.mono, fontSize: '0.5rem',
+                fontFamily: T.mono,
+                fontSize: '0.58rem',
                 color: isCurrent ? s.color : isPast ? T.textSec : T.textMuted,
                 fontWeight: isCurrent ? 800 : 500,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}>
                 {s.n}. {s.label}
               </span>
@@ -287,10 +401,23 @@ function NextcloudStepper({ workflow }) {
         })}
       </div>
 
+      {/* Current step label */}
       {(running || workflow.error) && workflow.step && (
-        <div style={{ fontSize: '0.58rem', color: workflow.error ? T.danger : T.purple, fontFamily: T.mono, display: 'flex', alignItems: 'center', gap: 5 }}>
-          {running && <RefreshCw size={7} style={{ animation: 'shu-spin 0.8s linear infinite', flexShrink: 0 }} />}
-          {workflow.error && <XCircle size={7} style={{ flexShrink: 0 }} />}
+        <div style={{
+          fontSize: '0.62rem',
+          color: workflow.error ? T.danger : T.purple,
+          fontFamily: T.mono,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          borderTop: `1px solid color-mix(in srgb,${T.purple} 14%,${T.border})`,
+          paddingTop: '0.5rem',
+          marginTop: '0.1rem',
+        }}>
+          {running && (
+            <RefreshCw size={9} style={{ animation: 'shu-spin 0.8s linear infinite', flexShrink: 0 }} />
+          )}
+          {workflow.error && <XCircle size={9} style={{ flexShrink: 0 }} />}
           {workflow.step}
         </div>
       )}
@@ -298,43 +425,94 @@ function NextcloudStepper({ workflow }) {
   )
 }
 
+// ─── DiskBar ──────────────────────────────────────────────────────────────────
 function DiskBar({ dfData }) {
   if (!dfData) return null
   const pct   = isNaN(dfData.pct) ? 0 : dfData.pct
   const color = pct > 85 ? T.danger : pct > 70 ? T.warning : T.success
+
   return (
-    <div style={{ background: T.bgSurf2, borderRadius: T.r.md, padding: '0.58rem 0.7rem', border: `1px solid ${pct > 85 ? 'rgba(239,68,68,0.25)' : T.border}` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-        <span style={{ fontFamily: T.mono, fontSize: '0.58rem', color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          / root
-        </span>
-        <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
-          <span style={{ fontFamily: T.mono, fontSize: '0.6rem', color: T.textSec }}>
+    <div style={{
+      background: T.bgSurf2,
+      borderRadius: T.r.md,
+      padding: '0.75rem 0.9rem',
+      border: `1px solid ${pct > 85 ? 'rgba(239,68,68,0.25)' : T.border}`,
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.5rem',
+      }}>
+        <span style={{
+          fontFamily: T.mono,
+          fontSize: '0.62rem',
+          color: T.textMuted,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.07em',
+        }}>/ root</span>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <span style={{ fontFamily: T.mono, fontSize: '0.65rem', color: T.textSec }}>
             <span style={{ color, fontWeight: 800 }}>{dfData.used}</span>
             <span style={{ color: T.textMuted }}> / {dfData.size}</span>
           </span>
-          <span style={{ fontFamily: T.mono, fontSize: '0.65rem', fontWeight: 800, color, minWidth: 28, textAlign: 'right' }}>{pct}%</span>
+          <span style={{
+            fontFamily: T.mono,
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            color,
+            minWidth: 32,
+            textAlign: 'right',
+          }}>{pct}%</span>
         </div>
       </div>
-      <MiniBar pct={pct} color={color} height={5} />
-      <div style={{ marginTop: '0.22rem', fontFamily: T.mono, fontSize: '0.55rem', color: T.textMuted, textAlign: 'right' }}>
+      <MiniBar pct={pct} color={color} height={6} />
+      <div style={{
+        marginTop: '0.3rem',
+        fontFamily: T.mono,
+        fontSize: '0.58rem',
+        color: T.textMuted,
+        textAlign: 'right',
+      }}>
         {dfData.avail} available
       </div>
     </div>
   )
 }
 
+// ─── StatTile ─────────────────────────────────────────────────────────────────
 function StatTile({ label, value, color, loading }) {
   return (
-    <div style={{ padding: '0.5rem 0.6rem', borderRadius: T.r.md, background: T.bgSurf2, border: `1px solid ${T.border}`, textAlign: 'center' }}>
-      <div style={{ fontFamily: T.mono, fontSize: '0.9rem', fontWeight: 900, color, lineHeight: 1.1 }}>
+    <div style={{
+      padding: '0.75rem 0.9rem',
+      borderRadius: T.r.md,
+      background: T.bgSurf2,
+      border: `1px solid ${T.border}`,
+      textAlign: 'center',
+    }}>
+      <div style={{
+        fontFamily: T.mono,
+        fontSize: '1rem',
+        fontWeight: 900,
+        color,
+        lineHeight: 1.1,
+      }}>
         {loading ? '…' : value}
       </div>
-      <div style={{ fontSize: '0.52rem', color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 3 }}>{label}</div>
+      <div style={{
+        fontSize: '0.56rem',
+        color: T.textMuted,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.07em',
+        marginTop: 5,
+      }}>{label}</div>
     </div>
   )
 }
 
+// ─── WorkflowFooter ───────────────────────────────────────────────────────────
 function WorkflowFooter({ wf, expanded, onToggle, onClear }) {
   if (!wf.kind) return null
   const running   = wf.running && !wf.done && !wf.error
@@ -344,53 +522,125 @@ function WorkflowFooter({ wf, expanded, onToggle, onClear }) {
 
   return (
     <div style={{ borderTop: `1px solid ${T.border}`, flexShrink: 0, background: T.bgSurf2 }}>
-      <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.42rem 0.85rem', cursor: 'pointer', userSelect: 'none' }}>
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          padding: '0.6rem 1rem',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
         <Dot color={statusC} pulse={running} />
-        <span style={{ fontFamily: T.mono, fontSize: '0.62rem', fontWeight: 700, color: T.textPri, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{
+          fontFamily: T.mono,
+          fontSize: '0.68rem',
+          fontWeight: 700,
+          color: T.textPri,
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
           {wf.title}
         </span>
-        <div style={{ width: 68, flexShrink: 0 }}>
+        <div style={{ width: 80, flexShrink: 0 }}>
           <MiniBar pct={pct} color={wf.color || T.success} height={3} />
         </div>
-        <span style={{ fontFamily: T.mono, fontSize: '0.56rem', fontWeight: 800, color: statusC, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>{pct}%</span>
-        <span style={{ fontSize: '0.57rem', fontWeight: 700, color: statusC, flexShrink: 0 }}>{statusLbl}</span>
+        <span style={{
+          fontFamily: T.mono,
+          fontSize: '0.62rem',
+          fontWeight: 800,
+          color: statusC,
+          flexShrink: 0,
+          minWidth: 30,
+          textAlign: 'right',
+        }}>{pct}%</span>
+        <span style={{
+          fontSize: '0.62rem',
+          fontWeight: 700,
+          color: statusC,
+          flexShrink: 0,
+        }}>{statusLbl}</span>
         {!running && (wf.done || wf.error) && (
-          <button onClick={e => { e.stopPropagation(); onClear() }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, display: 'flex', padding: 1 }}>
-            <X size={10} />
+          <button
+            onClick={e => { e.stopPropagation(); onClear() }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: T.textMuted,
+              display: 'flex',
+              padding: 2,
+            }}
+          >
+            <X size={12} />
           </button>
         )}
-        <span style={{ color: T.textMuted, display: 'flex' }}>{expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}</span>
+        <span style={{ color: T.textMuted, display: 'flex' }}>
+          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </span>
       </div>
+
       {!expanded && wf.step && running && (
-        <div style={{ padding: '0 0.85rem 0.35rem', fontSize: '0.57rem', color: T.textMuted, fontFamily: T.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <RefreshCw size={7} style={{ display: 'inline', marginRight: 5, animation: 'shu-spin 0.8s linear infinite' }} />
+        <div style={{
+          padding: '0 1rem 0.45rem',
+          fontSize: '0.62rem',
+          color: T.textMuted,
+          fontFamily: T.mono,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}>
+          <RefreshCw size={8} style={{ animation: 'shu-spin 0.8s linear infinite', flexShrink: 0 }} />
           {wf.step}
         </div>
       )}
+
       {expanded && (
-        <div style={{ padding: '0 0.72rem 0.72rem' }}>
+        <div style={{ padding: '0 1rem 1rem' }}>
           {wf.error && (
-            <div style={{ marginBottom: '0.4rem', padding: '0.32rem 0.5rem', borderRadius: T.r.sm, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', fontSize: '0.62rem', color: T.danger }}>
+            <div style={{
+              marginBottom: '0.6rem',
+              padding: '0.5rem 0.75rem',
+              borderRadius: T.r.md,
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.22)',
+              fontSize: '0.65rem',
+              color: T.danger,
+            }}>
               {wf.error}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: '0.28rem' }}>
-            <Terminal size={8} style={{ color: T.textMuted }} />
-            <span style={{ fontFamily: T.mono, fontSize: '0.52rem', color: T.textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              Output
-            </span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: '0.4rem',
+          }}>
+            <Terminal size={10} style={{ color: T.textMuted }} />
+            <span style={{
+              fontFamily: T.mono,
+              fontSize: '0.56rem',
+              color: T.textMuted,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}>Output</span>
           </div>
-          <OutputLog lines={(wf.output || []).slice(-40)} maxHeight={220} />
+          <OutputLog lines={(wf.output || []).slice(-40)} maxHeight={240} />
         </div>
       )}
     </div>
   )
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// NOTIFICATION SYSTEM
-// ════════════════════════════════════════════════════════════════════════════
+// ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ notice, onClose, isMobile }) {
   const timerRef = useRef(null)
   const tone = notice?.tone
@@ -398,7 +648,7 @@ function Toast({ notice, onClose, isMobile }) {
   useEffect(() => {
     if (!notice) return
     clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(onClose, 4000)
+    timerRef.current = setTimeout(onClose, 4500)
     return () => clearTimeout(timerRef.current)
   }, [notice, onClose])
 
@@ -407,87 +657,125 @@ function Toast({ notice, onClose, isMobile }) {
   const c   = tone === 'danger' ? T.danger : tone === 'success' ? T.success : T.warning
   const Ico = tone === 'danger' ? XCircle  : tone === 'success' ? CheckCircle : AlertTriangle
 
-  const sharedStyle = {
+  const baseStyle = {
+    position: 'fixed',
     zIndex: 300,
     background: T.bgSurf,
     border: `1px solid color-mix(in srgb, ${c} 28%, ${T.border})`,
     borderLeft: `3px solid ${c}`,
-    padding: '0.75rem 0.85rem 0.75rem 0.9rem',
-    boxShadow: `0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)`,
+    padding: '0.9rem 1rem 0.9rem 1.05rem',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)',
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '0.6rem',
+    gap: '0.75rem',
     overflow: 'hidden',
     pointerEvents: 'auto',
-    position: 'fixed',
+    animation: 'shu-toast-in-bottom 0.28s cubic-bezier(.32,1.1,.42,1)',
   }
 
-  // ── FIX: entrambe le varianti usano bottom ────────────────────────────────
   const containerStyle = isMobile ? {
-    ...sharedStyle,
-    bottom: 80,           // sopra la bottom nav su mobile
+    ...baseStyle,
+    bottom: 80,
     right: 'auto',
     left: '50%',
     top: 'auto',
     transform: 'translateX(-50%)',
     width: 'min(92vw, 640px)',
-    borderRadius: T.r.md,
-    animation: 'shu-toast-in-bottom 0.28s cubic-bezier(.32,1.1,.42,1)',
+    borderRadius: T.r.lg,
   } : {
-    ...sharedStyle,
-    bottom: 24,           // ← FIX: era top: 24 — ora in basso a destra su desktop
-    right: 24,
+    ...baseStyle,
+    bottom: 28,
+    right: 28,
     top: 'auto',
     left: 'auto',
     transform: 'none',
-    width: 'min(340px, calc(100vw - 48px))',
+    width: 'min(360px, calc(100vw - 56px))',
     borderRadius: T.r.xl,
-    animation: 'shu-toast-in-bottom 0.28s cubic-bezier(.32,1.1,.42,1)',
   }
 
   const toastNode = (
     <div style={containerStyle}>
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, height: 2,
-        background: c, borderRadius: '0 0 0 3px',
-        animation: 'shu-toast-progress 4s linear forwards',
-        transformOrigin: 'left', opacity: 0.55,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        height: 2,
+        background: c,
+        borderRadius: '0 0 0 3px',
+        animation: 'shu-toast-progress 4.5s linear forwards',
+        transformOrigin: 'left',
+        opacity: 0.5,
       }} />
-      <span style={{ color: c, flexShrink: 0, marginTop: 1 }}><Ico size={15} /></span>
+      <span style={{ color: c, flexShrink: 0, marginTop: 1 }}>
+        <Ico size={16} />
+      </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.textPri }}>{notice.title}</div>
+        <div style={{ fontSize: '0.76rem', fontWeight: 700, color: T.textPri }}>{notice.title}</div>
         {notice.message && (
-          <div style={{ fontSize: '0.63rem', color: T.textSec, lineHeight: 1.45, marginTop: 2 }}>{notice.message}</div>
+          <div style={{
+            fontSize: '0.67rem',
+            color: T.textSec,
+            lineHeight: 1.5,
+            marginTop: 3,
+          }}>{notice.message}</div>
         )}
         {notice.details && (
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 8 }}>
             <OutputLog lines={String(notice.details).split('\n')} maxHeight={90} />
           </div>
         )}
       </div>
-      <button onClick={onClose}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, flexShrink: 0, padding: 2, borderRadius: 4, lineHeight: 1, transition: 'color 0.15s' }}
+      <button
+        onClick={onClose}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: T.textMuted,
+          flexShrink: 0,
+          padding: 2,
+          borderRadius: 4,
+          lineHeight: 1,
+          transition: 'color 0.15s',
+        }}
         onMouseEnter={e => e.currentTarget.style.color = T.textPri}
         onMouseLeave={e => e.currentTarget.style.color = T.textMuted}
       >
-        <X size={12} />
+        <X size={13} />
       </button>
     </div>
   )
 
-  return typeof document !== 'undefined' ? createPortal(toastNode, document.body) : toastNode
+  return typeof document !== 'undefined'
+    ? createPortal(toastNode, document.body)
+    : toastNode
 }
 
+// ─── Layout helpers ───────────────────────────────────────────────────────────
 function SectionLabel({ children }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0.15rem 0 0.35rem' }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      margin: '0.25rem 0 0.5rem',
+    }}>
       <div style={{ flex: 1, height: 1, background: T.border }} />
-      <span style={{ fontSize: '0.53rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.textMuted, fontFamily: T.mono, flexShrink: 0 }}>{children}</span>
+      <span style={{
+        fontSize: '0.57rem',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        color: T.textMuted,
+        fontFamily: T.mono,
+        flexShrink: 0,
+      }}>{children}</span>
       <div style={{ flex: 1, height: 1, background: T.border }} />
     </div>
   )
 }
-const Sep = () => <div style={{ height: 1, background: T.border, margin: '0.5rem 0' }} />
+
+const Sep = () => <div style={{ height: 1, background: T.border, margin: '0.75rem 0' }} />
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN WIDGET
@@ -509,10 +797,10 @@ export default function SmartHouseUpgradeWidget() {
   const [backupLines, setBackupLines] = useState([])
   const [ncWorkflow,  setNcWorkflow]  = useState(null)
 
-  const isMobile = useIsMobile(640)
+  const isMobile   = useIsMobile(640)
   const closeNotice = useCallback(() => setNotice(null), [])
 
-  // ── load all health data ─────────────────────────────────────────────────
+  // ── load health ──────────────────────────────────────────────────────────
   const loadHealth = useCallback(async () => {
     setLoading(true)
     const [pkg, disk, thr, rb] = await Promise.allSettled([
@@ -551,9 +839,7 @@ export default function SmartHouseUpgradeWidget() {
           color:   prev.color,
           title:   prev.title,
         }))
-        if (workflow.kind === 'nextcloud') {
-          setNcWorkflow(d)
-        }
+        if (workflow.kind === 'nextcloud') setNcWorkflow(d)
         if (d.done || d.error) {
           clearInterval(id)
           setBusy(false)
@@ -574,7 +860,7 @@ export default function SmartHouseUpgradeWidget() {
     return () => clearInterval(id)
   }, [workflow.kind, workflow.running, loadHealth, workflow.title])
 
-  // ── start async workflow ──────────────────────────────────────────────────
+  // ── start workflow ───────────────────────────────────────────────────────
   const startWf = async ({ kind, title, color, url, step, body }) => {
     setBusy(true)
     try {
@@ -583,7 +869,11 @@ export default function SmartHouseUpgradeWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {}),
       })
-      setWorkflow({ kind, title, color, running: true, done: false, error: null, step, progress: 0, output: [], message: '' })
+      setWorkflow({
+        kind, title, color,
+        running: true, done: false, error: null,
+        step, progress: 0, output: [], message: '',
+      })
       setWfExpanded(false)
     } catch (e) {
       setNotice({ title: 'Workflow error', tone: 'danger', message: e.message })
@@ -600,15 +890,21 @@ export default function SmartHouseUpgradeWidget() {
     setBackupLines(['$ /usr/local/bin/backup.sh'])
     try {
       const d = await fj('/api_run_backup', { method: 'POST' })
-      setBackupLines(prev => [...prev, ...(d.output || d.message || 'Done').split('\n'), '✓ Backup completed'])
+      setBackupLines(prev => [
+        ...prev,
+        ...(d.output || d.message || 'Done').split('\n'),
+        '✓ Backup completed',
+      ])
       setNotice({ title: 'Backup completed', tone: 'success', message: d.message || 'Script executed successfully.' })
     } catch (e) {
       setBackupLines(prev => [...prev, `❌ ${e.message}`])
       setNotice({ title: 'Backup error', tone: 'danger', message: e.message })
-    } finally { setBacking(false) }
+    } finally {
+      setBacking(false)
+    }
   }
 
-  // ── power actions ─────────────────────────────────────────────────────────
+  // ── power ─────────────────────────────────────────────────────────────────
   const doPower = async action => {
     setBusy(true)
     try {
@@ -620,7 +916,9 @@ export default function SmartHouseUpgradeWidget() {
       })
     } catch (e) {
       setNotice({ title: 'Error', tone: 'danger', message: e.message })
-    } finally { setBusy(false) }
+    } finally {
+      setBusy(false)
+    }
   }
 
   // ── derived ───────────────────────────────────────────────────────────────
@@ -643,43 +941,54 @@ export default function SmartHouseUpgradeWidget() {
     { id: 'backup',   label: 'Backup',   icon: Archive  },
   ]
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: UPGRADE
-  // ══════════════════════════════════════════════════════════════════════════
+  // ── Tab: UPGRADE ─────────────────────────────────────────────────────────
   const renderUpgrade = () => {
-    const isFullUpgradeRunning = workflow.running && workflow.kind === 'fullUpgrade'
+    const isFullRunning = workflow.running && workflow.kind === 'fullUpgrade'
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: T.sp.sm }}>
-        {isFullUpgradeRunning && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        {isFullRunning && (
           <StepBadge
-            step={workflow.step} progress={workflow.progress}
-            running={true} color={T.accent}
+            step={workflow.step}
+            progress={workflow.progress}
+            running={true}
+            color={T.accent}
           />
         )}
 
         <ActionCard
-          primary icon={Download} label="Full Upgrade" color={T.accent}
-          sub="8 steps · pre-check · full-upgrade · autoremove · autoclean · firmware check · report"
+          primary
+          icon={Download}
+          label="Full Upgrade"
+          color={T.accent}
+          sub="8 steps · pre-check · full-upgrade · autoremove · autoclean · firmware · report"
           badge={upgradable > 0 ? `${upgradable} pkg` : null}
           disabled={busy}
           onClick={() => ask(
             'Start Full Upgrade?',
             '8 steps: pre-check (disk + connection), backup package list, apt update, apt full-upgrade (non-interactive), autoremove, autoclean, firmware verification, final report + reboot check.',
             'Start Full Upgrade',
-            () => startWf({ kind: 'fullUpgrade', title: 'Full Upgrade', color: T.accent, url: '/api/system/full_upgrade/start', step: 'Initializing…' }),
+            () => startWf({
+              kind: 'fullUpgrade', title: 'Full Upgrade', color: T.accent,
+              url: '/api/system/full_upgrade/start', step: 'Initializing…',
+            }),
           )}
         />
 
         <ActionCard
-          icon={Shield} label="APT Upgrade" color={T.cyan}
+          icon={Shield}
+          label="APT Upgrade"
+          color={T.cyan}
           sub="apt-get update + apt-get upgrade"
           disabled={busy}
           onClick={() => ask(
             'Start APT Upgrade?',
             'Runs apt-get update then apt-get upgrade. Faster than Full Upgrade — does not remove obsolete packages or check firmware.',
             'Start',
-            () => startWf({ kind: 'upgrade', title: 'APT Upgrade', color: T.cyan, url: '/api/system/upgrade/start', step: 'Updating packages…' }),
+            () => startWf({
+              kind: 'upgrade', title: 'APT Upgrade', color: T.cyan,
+              url: '/api/system/upgrade/start', step: 'Updating packages…',
+            }),
           )}
         />
 
@@ -691,7 +1000,10 @@ export default function SmartHouseUpgradeWidget() {
         )}
 
         <ActionCard
-          primary={!showNcStepper} icon={Cloud} label="Nextcloud Update" color={T.purple}
+          primary={!showNcStepper}
+          icon={Cloud}
+          label="Nextcloud Update"
+          color={T.purple}
           sub="8 step sicuri · pre-check · maintenance · DB dump · pull · occ upgrade"
           disabled={busy}
           onClick={() => ask(
@@ -712,8 +1024,7 @@ export default function SmartHouseUpgradeWidget() {
             'Start Update',
             () => startWf({
               kind: 'nextcloud', title: 'Nextcloud Update', color: T.purple,
-              url: '/api/system/nextcloud_update/start',
-              step: 'Pre-check…',
+              url: '/api/system/nextcloud_update/start', step: 'Pre-check…',
             }),
           )}
         />
@@ -723,21 +1034,46 @@ export default function SmartHouseUpgradeWidget() {
             <Sep />
             <button
               onClick={() => setPkgOpen(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '0.12rem 0', color: T.textSec }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.15rem 0.1rem',
+                color: T.textSec,
+              }}
             >
-              <Package size={10} />
-              <span style={{ fontFamily: T.mono, fontSize: '0.6rem', fontWeight: 700, flex: 1, textAlign: 'left' }}>
+              <Package size={12} />
+              <span style={{ fontFamily: T.mono, fontSize: '0.66rem', fontWeight: 700, flex: 1, textAlign: 'left' }}>
                 {pkgInfo.upgradable_list.length} upgradable packages
               </span>
-              {pkgOpen ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
+              {pkgOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
             </button>
+
             {pkgOpen && (
-              <div style={{ background: T.bgSurf3, borderRadius: T.r.sm, padding: '0.4rem 0.6rem', border: `1px solid ${T.border}` }}>
+              <div style={{
+                background: T.bgSurf3,
+                borderRadius: T.r.md,
+                padding: '0.6rem 0.8rem',
+                border: `1px solid ${T.border}`,
+              }}>
                 {pkgInfo.upgradable_list.slice(0, 20).map((p, i) => (
-                  <div key={i} style={{ fontFamily: T.mono, fontSize: '0.58rem', color: T.textSec, lineHeight: 1.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p}</div>
+                  <div key={i} style={{
+                    fontFamily: T.mono,
+                    fontSize: '0.63rem',
+                    color: T.textSec,
+                    lineHeight: 1.8,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>{p}</div>
                 ))}
                 {pkgInfo.upgradable_list.length > 20 && (
-                  <div style={{ fontSize: '0.56rem', color: T.textMuted, marginTop: 2 }}>…and {pkgInfo.upgradable_list.length - 20} more</div>
+                  <div style={{ fontSize: '0.6rem', color: T.textMuted, marginTop: 4 }}>
+                    …and {pkgInfo.upgradable_list.length - 20} more
+                  </div>
                 )}
               </div>
             )}
@@ -747,44 +1083,55 @@ export default function SmartHouseUpgradeWidget() {
     )
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: MAINTAIN
-  // ══════════════════════════════════════════════════════════════════════════
+  // ── Tab: MAINTAIN ────────────────────────────────────────────────────────
   const renderMaintain = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: T.sp.sm }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
       <SectionLabel>Package repair</SectionLabel>
 
       <ActionCard
-        primary icon={Wrench} label="Fix Broken Packages" color={T.warning}
+        primary
+        icon={Wrench}
+        label="Fix Broken Packages"
+        color={T.warning}
         sub="dpkg --configure -a · apt-get install -f"
         disabled={busy}
         onClick={() => ask(
           'Fix broken packages?',
           'dpkg --configure -a reconfigures half-installed packages, then apt-get install -f resolves broken dependencies. Safe, non-destructive.',
           'Fix',
-          () => startWf({ kind: 'maintenance', title: 'Fix Broken', color: T.warning, url: '/api/system/maintenance/fix_broken', step: 'Repairing…' }),
+          () => startWf({
+            kind: 'maintenance', title: 'Fix Broken', color: T.warning,
+            url: '/api/system/maintenance/fix_broken', step: 'Repairing…',
+          }),
           'warning',
         )}
       />
 
       <ActionCard
-        icon={RotateCcw} label="Clean All" color={T.success}
+        icon={RotateCcw}
+        label="Clean All"
+        color={T.success}
         sub="apt clean · autoclean · autoremove --purge · vacuum logs 7d · thumbnail cache"
         disabled={busy}
         onClick={() => ask(
           'Full system cleanup?',
           'apt clean → autoclean → autoremove --purge → journalctl --vacuum-time=7d → thumbnail cache. Frees space without removing user-installed packages.',
           'Clean',
-          () => startWf({ kind: 'maintenance', title: 'Clean All', color: T.success, url: '/api/system/maintenance/clean_all', step: 'Cleaning…' }),
+          () => startWf({
+            kind: 'maintenance', title: 'Clean All', color: T.success,
+            url: '/api/system/maintenance/clean_all', step: 'Cleaning…',
+          }),
         )}
       />
 
       <Sep />
       <SectionLabel>Power</SectionLabel>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: T.sp.sm }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
         <ActionCard
-          icon={RotateCcw} label="Reboot" color={T.warning}
+          icon={RotateCcw}
+          label="Reboot"
+          color={T.warning}
           sub="restart host OS"
           disabled={busy}
           onClick={() => ask(
@@ -796,7 +1143,9 @@ export default function SmartHouseUpgradeWidget() {
           )}
         />
         <ActionCard
-          icon={Power} label="Shutdown" color={T.danger}
+          icon={Power}
+          label="Shutdown"
+          color={T.danger}
           sub="power off host"
           disabled={busy}
           onClick={() => ask(
@@ -811,27 +1160,31 @@ export default function SmartHouseUpgradeWidget() {
     </div>
   )
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // TAB: BACKUP
-  // ══════════════════════════════════════════════════════════════════════════
+  // ── Tab: BACKUP ──────────────────────────────────────────────────────────
   const renderBackup = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: T.sp.sm }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
       <div style={{
-        padding: '0.58rem 0.72rem', borderRadius: T.r.md,
+        padding: '0.75rem 0.9rem',
+        borderRadius: T.r.lg,
         background: `color-mix(in srgb,${T.success} 7%,${T.bgSurf2})`,
         border: `1px solid color-mix(in srgb,${T.success} 22%,${T.border})`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <Archive size={10} style={{ color: T.success }} />
-          <span style={{ fontSize: '0.64rem', fontWeight: 700, color: T.success }}>Script configured</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+          <Archive size={12} style={{ color: T.success, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: T.success }}>Script configured</span>
         </div>
-        <p style={{ fontSize: '0.6rem', color: T.textSec, lineHeight: 1.5, margin: 0 }}>
-          Runs <span style={{ fontFamily: T.mono, color: T.cyan }}>/usr/local/bin/backup.sh</span> — snapshots config, user data and packages, then sends the archive via SMTP.
+        <p style={{ fontSize: '0.64rem', color: T.textSec, lineHeight: 1.55, margin: 0 }}>
+          Runs{' '}
+          <span style={{ fontFamily: T.mono, color: T.cyan }}>/usr/local/bin/backup.sh</span>
+          {' '}— snapshots config, user data and packages, then sends the archive via SMTP.
         </p>
       </div>
 
       <ActionCard
-        primary icon={Archive} label="Start Backup" color={T.success}
+        primary
+        icon={Archive}
+        label="Start Backup"
+        color={T.success}
         sub="snapshot · user data · email attachment"
         disabled={backing}
         badge={backing ? 'Running…' : null}
@@ -842,18 +1195,40 @@ export default function SmartHouseUpgradeWidget() {
         <>
           <Sep />
           <div style={{
-            padding: '0.48rem 0.68rem', borderRadius: T.r.md,
-            background: needsReboot ? 'rgba(239,68,68,0.07)' : `color-mix(in srgb,${T.success} 7%,${T.bgSurf2})`,
-            border: `1px solid ${needsReboot ? 'rgba(239,68,68,0.26)' : `color-mix(in srgb,${T.success} 22%,${T.border})`}`,
-            display: 'flex', alignItems: 'flex-start', gap: 8,
+            padding: '0.65rem 0.85rem',
+            borderRadius: T.r.md,
+            background: needsReboot
+              ? 'rgba(239,68,68,0.07)'
+              : `color-mix(in srgb,${T.success} 7%,${T.bgSurf2})`,
+            border: `1px solid ${
+              needsReboot
+                ? 'rgba(239,68,68,0.26)'
+                : `color-mix(in srgb,${T.success} 22%,${T.border})`
+            }`,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
           }}>
-            <Power size={10} style={{ color: needsReboot ? T.danger : T.success, flexShrink: 0, marginTop: 1 }} />
+            <Power
+              size={13}
+              style={{ color: needsReboot ? T.danger : T.success, flexShrink: 0, marginTop: 1 }}
+            />
             <div>
-              <div style={{ fontSize: '0.63rem', fontWeight: 700, color: needsReboot ? T.danger : T.success }}>
+              <div style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                color: needsReboot ? T.danger : T.success,
+                marginBottom: reboot.message ? 3 : 0,
+              }}>
                 {needsReboot ? '⚠ Reboot required' : '✓ No reboot required'}
               </div>
               {reboot.message && (
-                <div style={{ fontFamily: T.mono, fontSize: '0.56rem', color: T.textMuted, marginTop: 2, lineHeight: 1.4 }}>
+                <div style={{
+                  fontFamily: T.mono,
+                  fontSize: '0.6rem',
+                  color: T.textMuted,
+                  lineHeight: 1.45,
+                }}>
                   {reboot.message}
                 </div>
               )}
@@ -865,7 +1240,7 @@ export default function SmartHouseUpgradeWidget() {
       {pkgInfo && (
         <>
           <SectionLabel>Package status</SectionLabel>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: T.sp.sm }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
             <StatTile label="Installed"  value={installed}  color={T.textSec}                              loading={loading} />
             <StatTile label="Upgradable" value={upgradable} color={upgradable > 0 ? T.warning : T.success} loading={loading} />
             <StatTile label="To remove"  value={autoremove} color={autoremove > 0 ? T.cyan : T.textSec}    loading={loading} />
@@ -877,9 +1252,9 @@ export default function SmartHouseUpgradeWidget() {
         <>
           <SectionLabel>Disk usage</SectionLabel>
           {dfData && <DiskBar dfData={dfData} />}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: T.sp.sm, marginTop: T.sp.sm }}>
-            <StatTile label="APT cache" value={aptCache} color={T.cyan} loading={loading} />
-            <StatTile label="Logs" value={logSize} color={T.warning} loading={loading} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginTop: '0.1rem' }}>
+            <StatTile label="APT cache" value={aptCache} color={T.cyan}    loading={loading} />
+            <StatTile label="Logs"      value={logSize}  color={T.warning} loading={loading} />
           </div>
         </>
       )}
@@ -899,35 +1274,53 @@ export default function SmartHouseUpgradeWidget() {
 
       {/* ── Header ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: T.sp.sm,
-        padding: `0.42rem ${T.sp.lg}`, borderBottom: `1px solid ${T.border}`, flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0.65rem 1.1rem',
+        borderBottom: `1px solid ${T.border}`,
+        flexShrink: 0,
       }}>
         <span style={{
-          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-          background: `color-mix(in srgb,${T.accent} 12%,transparent)`, color: T.accent,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          flexShrink: 0,
+          background: `color-mix(in srgb,${T.accent} 12%,transparent)`,
+          color: T.accent,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           border: `1.5px solid color-mix(in srgb,${T.accent} 24%,transparent)`,
         }}>
-          <Server size={11} />
+          <Server size={13} />
         </span>
-        <span style={{ fontWeight: 800, fontSize: '0.69rem', color: T.textPri, flex: 1, letterSpacing: '-0.01em' }}>
+
+        <span style={{
+          fontWeight: 800,
+          fontSize: '0.76rem',
+          color: T.textPri,
+          flex: 1,
+          letterSpacing: '-0.01em',
+        }}>
           System Manager
         </span>
 
-        <div style={{ display: 'flex', gap: 3 }}>
-          <Chip
+        {/* Status badges — spaced out, never squished */}
+        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+          <StatusBadge
             label="pkg"
             value={loading ? '…' : upgradable > 0 ? `${upgradable}↑` : '✓'}
             color={loading ? T.textMuted : upgradable > 0 ? T.warning : T.success}
             pulse={upgradable > 0}
           />
-          <Chip
+          <StatusBadge
             label="cpu"
             value={loading ? '…' : throttleOk == null ? '—' : throttleOk ? 'OK' : `${throttleFlg}!`}
             color={loading ? T.textMuted : throttleOk == null ? T.textMuted : throttleOk ? T.success : T.warning}
             pulse={throttleOk === false}
           />
-          <Chip
+          <StatusBadge
             label="reboot"
             value={loading ? '…' : needsReboot ? '⚠' : 'OK'}
             color={loading ? T.textMuted : needsReboot ? T.danger : T.success}
@@ -936,29 +1329,56 @@ export default function SmartHouseUpgradeWidget() {
         </div>
 
         <button
-          onClick={loadHealth} disabled={loading}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, display: 'flex', padding: 2 }}
+          onClick={loadHealth}
+          disabled={loading}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: T.textMuted,
+            display: 'flex',
+            padding: 4,
+            borderRadius: T.r.sm,
+            flexShrink: 0,
+          }}
           title="Refresh"
         >
-          <RefreshCw size={11} style={{ animation: loading ? 'shu-spin 0.8s linear infinite' : 'none' }} />
+          <RefreshCw size={13} style={{ animation: loading ? 'shu-spin 0.8s linear infinite' : 'none' }} />
         </button>
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.bgSurf2 }}>
+      <div style={{
+        display: 'flex',
+        borderBottom: `1px solid ${T.border}`,
+        flexShrink: 0,
+        background: T.bgSurf2,
+      }}>
         {TABS.map(t => {
           const Icon   = t.icon
           const active = tab === t.id
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-              padding: '0.46rem 0.2rem', background: 'none', border: 'none',
-              borderBottom: active ? `2px solid ${T.accent}` : '2px solid transparent',
-              cursor: 'pointer', color: active ? T.accent : T.textMuted,
-              fontSize: '0.6rem', fontWeight: active ? 800 : 500,
-              transition: 'all 0.13s ease',
-            }}>
-              <Icon size={10} strokeWidth={active ? 2.5 : 1.8} />
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                padding: '0.6rem 0.5rem',
+                background: 'none',
+                border: 'none',
+                borderBottom: active ? `2px solid ${T.accent}` : '2px solid transparent',
+                cursor: 'pointer',
+                color: active ? T.accent : T.textMuted,
+                fontSize: '0.64rem',
+                fontWeight: active ? 800 : 500,
+                transition: 'all 0.13s ease',
+              }}
+            >
+              <Icon size={12} strokeWidth={active ? 2.5 : 1.8} />
               {t.label}
             </button>
           )
@@ -966,7 +1386,7 @@ export default function SmartHouseUpgradeWidget() {
       </div>
 
       {/* ── Scrollable body ── */}
-      <div style={{ flex: 1, overflow: 'auto', padding: T.sp.lg }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.1rem' }}>
         {tab === 'upgrade'  && renderUpgrade()}
         {tab === 'maintain' && renderMaintain()}
         {tab === 'backup'   && renderBackup()}
@@ -974,12 +1394,13 @@ export default function SmartHouseUpgradeWidget() {
 
       {/* ── Workflow footer ── */}
       <WorkflowFooter
-        wf={workflow} expanded={wfExpanded}
+        wf={workflow}
+        expanded={wfExpanded}
         onToggle={() => setWfExpanded(v => !v)}
         onClear={() => { setWorkflow(EMPTY_WF); setWfExpanded(false); setNcWorkflow(null) }}
       />
 
-      {/* ── Notifications ── */}
+      {/* ── Confirm modal ── */}
       <Modal isOpen={!!confirm} onClose={() => setConfirm(null)}>
         <ModalHeader>
           <ModalTitle>{confirm?.title}</ModalTitle>
@@ -989,12 +1410,14 @@ export default function SmartHouseUpgradeWidget() {
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={async () => {
               const fn = confirm?.onConfirm
               setConfirm(null)
-              try { await fn?.() } catch (e) { setNotice({ title: 'Error', tone: 'danger', message: e.message }) }
+              try { await fn?.() } catch (e) {
+                setNotice({ title: 'Error', tone: 'danger', message: e.message })
+              }
             }}
           >
             {confirm?.confirmLabel || 'Continue'}
@@ -1005,7 +1428,7 @@ export default function SmartHouseUpgradeWidget() {
       <Toast notice={notice} onClose={closeNotice} isMobile={isMobile} />
 
       <style>{`
-        @keyframes shu-spin  { to { transform: rotate(360deg); } }
+        @keyframes shu-spin { to { transform: rotate(360deg); } }
         @keyframes shu-pulse { 0%,100%{opacity:1} 50%{opacity:0.28} }
         @keyframes shu-toast-in-bottom {
           from { opacity: 0; transform: translateY(16px); }
@@ -1014,10 +1437,6 @@ export default function SmartHouseUpgradeWidget() {
         @keyframes shu-toast-progress {
           from { width: 100%; }
           to   { width: 0%; }
-        }
-        @keyframes shu-sheet-up {
-          from { transform: translateY(100%); opacity: 0.6; }
-          to   { transform: translateY(0);    opacity: 1; }
         }
       `}</style>
     </div>
