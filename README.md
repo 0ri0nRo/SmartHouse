@@ -1,51 +1,39 @@
 # Smart House Project
 <img width="1671" height="850" alt="Screenshot 2026-03-23 at 20 54 05" src="https://github.com/user-attachments/assets/1e9533a4-d7a5-499f-9b03-5e27bfad88c8" />
 <img width="1675" height="816" alt="Screenshot 2026-03-23 at 20 54 14" src="https://github.com/user-attachments/assets/6be1f5cb-a9ef-4690-87a2-dbbccf916d9a" />
-
-
-
-This project provides a web interface to visualize temperature and humidity data using charts. It features interactive charts for temperature and humidity, and dynamically displays icons based on the current weather conditions and time of day.
-
-
-## Features
-
-- **Interactive Charts**: Displays temperature and humidity data over time using Chart.js.
-- **Dynamic Icons**: Shows icons representing the current weather (sun/moon) and temperature (hot/cold).
-- **Responsive Design**: Optimized for various screen sizes.
-
-# Temperature and Humidity Charts
-<img width="1670" height="694" alt="Screenshot 2026-03-23 at 20 55 29" src="https://github.com/user-attachments/assets/03c028c6-677c-47f2-9fec-7e8a20f673d1" />
-
-
-# Raspberry Pi info with backup and SSH Connection 
-<img width="1646" height="936" alt="Screenshot 2026-03-23 at 20 55 03" src="https://github.com/user-attachments/assets/c30cc205-bc8f-4708-b128-a50bdc9b0e83" />
-
-## Prerequisites
-
-Before running this project, ensure you have the following installed:
-
-- [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
-## Project Structure
-
-```bash
-project/
-├── app.py                          # Main entry point
-├── config/
-│   ├── __init__.py
-│   └── settings.py                 # Configuration and environment variables
-├── models/
-│   ├── __init__.py
-│   └── database.py                 # Database connections and decorators
-├── services/
-│   ├── __init__.py
-│   ├── sensor_service.py           # SensorService
-│   ├── air_quality_service.py      # AirQualityService
-│   ├── network_service.py          # NetworkService
-│   ├── train_service.py            # TrainService
-│   ├── todolist_service.py         # TodolistService
-│   └── ssh_service.py              # SSHService
+SmartHouse/
+├── docker-compose.yml
+├── README.md
+├── smarthouse-ssl.conf
+├── backup/
+│   └── python_migrated/
+├── client/
+│   ├── src/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── api/
+│   │   ├── components/
+│   │   └── pages/
+│   ├── package.json
+│   └── README.md
+├── home/
+│   └── cowrie/
+├── mosquitto/
+│   └── config/
+├── nginx/
+├── src/
+│   ├── app.py
+│   ├── main.py
+│   ├── api/
+│   ├── client/
+│   ├── config/
+│   ├── models/
+│   └── services/
+├── static/
+├── templates/
+├── uploads/
+├── utils/
+└── zigbee2mqtt/
 ├── api/
 │   ├── __init__.py
 │   ├── sensor_routes.py            # Routes for sensor endpoints
@@ -105,6 +93,24 @@ This command will:
 - Build the Docker image as defined in the Dockerfile.
 - Create and start a container based on the built image.
 - Expose the application on port 5000.
+
+### Frontend (client) build
+
+The repository includes a modern React + Vite client in `client/`. When running the server build or running locally you may need to build the client assets separately:
+
+```bash
+# from repo root
+cd client
+pnpm install
+# development with HMR
+pnpm dev
+# build for production
+pnpm run build
+# preview the built site
+pnpm run preview
+```
+
+Note: recent UI updates introduced a new token-based theme (see `client/src/styles/global.css`). Builds succeed locally but may trigger a bundle-size warning for large chunks; consider code-splitting or raising `build.chunkSizeWarningLimit` in `client/vite.config.js` if needed.
 
 ## Restoring the SQL Backup
 
