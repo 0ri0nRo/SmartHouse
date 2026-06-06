@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Thermometer, Droplets, Wind, Cpu, Bell, Flame, ChevronRight, RefreshCw,
          Settings, GripVertical, Eye, EyeOff, RotateCcw, X, Newspaper,
-         Radio, Shield, Sunrise, Sunset } from 'lucide-react'
+         Radio, Shield, Sunrise, Sunset, LayoutGrid, Server, Activity,
+         Info, Sliders } from 'lucide-react'
 import { api } from '../api'
 import WeatherWidget            from '../components/WeatherWidget'
 import PingWidget               from '../components/PingWidget'
@@ -20,22 +21,66 @@ const LAYOUT_KEY = 'smarthome:widget_layout'
 
 // ── Widget registry ────────────────────────────────────────
 const DEFAULT_WIDGETS: WidgetDef[] = [
-  { id: 'calendar',     label: 'Calendar',               category: 'info'    },
-  { id: 'alarm',        label: 'Home Alarm',             category: 'control' },
-  { id: 'boiler',       label: 'Boiler',                 category: 'control' },
-  { id: 'environment',  label: 'Temperature & Humidity', category: 'sensor'  },
-  { id: 'raspi',        label: 'Raspberry Pi',           category: 'system'  },
-  { id: 'weather',      label: 'Weather',                category: 'info'    },
-  { id: 'ping',         label: 'Ping',                   category: 'system'  },
-  { id: 'train',        label: 'Train',                  category: 'info'    },
-  { id: 'air_external', label: 'Air Quality (Ext)',      category: 'sensor'  },
-  { id: 'on_this_day',  label: 'On This Day',            category: 'info'    },
-  { id: 'recipe',       label: 'Recipe',                 category: 'info'    },
-  { id: 'network',      label: 'Network Devices',        category: 'system'  },
-  { id: 'sunmoon',      label: 'Sun & Moon',             category: 'info'    },
-  { id: 'news',         label: 'News',                   category: 'info'    },
-  { id: 'picow',        label: 'Pico W',                 category: 'sensor'  },
-  { id: 'backup',       label: 'Backup',                 category: 'system'  },
+  { id: 'calendar',     label: 'Calendar',          category: 'info'    },
+  { id: 'alarm',        label: 'Home Alarm',         category: 'control' },
+  { id: 'boiler',       label: 'Boiler',             category: 'control' },
+  { id: 'environment',  label: 'Sensors',            category: 'sensor'  },
+  { id: 'raspi',        label: 'Raspberry Pi',       category: 'system'  },
+  { id: 'weather',      label: 'Weather',            category: 'info'    },
+  { id: 'ping',         label: 'Ping',               category: 'system'  },
+  { id: 'train',        label: 'Train',              category: 'info'    },
+  { id: 'air_external', label: 'Air Quality (Ext)',  category: 'sensor'  },
+  { id: 'on_this_day',  label: 'On This Day',        category: 'info'    },
+  { id: 'recipe',       label: 'Recipe',             category: 'info'    },
+  { id: 'network',      label: 'Network Devices',    category: 'system'  },
+  { id: 'sunmoon',      label: 'Sun & Moon',         category: 'info'    },
+  { id: 'news',         label: 'News',               category: 'info'    },
+  { id: 'picow',        label: 'Pico W',             category: 'sensor'  },
+  { id: 'backup',       label: 'Backup',             category: 'system'  },
+]
+
+// ── Tab definitions (mobile bottom nav) ───────────────────
+type TabId = 'overview' | 'control' | 'sensors' | 'info'
+
+interface NavTab {
+  id: TabId
+  label: string
+  icon: React.ComponentType<{ size: number; strokeWidth?: number }>
+  categories: string[]
+  // Which specific widget IDs to pin to this tab (overrides category filter)
+  pinned?: string[]
+}
+
+const NAV_TABS: NavTab[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: LayoutGrid,
+    categories: [],
+    // hand-pick the "at a glance" cards
+    pinned: ['environment', 'raspi', 'weather', 'calendar'],
+  },
+  {
+    id: 'control',
+    label: 'Control',
+    icon: Sliders,
+    categories: ['control'],
+    pinned: ['alarm', 'boiler', 'ping', 'backup'],
+  },
+  {
+    id: 'sensors',
+    label: 'Sensors',
+    icon: Activity,
+    categories: ['sensor'],
+    pinned: ['environment', 'air_external', 'picow', 'sunmoon', 'network'],
+  },
+  {
+    id: 'info',
+    label: 'Info',
+    icon: Info,
+    categories: ['info'],
+    pinned: ['train', 'news', 'on_this_day', 'recipe'],
+  },
 ]
 
 interface WidgetDef   { id: string; label: string; category: string }
@@ -65,6 +110,329 @@ const CAT_COLOR: Record<string, string> = {
   sensor:  'var(--card-hum-accent)',
   system:  'var(--card-raspi-accent)',
   info:    'var(--card-air-accent)',
+}
+
+// ── Bottom Nav ─────────────────────────────────────────────
+function BottomNav({
+  active,
+  onChange,
+  alerts,
+}: {
+  active: TabId
+  onChange: (id: TabId) => void
+  alerts: number
+}) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+      background: 'var(--bg-surface)',
+      borderTop: '1px solid var(--border)',
+      display: 'flex',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      backdropFilter: 'blur(20px)',
+    }}>
+      {NAV_TABS.map(tab => {
+        const Icon = tab.icon
+        const isActive = active === tab.id
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            style={{
+              flex: 1,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 3, padding: '10px 0 8px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+              position: 'relative', transition: 'color 0.15s',
+            }}
+          >
+            {isActive && (
+              <div style={{
+                position: 'absolute', top: 0,
+                left: '20%', right: '20%',
+                height: 2, borderRadius: 1,
+                background: 'var(--accent)',
+              }} />
+            )}
+            <div style={{ position: 'relative' }}>
+              <Icon size={21} strokeWidth={isActive ? 2.2 : 1.8} />
+              {tab.id === 'control' && alerts > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -6,
+                  width: 14, height: 14, borderRadius: '50%',
+                  background: 'var(--color-danger)', color: '#fff',
+                  fontSize: '0.46rem', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1.5px solid var(--bg-surface)',
+                }}>{alerts}</span>
+              )}
+            </div>
+            <span style={{
+              fontSize: '0.60rem',
+              fontWeight: isActive ? 700 : 500,
+              letterSpacing: '0.2px',
+            }}>{tab.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Settings sheet (bottom sheet on mobile, modal on desktop) ──
+function SettingsSheet({
+  open,
+  onClose,
+  layout,
+  onToggleVisible,
+  onReset,
+  editMode,
+  setEditMode,
+  isMobile,
+}: {
+  open: boolean
+  onClose: () => void
+  layout: LayoutEntry[]
+  onToggleVisible: (id: string) => void
+  onReset: () => void
+  editMode: boolean
+  setEditMode: (v: boolean) => void
+  isMobile: boolean
+}) {
+  if (!open) return null
+
+  const categories = Array.from(new Set(DEFAULT_WIDGETS.map(w => w.category)))
+
+  const Inner = () => (
+    <>
+      {/* Edit mode toggle */}
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{
+          fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.8px', color: 'var(--text-muted)',
+          marginBottom: 10, fontFamily: 'var(--font-mono)',
+        }}>Layout</div>
+        <div
+          onClick={() => { setEditMode(!editMode); if (isMobile) onClose() }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '11px 14px', borderRadius: 12, cursor: 'pointer',
+            background: editMode
+              ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+              : 'var(--bg-surface-2)',
+            border: `1px solid ${editMode
+              ? 'color-mix(in srgb, var(--accent) 35%, transparent)'
+              : 'var(--border)'}`,
+            transition: 'all 0.15s',
+          }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: editMode
+              ? 'color-mix(in srgb, var(--accent) 15%, transparent)'
+              : 'rgba(148,163,184,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <GripVertical size={16} style={{ color: editMode ? 'var(--accent)' : 'var(--text-muted)' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Reorder widgets
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: 1 }}>
+              Drag & drop to rearrange
+            </div>
+          </div>
+          {/* Toggle switch */}
+          <div style={{
+            width: 42, height: 24, borderRadius: 999,
+            background: editMode ? 'var(--accent)' : 'rgba(148,163,184,0.25)',
+            position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute', top: 3, width: 18, height: 18, borderRadius: '50%',
+              background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+              left: editMode ? 21 : 3, transition: 'left 0.2s',
+            }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Widget visibility */}
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 10,
+        }}>
+          <div style={{
+            fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.8px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+          }}>Widget visibility</div>
+          <button
+            onClick={onReset}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '3px 8px', borderRadius: 6,
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              color: 'var(--text-muted)', fontSize: '0.65rem',
+              cursor: 'pointer',
+            }}
+          >
+            <RotateCcw size={10} /> Reset
+          </button>
+        </div>
+
+        {categories.map(cat => {
+          const widgets = DEFAULT_WIDGETS.filter(w => w.category === cat)
+          return (
+            <div key={cat} style={{ marginBottom: 14 }}>
+              <div style={{
+                fontSize: '0.55rem', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.7px',
+                color: CAT_COLOR[cat] || 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)', marginBottom: 6,
+              }}>{cat}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {widgets.map(w => {
+                  const entry = layout.find(e => e.id === w.id)
+                  const visible = entry?.visible ?? true
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={() => onToggleVisible(w.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '4px 10px', borderRadius: 99,
+                        background: visible
+                          ? `color-mix(in srgb, ${CAT_COLOR[cat] || 'var(--accent)'} 12%, transparent)`
+                          : 'var(--bg-surface-2)',
+                        border: `1px solid ${visible
+                          ? `color-mix(in srgb, ${CAT_COLOR[cat] || 'var(--accent)'} 30%, transparent)`
+                          : 'var(--border)'}`,
+                        color: visible
+                          ? (CAT_COLOR[cat] || 'var(--accent)')
+                          : 'var(--text-muted)',
+                        fontSize: '0.70rem', fontWeight: 600,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      {visible
+                        ? <Eye size={10} />
+                        : <EyeOff size={10} />}
+                      {w.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ padding: '12px 20px', fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+        Tap a widget to show/hide it across all tabs.
+      </div>
+      <div style={{ height: 20 }} />
+    </>
+  )
+
+  if (isMobile) {
+    // Bottom sheet on mobile
+    return (
+      <>
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          }}
+        />
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 201,
+          background: 'var(--bg-surface)',
+          borderTopLeftRadius: 24, borderTopRightRadius: 24,
+          maxHeight: '92vh',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.35)',
+          animation: 'slideUp 0.28s cubic-bezier(.32,1.1,.42,1)',
+        }}>
+          {/* Handle */}
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 8, flexShrink: 0 }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(148,163,184,0.35)' }} />
+          </div>
+          {/* Title row */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 20px 14px', flexShrink: 0,
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</span>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
+                borderRadius: 8, padding: '5px 7px', cursor: 'pointer',
+                color: 'var(--text-secondary)', lineHeight: 1,
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <Inner />
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // Desktop: centered modal
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem',
+        }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 18, width: '100%', maxWidth: 460,
+            maxHeight: '88vh', overflowY: 'auto',
+            position: 'relative',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1.1rem 1.25rem', borderBottom: '1px solid var(--border)',
+            position: 'sticky', top: 0, background: 'var(--bg-surface)', zIndex: 10,
+          }}>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>Settings</span>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
+                borderRadius: 8, padding: '5px 7px', cursor: 'pointer',
+                color: 'var(--text-secondary)', lineHeight: 1,
+              }}
+            >
+              <X size={13} />
+            </button>
+          </div>
+          <Inner />
+        </div>
+      </div>
+    </>
+  )
 }
 
 // ── Widget shells ──────────────────────────────────────────
@@ -162,20 +530,6 @@ function DualWidget({ section, icon, label, sublabel, onNavigate,
             </div>
           </div>
         ))}
-      </div>
-    </Widget>
-  )
-}
-
-function StatWidget({ section, icon, label, sublabel, onNavigate, value, unit, color }: any) {
-  const c = color || `var(--card-${section}-accent)`
-  return (
-    <Widget section={section} icon={icon} label={label} sublabel={sublabel} onNavigate={onNavigate}>
-      <div style={{ fontFamily:'var(--font-mono)', fontSize:'clamp(1.5rem,5vw,2.5rem)',
-        fontWeight:500, color:c, lineHeight:1, display:'flex', alignItems:'baseline', gap:'0.2rem' }}>
-        {value??'—'}
-        {unit&&value!=null&&<span style={{ fontSize:'clamp(0.75rem,2vw,1rem)',
-          color:'var(--text-muted)', fontWeight:400 }}>{unit}</span>}
       </div>
     </Widget>
   )
@@ -298,7 +652,8 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
   const aqiLabel  = (v: number) => v >= 80 ? 'Good' : v >= 60 ? 'Moderate' : v >= 40 ? 'Poor' : 'Hazardous'
   const parseAqi = (msg: string): number | null => {
     const m = msg.match(/aqi\s*[:=]\s*([\d.]+)/i)
-    return m ? parseFloat(m[1]) : null}
+    return m ? parseFloat(m[1]) : null
+  }
   const parseTs   = (raw: string): Date | null => {
     try { const d = new Date(raw.replace(' ','T').replace(/(\.(\d{3}))\d+/,'$1')); return isNaN(d.getTime()) ? null : d }
     catch { return null }
@@ -310,54 +665,22 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
         const res = await fetch('/api/pico-logs?limit=20', { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
-
         if (data?.logs?.length) {
-
-          // 🔥 take the latest SENSOR log (not the latest generic one)
-          const sensorLog = [...data.logs]
-            .reverse()
-            .find((l: PicoLog) => l.level === 'SENSOR')
-
+          const sensorLog = [...data.logs].reverse().find((l: PicoLog) => l.level === 'SENSOR')
           const entry = sensorLog ?? data.logs[data.logs.length - 1]
-
           setLog(entry)
-
-          // AQI only if it is SENSOR
-          if (entry.level === 'SENSOR') {
-            setAqi(parseAqi(entry.message))
-          } else {
-            setAqi(null)
-          }
-
-          // timestamp / online status
+          if (entry.level === 'SENSOR') setAqi(parseAqi(entry.message))
+          else setAqi(null)
           const d = parseTs(entry.created_at)
           if (d) {
             const diffMin = Math.floor((Date.now() - d.getTime()) / 60000)
-
-            setLastLog(
-              diffMin < 1
-                ? 'just now'
-                : diffMin < 60
-                  ? `${diffMin}m ago`
-                  : d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-            )
-
+            setLastLog(diffMin < 1 ? 'just now' : diffMin < 60 ? `${diffMin}m ago` : d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }))
             setOnline(diffMin >= 0 && diffMin < 5)
-          } else {
-            setOnline(false)
-          }
-
-        } else {
-          setOnline(false)
-        }
-
-      } catch {
-        setOnline(false)
-      } finally {
-        setLoading(false)
-      }
+          } else { setOnline(false) }
+        } else { setOnline(false) }
+      } catch { setOnline(false) }
+      finally { setLoading(false) }
     }
-
     load()
     const id = setInterval(load, 30000)
     return () => clearInterval(id)
@@ -426,9 +749,6 @@ function PicoWidget({ onNavigate }: { onNavigate: () => void }) {
                 <div style={{ fontSize:'0.55rem', fontWeight:600, letterSpacing:'0.5px', textTransform:'uppercase', color:'var(--text-muted)', marginBottom:'0.25rem' }}>timestamp</div>
                 <div style={{ color:'var(--text-primary)' }}>
                   {new Date(log.created_at)?.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) ?? '—'}
-                </div>
-                <div style={{ opacity:0.6, marginTop:'0.1rem' }}>
-                  {new Date(log.created_at)?.toLocaleDateString('it-IT') ?? ''}
                 </div>
               </div>
             </div>
@@ -574,70 +894,6 @@ function DraggableSlot({ id, editMode, isDragOver, onDragStart, onDragOver, onDr
   )
 }
 
-// ── Settings panel ─────────────────────────────────────────
-function SettingsPanel({ layout, onToggleVisible, onReset, onClose }: {
-  layout: LayoutEntry[]; onToggleVisible: (id: string) => void; onReset: () => void; onClose: () => void
-}) {
-  const categories = Array.from(new Set(DEFAULT_WIDGETS.map(w => w.category)))
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.5)',
-      display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }} onClick={onClose}>
-      <div style={{ background:'var(--bg-surface)', borderRadius:'var(--radius-lg)',
-        border:'1px solid var(--border)', width:'100%', maxWidth:420,
-        maxHeight:'80vh', overflow:'hidden', display:'flex', flexDirection:'column' }}
-        onClick={e => e.stopPropagation()}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'1rem 1.25rem', borderBottom:'1px solid var(--border)' }}>
-          <span style={{ fontWeight:600, fontSize:'0.9rem' }}>Widget visibility</span>
-          <div style={{ display:'flex', gap:'0.5rem' }}>
-            <button className="btn btn--ghost btn--sm" onClick={onReset}
-              style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
-              <RotateCcw size={12}/> Reset
-            </button>
-            <button className="btn btn--ghost btn--sm" onClick={onClose}><X size={14}/></button>
-          </div>
-        </div>
-        <div style={{ overflowY:'auto', padding:'0.75rem 1.25rem 1.25rem' }}>
-          {categories.map(cat => {
-            const widgets = DEFAULT_WIDGETS.filter(w => w.category === cat)
-            return (
-              <div key={cat} style={{ marginTop:'0.75rem' }}>
-                <div style={{ fontSize:'0.65rem', fontWeight:700, textTransform:'uppercase',
-                  letterSpacing:'0.07em', color: CAT_COLOR[cat] || 'var(--text-muted)',
-                  marginBottom:'0.4rem', fontFamily:'var(--font-mono)' }}>{cat}</div>
-                {widgets.map(w => {
-                  const entry   = layout.find(e => e.id === w.id)
-                  const visible = entry?.visible ?? true
-                  return (
-                    <div key={w.id} onClick={() => onToggleVisible(w.id)}
-                      style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-                        padding:'0.5rem 0.75rem', borderRadius:'var(--radius-md)',
-                        cursor:'pointer', marginBottom:'0.2rem',
-                        background: visible ? 'transparent' : 'var(--bg-muted)', transition:'background 0.15s' }}
-                      onMouseEnter={e=>(e.currentTarget as HTMLDivElement).style.background='var(--bg-surface-2)'}
-                      onMouseLeave={e=>(e.currentTarget as HTMLDivElement).style.background=visible?'transparent':'var(--bg-muted)'}
-                    >
-                      <span style={{ fontSize:'0.82rem', color: visible ? 'var(--text-primary)' : 'var(--text-muted)',
-                        textDecoration: visible ? 'none' : 'line-through' }}>{w.label}</span>
-                      {visible
-                        ? <Eye size={14} style={{ color:'var(--color-success)', flexShrink:0 }}/>
-                        : <EyeOff size={14} style={{ color:'var(--text-muted)', flexShrink:0 }}/>}
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-        <div style={{ padding:'0.75rem 1.25rem', borderTop:'1px solid var(--border)',
-          fontFamily:'var(--font-mono)', fontSize:'0.68rem', color:'var(--text-muted)' }}>
-          Drag widgets in the dashboard to reorder them
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main page ──────────────────────────────────────────────
 export default function HomePage() {
   const nav = useNavigate()
@@ -646,6 +902,15 @@ export default function HomePage() {
   const [showSettings,    setShowSettings]    = useState(false)
   const [editMode,        setEditMode]        = useState(false)
   const [layout,          setLayout]          = useState<LayoutEntry[]>(loadLayout)
+  const [isMobile,        setIsMobile]        = useState(false)
+  const [mobileTab,       setMobileTab]       = useState<TabId>('overview')
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 860)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const dragId    = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -665,7 +930,6 @@ export default function HomePage() {
   const [lastUpdate,    setLastUpdate]    = useState<Date | null>(null)
   const [countdown,     setCountdown]     = useState(REFRESH_INTERVAL)
 
-  // ── Nuovi state per la barra ───────────────────────────
   const [aqi,     setAqi]     = useState<number | null>(null)
   const [sunrise, setSunrise] = useState<string | null>(null)
   const [sunset,  setSunset]  = useState<string | null>(null)
@@ -711,8 +975,6 @@ export default function HomePage() {
         .then(([b, t]: [any, any]) => { setBoilerOn(b.is_on); setThermostat(t.thermostat_enabled) })
         .catch(() => {}),
 
-
-      // ── Alba e tramonto ───────────────────────────────
       fetch('/api/sunmoon')
         .then(r => r.json())
         .then((d: any) => {
@@ -793,13 +1055,13 @@ export default function HomePage() {
       case 'boiler':       return (
         <ToggleWidget section="temp" icon={Flame} label="Boiler"
           sublabel={thermostat ? 'Thermostat active' : 'Manual control'}
-          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler} onNavigate={() => nav('/temperature')}/>
+          isOn={boilerOn} loading={boilerLoading} onToggle={toggleBoiler} onNavigate={() => nav('/floorplan')}/>
       )
       case 'environment':  return (
-        <DualWidget section="hum" icon={Thermometer} label="Environment" sublabel="Temperature & Humidity"
-          onNavigate={() => nav('/temperature')}
-          val1={temp} unit1="°C" tag1="Temp"     color1="var(--card-temp-accent)"
-          val2={hum}  unit2="%" tag2="Humidity"  color2="var(--card-hum-accent)"/>
+        <DualWidget section="hum" icon={Thermometer} label="Sensors" sublabel="Floorplan hub"
+          onNavigate={() => nav('/floorplan')}
+          val1={temp} unit1="°C" tag1="Temp"    color1="var(--card-temp-accent)"
+          val2={hum}  unit2="%" tag2="Humidity" color2="var(--card-hum-accent)"/>
       )
       case 'raspi':        return (
         <DualWidget section="raspi" icon={Cpu} label="Raspberry Pi" sublabel="System status"
@@ -824,10 +1086,22 @@ export default function HomePage() {
     }
   }
 
+  // ── Resolve which widget IDs to show for current mobile tab ──
+  const mobileWidgetIds = (): string[] => {
+    const tab = NAV_TABS.find(t => t.id === mobileTab)!
+    const pinned = tab.pinned ?? []
+    // filter to only visible ones
+    const visibleIds = new Set(layout.filter(e => e.visible).map(e => e.id))
+    return pinned.filter(id => visibleIds.has(id))
+  }
+
   const visibleLayout = layout.filter(e => e.visible)
   const hiddenCount   = layout.filter(e => !e.visible).length
+  const alertCount    = [
+    alarm === true ? 1 : 0,
+    boilerOn === true ? 1 : 0,
+  ].reduce((a, b) => a + b, 0)
 
-  // ── Colore AQI ─────────────────────────────────────────
   const aqiColor = aqi != null
     ? aqi >= 80 ? 'var(--color-success)' : aqi >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'
     : 'var(--text-muted)'
@@ -835,55 +1109,329 @@ export default function HomePage() {
     ? aqi >= 80 ? 'Good' : aqi >= 60 ? 'Moderate' : 'Poor'
     : ''
 
+  // ════════════════════════════════════════════════════════
+  // MOBILE RENDER
+  // ════════════════════════════════════════════════════════
+  if (isMobile) {
+    const tabWidgets = mobileWidgetIds()
+
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--bg-page)',
+        color: 'var(--text-primary)',
+        paddingBottom: 'calc(64px + env(safe-area-inset-bottom))',
+        paddingTop: 'env(safe-area-inset-top)',
+      }}>
+
+        {/* ── MOBILE HEADER ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px',
+          background: 'var(--bg-surface)',
+          borderBottom: '1px solid var(--border)',
+          position: 'sticky', top: 0, zIndex: 50,
+          backdropFilter: 'blur(20px)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 9,
+              background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 28%, transparent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Server size={15} style={{ color: 'var(--accent)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+                Smart<span style={{ color: 'var(--accent)' }}>House</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.58rem', color: 'var(--text-muted)' }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-success)', animation: 'lp 2s infinite', display: 'inline-block' }} />
+                {lastUpdate ? lastUpdate.toLocaleTimeString('it-IT') : '…'} · {REFRESH_INTERVAL}s
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Refresh */}
+            <button
+              onClick={() => loadAll(true)}
+              disabled={refreshing}
+              style={{
+                width: 36, height: 36, borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--bg-surface-2)', border: '1px solid var(--border)',
+                cursor: 'pointer', color: 'var(--text-secondary)',
+              }}
+            >
+              <RefreshCw size={15} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
+            </button>
+
+            {/* Gear icon */}
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{
+                width: 40, height: 40, borderRadius: 11,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: showSettings
+                  ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+                  : 'var(--bg-surface-2)',
+                border: `1px solid ${showSettings
+                  ? 'color-mix(in srgb, var(--accent) 40%, transparent)'
+                  : 'var(--border)'}`,
+                cursor: 'pointer',
+                color: showSettings ? 'var(--accent)' : 'var(--text-primary)',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Settings size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Refresh progress bar */}
+        <div style={{ padding: '0 16px', paddingTop: 8 }}>
+          <RefreshBar secondsLeft={countdown} total={REFRESH_INTERVAL} />
+        </div>
+
+        {/* Notification banner */}
+        {showNotifBanner && permission === 'default' && (
+          <div style={{
+            margin: '8px 12px 0',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '0.75rem', padding: '10px 14px',
+            background: 'var(--accent-light)',
+            border: '1px solid rgba(59,110,255,0.16)',
+            borderRadius: 12,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Bell size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-primary)' }}>
+                Enable notifications for alerts
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn--primary btn--sm" onClick={async () => { await request(); setShowNotifBanner(false) }}>Enable</button>
+              <button className="btn btn--ghost btn--sm" onClick={() => setShowNotifBanner(false)}>Not now</button>
+            </div>
+          </div>
+        )}
+
+        {/* Edit mode banner */}
+        {editMode && (
+          <div style={{
+            margin: '8px 12px 0',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, padding: '10px 14px',
+            background: 'color-mix(in srgb, var(--accent) 6%, transparent)',
+            border: '1px dashed var(--accent)',
+            borderRadius: 12, fontSize: '0.72rem', color: 'var(--accent)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <GripVertical size={13} />
+              Drag to reorder widgets
+            </div>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={() => setEditMode(false)}
+            >Done</button>
+          </div>
+        )}
+
+        {/* ── TAB CONTENT ── */}
+        <div style={{ padding: '12px 12px 0' }}>
+          {tabWidgets.length === 0 ? (
+            <div style={{
+              padding: '3rem 1rem', textAlign: 'center',
+              color: 'var(--text-secondary)', fontSize: '0.82rem',
+            }}>
+              <div style={{ fontSize: '2rem', marginBottom: 10 }}>🙈</div>
+              All widgets in this tab are hidden.
+              <div style={{ marginTop: 8 }}>
+                <button className="btn btn--ghost btn--sm" onClick={() => setShowSettings(true)}>
+                  <Settings size={12} /> Manage
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bento-grid bento-grid--auto" style={{ alignItems: 'stretch' }}>
+              {tabWidgets.map(id => (
+                <DraggableSlot key={id} id={id} editMode={editMode} isDragOver={dragOverId === id}
+                  onDragStart={handleDragStart} onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd} onDrop={handleDrop}>
+                  {renderWidget(id)}
+                </DraggableSlot>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Summary bar (bottom of tab content) */}
+        {(tempMM || humMM || sunrise || sunset) && (
+          <div style={{
+            margin: '12px 12px 0',
+            display: 'flex', gap: '0.75rem', flexWrap: 'wrap',
+            padding: '10px 14px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            alignItems: 'center',
+          }}>
+            {tempMM && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Thermometer size={11} style={{ color: 'var(--card-temp-accent)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {tempMM} °C
+                </span>
+              </div>
+            )}
+            {humMM && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Droplets size={11} style={{ color: 'var(--card-hum-accent)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {humMM} %
+                </span>
+              </div>
+            )}
+            {sunrise && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Sunrise size={11} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {sunrise}
+                </span>
+              </div>
+            )}
+            {sunset && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Sunset size={11} style={{ color: 'var(--card-temp-accent)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                  {sunset}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── BOTTOM NAV ── */}
+        <BottomNav active={mobileTab} onChange={setMobileTab} alerts={alertCount} />
+
+        {/* ── SETTINGS SHEET (mobile) ── */}
+        <SettingsSheet
+          open={showSettings} onClose={() => setShowSettings(false)}
+          layout={layout} onToggleVisible={toggleVisible} onReset={resetLayout}
+          editMode={editMode} setEditMode={setEditMode}
+          isMobile={true}
+        />
+
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes lp   { 0%,100%{opacity:1} 50%{opacity:0.3} }
+          @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        `}</style>
+      </div>
+    )
+  }
+
+  // ════════════════════════════════════════════════════════
+  // DESKTOP RENDER
+  // ════════════════════════════════════════════════════════
   return (
     <div className="animate-fade">
 
       {/* Header */}
-      <div style={{ marginBottom:'1.5rem' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          flexWrap:'wrap', gap:'0.75rem', marginBottom:'0.6rem' }}>
-          <div>
-            <h1 className="page-title" style={{ fontSize:'clamp(1.4rem,4vw,2rem)' }}>
+      <section className="page-header animate-slide-up" style={{ marginBottom: '1rem' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'1rem', flexWrap:'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div className="section-tag section-tag--act" style={{ marginBottom:'0.45rem' }}>Overview</div>
+            <h1 className="page-title" style={{ fontSize:'clamp(1.7rem, 4vw, 2.65rem)', marginBottom:'0.35rem' }}>
               Smart<span style={{ color:'var(--accent)' }}>House</span>
             </h1>
-            <p style={{ fontFamily:'var(--font-mono)', fontSize:'0.65rem',
-              color:'var(--text-muted)', letterSpacing:'0.5px', marginTop:'0.2rem' }}>
-              {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString('it-IT')}` : 'Loading...'}
+            <p className="page-subtitle" style={{ maxWidth:'64ch' }}>
+              A live home dashboard with the essentials up front: sensors, automations, health checks, and quick actions.
             </p>
           </div>
-          <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', flexWrap:'wrap' }}>
+
+          <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', flexWrap:'wrap', justifyContent:'flex-end' }}>
             <button className={editMode ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm'}
               onClick={() => setEditMode(v => !v)}
               style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
               <GripVertical size={13}/>{editMode ? 'Done' : 'Reorder'}
             </button>
-            <button className="btn btn--ghost btn--sm" onClick={() => setShowSettings(true)}
-              style={{ display:'flex', alignItems:'center', gap:'0.35rem', position:'relative' }}>
-              <Settings size={13}/> Widgets
-              {hiddenCount > 0 && (
-                <span style={{ position:'absolute', top:-4, right:-4, minWidth:16, height:16,
-                  borderRadius:99, background:'var(--accent)', color:'#fff',
-                  fontFamily:'var(--font-mono)', fontSize:'0.6rem', fontWeight:700,
-                  display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px' }}>
-                  {hiddenCount}
-                </span>
-              )}
-            </button>
-            <button className="btn btn--ghost btn--sm" onClick={() => loadAll()} disabled={refreshing}>
+
+            <button className="btn btn--ghost btn--sm" onClick={() => loadAll()} disabled={refreshing}
+              style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}>
               <RefreshCw size={13} style={{ animation:refreshing ? 'spin 0.8s linear infinite' : 'none' }}/>
               {refreshing ? 'Refreshing...' : 'Refresh all'}
             </button>
+
+            {/* ── GEAR ICON ── */}
+            <button
+              onClick={() => setShowSettings(v => !v)}
+              title="Settings"
+              style={{
+                width: 34, height: 34, borderRadius: 9,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: showSettings
+                  ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+                  : 'var(--bg-surface-2)',
+                border: `1px solid ${showSettings
+                  ? 'color-mix(in srgb, var(--accent) 40%, transparent)'
+                  : 'var(--border)'}`,
+                cursor: 'pointer',
+                color: showSettings ? 'var(--accent)' : 'var(--text-secondary)',
+                transition: 'all 0.15s', flexShrink: 0,
+                position: 'relative',
+              }}
+            >
+              <Settings size={15} />
+              {hiddenCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  minWidth: 16, height: 16, borderRadius: 99,
+                  background: 'var(--accent)', color: '#fff',
+                  fontFamily: 'var(--font-mono)', fontSize: '0.58rem', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 3px',
+                }}>{hiddenCount}</span>
+              )}
+            </button>
           </div>
         </div>
-        <RefreshBar secondsLeft={countdown} total={REFRESH_INTERVAL}/>
-      </div>
+
+        <div className="panel-strip" style={{ padding:'0.95rem 0 0' }}>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Updated</span>
+            <span className="panel-strip__value">{lastUpdate ? lastUpdate.toLocaleTimeString('it-IT') : 'Loading...'}</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Widgets</span>
+            <span className="panel-strip__value">{visibleLayout.length} visible</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Hidden</span>
+            <span className="panel-strip__value">{hiddenCount}</span>
+          </div>
+          <div className="panel-strip__item">
+            <span className="panel-strip__label">Mode</span>
+            <span className="panel-strip__value">{editMode ? 'Reordering' : 'View'}</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop:'0.9rem' }}>
+          <RefreshBar secondsLeft={countdown} total={REFRESH_INTERVAL}/>
+        </div>
+      </section>
 
       {/* Edit mode hint */}
       {editMode && (
-        <div style={{ display:'flex', alignItems:'center', gap:'0.5rem',
-          padding:'0.6rem 0.875rem', marginBottom:'0.875rem',
-          background:'var(--accent-light)', border:'1px solid rgba(0,102,204,0.2)',
-          borderRadius:'var(--radius-md)', fontSize:'0.78rem', color:'var(--text-primary)' }}>
+        <div className="card animate-slide-up" style={{
+          display:'flex', alignItems:'center', gap:'0.5rem',
+          padding:'0.85rem 0.95rem', marginBottom:'0.875rem',
+          background:'var(--accent-light)', borderColor:'rgba(59,110,255,0.16)',
+          fontSize:'0.78rem', color:'var(--text-primary)'
+        }}>
           <GripVertical size={13} style={{ color:'var(--accent)', flexShrink:0 }}/>
           Drag widgets to reorder them. Click <strong>Done</strong> when finished.
         </div>
@@ -891,10 +1439,12 @@ export default function HomePage() {
 
       {/* Notification banner */}
       {showNotifBanner && permission === 'default' && (
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
-          gap:'1rem', padding:'0.75rem 1rem', marginBottom:'1rem',
-          background:'var(--accent-light)', border:'1px solid rgba(0,102,204,0.2)',
-          borderRadius:'var(--radius-md)', flexWrap:'wrap' }}>
+        <div className="card animate-slide-up" style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          gap:'1rem', padding:'0.9rem 1rem', marginBottom:'1rem',
+          background:'var(--accent-light)', borderColor:'rgba(59,110,255,0.16)',
+          flexWrap:'wrap'
+        }}>
           <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
             <Bell size={14} style={{ color:'var(--accent)', flexShrink:0 }}/>
             <span style={{ fontSize:'0.8rem', color:'var(--text-primary)' }}>
@@ -910,88 +1460,85 @@ export default function HomePage() {
       )}
 
       {/* Widget grid */}
-      <div style={{
-        display:'grid',
-        gridTemplateColumns:'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
-        gap:'0.625rem', alignItems:'stretch',
-      }}>
-        {visibleLayout.map(({ id }) => (
-          <DraggableSlot key={id} id={id} editMode={editMode} isDragOver={dragOverId === id}
-            onDragStart={handleDragStart} onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd} onDrop={handleDrop}>
-            {renderWidget(id)}
-          </DraggableSlot>
-        ))}
-      </div>
+      <section>
+        <div className="flex-between" style={{ margin:'0.25rem 0 0.85rem', gap:'1rem', flexWrap:'wrap' }}>
+          <div>
+            <div className="section-tag section-tag--air">Widgets</div>
+            <div className="page-subtitle" style={{ marginTop:'0.3rem' }}>
+              Drag to reorder, hide what you do not need, and keep the essentials first.
+            </div>
+          </div>
+        </div>
 
-      {/* ── Bottom summary bar ── */}
+        <div className="bento-grid bento-grid--auto" style={{ alignItems:'stretch' }}>
+          {visibleLayout.map(({ id }) => (
+            <DraggableSlot key={id} id={id} editMode={editMode} isDragOver={dragOverId === id}
+              onDragStart={handleDragStart} onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd} onDrop={handleDrop}>
+              {renderWidget(id)}
+            </DraggableSlot>
+          ))}
+        </div>
+      </section>
+
+      {/* Bottom summary bar */}
       {(tempMM || humMM || aqi != null || sunrise || sunset) && (
-        <div style={{ display:'flex', gap:'1.25rem', flexWrap:'wrap', marginTop:'1rem',
-          padding:'0.75rem 1rem', background:'var(--bg-surface)',
-          border:'1px solid var(--border)', borderRadius:'var(--radius-md)',
-          alignItems:'center' }}>
-
-          {/* Temp 24h */}
+        <div className="card animate-slide-up" style={{ display:'flex', gap:'1rem', flexWrap:'wrap', marginTop:'1rem',
+          padding:'0.9rem 1rem', background:'var(--bg-surface)', alignItems:'center' }}>
           {tempMM && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Thermometer size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Temp 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{tempMM} °C</span>
               </span>
             </div>
           )}
-
-          {/* Hum 24h */}
           {humMM && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Droplets size={12} style={{ color:'var(--card-hum-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Hum 24h: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{humMM} %</span>
               </span>
             </div>
           )}
-
-          {/* AQI */}
           {aqi != null && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Wind size={12} style={{ color: aqiColor, flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 AQI: <span style={{ color: aqiColor, fontWeight:500 }}>{aqi.toFixed(0)} · {aqiLabel}</span>
               </span>
             </div>
           )}
-
-          {/* Sunrise */}
           {sunrise && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Sunrise size={12} style={{ color:'var(--color-warning)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Sunrise: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunrise}</span>
               </span>
             </div>
           )}
-
-          {/* Sunset */}
           {sunset && (
-            <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+            <div className="panel-strip__item" style={{ marginRight: '0.4rem' }}>
               <Sunset size={12} style={{ color:'var(--card-temp-accent)', flexShrink:0 }}/>
-              <span style={{ fontFamily:'var(--font-mono)', fontSize:'0.72rem', color:'var(--text-secondary)' }}>
+              <span className="panel-strip__label" style={{ color:'var(--text-secondary)' }}>
                 Sunset: <span style={{ color:'var(--text-primary)', fontWeight:500 }}>{sunset}</span>
               </span>
             </div>
           )}
-
         </div>
       )}
 
-      {/* Settings modal */}
-      {showSettings && (
-        <SettingsPanel layout={layout} onToggleVisible={toggleVisible}
-          onReset={resetLayout} onClose={() => setShowSettings(false)}/>
-      )}
+      {/* Settings modal (desktop) */}
+      <SettingsSheet
+        open={showSettings} onClose={() => setShowSettings(false)}
+        layout={layout} onToggleVisible={toggleVisible} onReset={resetLayout}
+        editMode={editMode} setEditMode={setEditMode}
+        isMobile={false}
+      />
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes lp   { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @media (max-width: 480px) { .page-title { font-size: 1.4rem !important; } }
       `}</style>
     </div>

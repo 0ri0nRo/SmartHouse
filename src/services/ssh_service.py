@@ -6,7 +6,7 @@ class SSHService:
     """Service to execute SSH commands on remote devices"""
     
     @staticmethod
-    def exec_command(command, private_key_str=None, passphrase=None, username=None, password=None, ip=None, port=22):
+    def exec_command(command, private_key_str=None, passphrase=None, username=None, password=None, ip=None, port=22, timeout: int = 60):
         """Executes an SSH command using private key or username/password"""
 
         client = paramiko.SSHClient()
@@ -38,7 +38,7 @@ class SSHService:
         else:
             raise ValueError("No authentication method provided (password or private key required)")
 
-        stdin, stdout, stderr = client.exec_command(command)
+        stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
         out = stdout.read().decode('utf-8')
         err = stderr.read().decode('utf-8')
         client.close()

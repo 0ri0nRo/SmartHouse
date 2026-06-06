@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models.database import handle_db_error
 from services.train_service import TrainService
+from utils.redis_cache import cache_json_response
 from config.settings import get_config
 
 train_bp     = Blueprint('train', __name__)
@@ -10,6 +11,7 @@ train_service = TrainService(config['DB_CONFIG'])
 
 @train_bp.route('/trains_data/<train_destination>', methods=['GET'])
 @handle_db_error
+@cache_json_response(ttl_seconds=60)
 def api_trains_data_fetch(train_destination):
     """
     Fetch train data for a given destination.

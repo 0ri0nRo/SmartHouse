@@ -5,6 +5,7 @@ import psutil
 import logging
 import threading
 import shutil
+from datetime import datetime
 from models.database import handle_db_error
 from services.ssh_service import SSHService
 from send_email import EmailSender, send_backup_email
@@ -22,26 +23,42 @@ email_sender = EmailSender(
 )
 
 _upgrade_state = {'running': False, 'output': [], 'done': False, 'error': None}
+_nextcloud_state = {'running': False, 'output': [], 'done': False, 'error': None}
+_full_upgrade_state = {
+    'running': False,
+    'output': [],
+    'done': False,
+    'error': None,
+    'step': '',
+    'progress': 0,
+    'total_steps': 8,
+    'start_time': None,
+    'end_time': None,
+}
+_maintenance_state = {
+    'running': False,
+    'output': [],
+    'done': False,
+    'error': None,
+    'action': '',
+}
 
 HOST_IP   = config.get('RASPI_HOST_IP',       '127.0.0.1')
 HOST_USER = config.get('RASPI_HOST_USER',     'orion')
 HOST_PWD  = config.get('RASPI_HOST_PASSWORD', None)
 HOST_KEY  = config.get('RASPI_HOST_KEY_PATH', '/run/secrets/id_rsa')
-HOST_PORT = int(config.get('RASPI_HOST_SSH_PORT', 2244))   # ← porta di default 2244
+HOST_PORT = int(config.get('RASPI_HOST_SSH_PORT', 2244))   # ← default port 2244
 
+# Default SSH timeout (seconds) — used when a payload doesn't specify timeout
+DEFAULT_SSH_TIMEOUT = 30
 ALLOWED_SERVICES = {
     'nginx', 'ssh', 'cron', 'docker',
     'bluetooth', 'avahi-daemon', 'fail2ban',
 }
 
 
-def _ssh_exec_host(command: str, port: int = None) -> tuple:
-    """Esegue un comando sul Raspberry Pi via SSH usando la chiave del server.
+def _ssh_exec_host(command: str, port: int = None, timeout: int = 60) -> tuple:
     
-    Args:
-        command: Comando da eseguire
-        port:    Porta SSH (default: HOST_PORT = 2244)
-    """
     effective_port = port if port is not None else HOST_PORT
 
     key_content = None
@@ -57,6 +74,7 @@ def _ssh_exec_host(command: str, port: int = None) -> tuple:
         password=HOST_PWD,
         ip=HOST_IP,
         port=effective_port,
+        timeout=timeout,        # forwarded
     )
     return out, '', 0
 
@@ -130,7 +148,7 @@ def _parse_throttle_flags(value: int) -> list:
 
 
 def _validate_port(value, default: int = None) -> int:
-    """Valida e converte un valore in numero di porta TCP valido."""
+    """Validate and convert a value to a valid TCP port number."""
     try:
         p = int(value)
         if 1 <= p <= 65535:
@@ -205,7 +223,7 @@ def api_run_backup():
 @system_bp.route('/api/ssh_exec', methods=['POST'])
 @handle_db_error
 def api_ssh_exec():
-    data        = request.get_json()
+    data        = request.get_json() or {}
     private_key = data.get('privateKey')
     command     = data.get('command')
     passphrase  = data.get('passphrase') or None
@@ -213,6 +231,11 @@ def api_ssh_exec():
     password    = data.get('password')   or None
     ip          = data.get('ip')         or None
     port        = _validate_port(data.get('port'), default=HOST_PORT)
+    # Read optional timeout from payload, fallback to DEFAULT_SSH_TIMEOUT
+    try:
+        timeout = int(data.get('timeout', DEFAULT_SSH_TIMEOUT))
+    except (TypeError, ValueError):
+        timeout = DEFAULT_SSH_TIMEOUT
 
     if (not private_key and not password) or not command:
         return jsonify({'error': 'Missing authentication method or command'}), 400
@@ -225,6 +248,7 @@ def api_ssh_exec():
             password=password,
             ip=ip,
             port=port,
+            timeout=timeout,
         )
         return jsonify({'output': out})
     except ValueError as e:
@@ -396,71 +420,611 @@ def api_network():
         })
     result.sort(key=lambda x: x['bytesRecv'], reverse=True)
     return jsonify(result)
-
-
-# ── Logs ───────────────────────────────────────────────────
-@system_bp.route('/api/logs/system')
-@handle_db_error
-@cache_json_response(ttl_seconds=20)
-def api_logs_system():
-    lines = min(int(request.args.get('lines', 50)), 200)
+ 
+ 
+@system_bp.route('/api/system/full_upgrade/status')
+def api_full_upgrade_status():
+    """Returns the state of the full upgrade"""
+    return jsonify(_full_upgrade_state)
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# MAINTENANCE COMMANDS
+# ══════════════════════════════════════════════════════════════════════════════
+ 
+@system_bp.route('/api/system/maintenance/fix_broken', methods=['POST'])
+def api_fix_broken():
+    """
+    Fix broken packages:
+    - dpkg --configure -a
+    - apt-get install -f
+    """
+    global _maintenance_state
+    
+    if _maintenance_state['running']:
+        return jsonify({'error': 'Maintenance operation already running'}), 409
+    
+    _maintenance_state = {
+        'running': True,
+        'output': [],
+        'done': False,
+        'error': None,
+        'action': 'fix_broken'
+    }
+    
+    def run():
+        global _maintenance_state
+        try:
+            _maintenance_state['output'].append('═══ Fixing broken packages ═══')
+            
+            # dpkg --configure -a
+            _maintenance_state['output'].append('$ sudo dpkg --configure -a')
+            stdout, stderr, rc = _ssh_exec_host('sudo dpkg --configure -a', timeout=300)
+            _maintenance_state['output'].append(stdout if stdout else stderr)
+            
+            # apt-get install -f
+            _maintenance_state['output'].append('$ sudo apt-get install -f -y')
+            stdout, stderr, rc = _ssh_exec_host('sudo apt-get install -f -y', timeout=300)
+            _maintenance_state['output'].append(stdout if stdout else stderr)
+            
+            if rc == 0:
+                _maintenance_state['output'].append('✓ Repair completed')
+            else:
+                raise Exception('Error during repair')
+                
+        except Exception as e:
+            _maintenance_state['error'] = str(e)
+        finally:
+            _maintenance_state['running'] = False
+            _maintenance_state['done'] = True
+    
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Repair started'}), 202
+ 
+ 
+@system_bp.route('/api/system/maintenance/clean_all', methods=['POST'])
+def api_clean_all():
+    """
+    Full system cleanup:
+    - apt-get clean
+    - apt-get autoclean
+    - apt-get autoremove
+    - Clean old logs
+    - Clean thumbnail cache
+    """
+    global _maintenance_state
+    
+    if _maintenance_state['running']:
+        return jsonify({'error': 'Maintenance operation already running'}), 409
+    
+    _maintenance_state = {
+        'running': True,
+        'output': [],
+        'done': False,
+        'error': None,
+        'action': 'clean_all'
+    }
+    
+    def run():
+        global _maintenance_state
+        try:
+            _maintenance_state['output'].append('═══ Full system cleanup ═══')
+            
+            commands = [
+                ('apt-get clean', 'sudo apt-get clean'),
+                ('apt-get autoclean', 'sudo apt-get autoclean -y'),
+                ('apt-get autoremove', 'sudo apt-get autoremove -y --purge'),
+                ('Clean old logs', 'sudo journalctl --vacuum-time=7d'),
+                ('Clean thumbnail cache', 'rm -rf ~/.cache/thumbnails/*'),
+            ]
+            
+            for label, cmd in commands:
+                _maintenance_state['output'].append(f'\n$ {cmd}')
+                stdout, stderr, rc = _ssh_exec_host(cmd, timeout=180)
+                _maintenance_state['output'].append(stdout if stdout else stderr)
+                if rc == 0:
+                    _maintenance_state['output'].append(f'✓ {label} completed')
+            
+            # Report freed space
+            stdout, stderr, rc = _ssh_exec_host("df -h / | tail -1")
+            _maintenance_state['output'].append(f'\nDisk space:\n{stdout}')
+            
+            _maintenance_state['output'].append('\n✓ Cleanup completed successfully')
+            
+        except Exception as e:
+            _maintenance_state['error'] = str(e)
+        finally:
+            _maintenance_state['running'] = False
+            _maintenance_state['done'] = True
+    
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Cleanup started'}), 202
+ 
+ 
+@system_bp.route('/api/system/maintenance/status')
+def api_maintenance_status():
+    """Returns the state of maintenance operations"""
+    return jsonify(_maintenance_state)
+ 
+ 
+@system_bp.route('/api/system/disk_usage')
+def api_disk_usage():
+    """
+    Detailed disk usage analysis
+    """
     try:
-        r = _run_host_cmd(['journalctl', '-n', str(lines), '--no-pager', '-o', 'short-iso'])
-        return jsonify({'lines': (r.stdout or '').splitlines(), 'source': 'host'})
+        output = {
+            'summary': {},
+            'top_directories': [],
+            'apt_cache_size': None,
+            'log_size': None
+        }
+        
+        # General summary
+        stdout, stderr, rc = _ssh_exec_host("df -h /")
+        if rc == 0:
+            output['summary']['raw'] = stdout
+        
+        # Top directories
+        stdout, stderr, rc = _ssh_exec_host(
+            "sudo du -h --max-depth=1 / 2>/dev/null | sort -rh | head -10",
+            timeout=60
+        )
+        if rc == 0:
+            output['top_directories'] = stdout.splitlines()
+        
+        # APT cache size
+        stdout, stderr, rc = _ssh_exec_host("sudo du -sh /var/cache/apt/archives 2>/dev/null")
+        if rc == 0:
+            output['apt_cache_size'] = stdout.strip()
+        
+        # Log size
+        stdout, stderr, rc = _ssh_exec_host("sudo du -sh /var/log 2>/dev/null")
+        if rc == 0:
+            output['log_size'] = stdout.strip()
+        
+        return jsonify(output)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+ 
+ 
+@system_bp.route('/api/system/package_info')
+def api_package_info():
+    """
+    Information about installed and available packages
+    """
+    try:
+        output = {}
+        
+        # Installed packages
+        stdout, stderr, rc = _ssh_exec_host("dpkg -l | wc -l")
+        if rc == 0:
+            output['installed_count'] = stdout.strip()
+        
+        # Upgradable packages
+        stdout, stderr, rc = _ssh_exec_host(
+            "apt list --upgradable 2>/dev/null | grep -v 'Listing' | wc -l"
+        )
+        if rc == 0:
+            output['upgradable_count'] = stdout.strip()
+        
+        # Autoremovable packages
+        stdout, stderr, rc = _ssh_exec_host(
+            "apt-get autoremove --dry-run 2>/dev/null | grep 'will be removed' | awk '{print $1}'"
+        )
+        if rc == 0:
+            output['autoremovable_count'] = stdout.strip()
+        
+        # List of upgradable packages
+        stdout, stderr, rc = _ssh_exec_host(
+            "apt list --upgradable 2>/dev/null | grep -v 'Listing' | head -20"
+        )
+        if rc == 0:
+            output['upgradable_list'] = stdout.splitlines()
+        
+        return jsonify(output)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+ 
+ 
+@system_bp.route('/api/system/check_reboot_required')
+def api_check_reboot_required():
+    """
+    Check if a reboot is required
+    """
+    try:
+        stdout, stderr, rc = _ssh_exec_host('[ -f /var/run/reboot-required ] && cat /var/run/reboot-required || echo "No reboot required"')
+        
+        required = 'reboot' in stdout.lower() and 'no reboot' not in stdout.lower()
+        
+        return jsonify({
+            'required': required,
+            'message': stdout.strip(),
+            'file_exists': rc == 0 and 'No reboot' not in stdout
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@system_bp.route('/api/logs/auth')
+# ══════════════════════════════════════════════════════════════════════════════
+# NEXTCLOUD UPDATE
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 1. Stato iniziale (sostituisce la definizione a livello modulo) ────────────
+_nextcloud_state = {
+    'running':     False,
+    'output':      [],
+    'done':        False,
+    'error':       None,
+    'step':        '',
+    'progress':    0,
+    'total_steps': 8,
+    'start_time':  None,
+    'end_time':    None,
+}
+
+
+# ── 2. Route start ─────────────────────────────────────────────────────────────
+@system_bp.route('/api/system/nextcloud_update/start', methods=['POST'])
 @handle_db_error
-@cache_json_response(ttl_seconds=20)
-def api_logs_auth():
-    try:
-        r = _run_host_cmd(['journalctl', '-u', 'ssh', '-n', '30', '--no-pager', '-o', 'short-iso'])
-        if (r.stdout or '').strip():
-            return jsonify({'lines': r.stdout.splitlines(), 'source': 'host'})
-        with open('/var/log/auth.log') as f:
-            return jsonify({'lines': [l.rstrip() for l in f.readlines()[-30:]], 'source': 'local'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+def api_nextcloud_update_start():
+    global _nextcloud_state
+
+    if _nextcloud_state['running']:
+        return jsonify({'error': 'Nextcloud update already running'}), 409
+
+    data = request.get_json(force=True, silent=True) or {}
+    compose_dir  = data.get('compose_dir', '~/nextcloud-docker')
+    db_service   = data.get('db_service',  'db')
+    app_service  = data.get('app_service', 'nextcloud')
+    db_root_pass = data.get('db_root_pass', 'root_password')
+    backup_dir   = data.get('backup_dir',  '/tmp/nextcloud-backups')
+
+    _nextcloud_state = {
+        'running':     True,
+        'output':      [],
+        'done':        False,
+        'error':       None,
+        'step':        'Initializing…',
+        'progress':    0,
+        'total_steps': 8,
+        'start_time':  datetime.now().isoformat(),
+        'end_time':    None,
+    }
+
+    def log(msg: str):
+        _nextcloud_state['output'].append(
+            f'[{datetime.now().strftime("%H:%M:%S")}] {msg}'
+        )
+        logger.info(f'NextcloudUpdate: {msg}')
+
+    def set_step(label: str, n: int):
+        _nextcloud_state['step']     = label
+        _nextcloud_state['progress'] = int(n / _nextcloud_state['total_steps'] * 100)
+
+    def run_cmd(cmd: str, timeout: int = 120, critical: bool = True):
+        log(f'$ {cmd}')
+        try:
+            stdout, stderr, rc = _ssh_exec_host(cmd, timeout=timeout)
+            for line in (stdout or stderr or '').splitlines():
+                if line.strip():
+                    log(line)
+            if rc != 0 and critical:
+                raise RuntimeError((stderr or stdout or f'exit code {rc}').strip())
+            return stdout or '', rc
+        except RuntimeError:
+            raise
+        except Exception as e:
+            if critical:
+                raise RuntimeError(str(e)) from e
+            log(f'⚠ {e}')
+            return '', 1
+
+    def maintenance(on: bool):
+        state_str = '--on' if on else '--off'
+        run_cmd(
+            f'cd {compose_dir} && docker compose exec -T {app_service} '
+            f'php /var/www/html/occ maintenance:mode {state_str}',
+            timeout=60,
+            critical=False,
+        )
+
+    def get_image_version() -> str:
+        out, _ = run_cmd(
+            f'docker inspect nextcloud:latest --format "{{{{index .Config.Env}}}}" 2>/dev/null '
+            f'| tr " " "\\n" | grep NEXTCLOUD_VERSION | cut -d= -f2',
+            critical=False,
+        )
+        return out.strip() or 'n/a'
+
+    def get_data_version() -> str:
+        out, _ = run_cmd(
+            f'cd {compose_dir} && docker compose exec -T {app_service} '
+            f'php /var/www/html/occ config:system:get version 2>/dev/null',
+            critical=False,
+        )
+        return out.strip() or 'n/a'
+
+    def align_version_php():
+        """
+        Copy version.php from the image into the volume after occ upgrade.
+
+        occ upgrade may increment the patch version in the data
+        (e.g. 33.0.5 → 33.0.5.1) while the Docker image stays on the
+        previous version. On the next container restart Nextcloud refuses
+        to start with:
+            "version of the data is higher than the docker image version"
+        Fix: overwrite version.php with the one shipped inside the image.
+        """
+        run_cmd(
+            f'docker run --rm '
+            f'--volumes-from $(cd {compose_dir} && docker compose ps -q {app_service}) '
+            f'nextcloud:latest '
+            f'sh -c "cp /usr/src/nextcloud/version.php /var/www/html/version.php"',
+            timeout=60,
+            critical=False,
+        )
+
+    def run():
+        global _nextcloud_state
+        maintenance_was_enabled = False
+        try:
+
+            # ── STEP 1: Pre-check ────────────────────────────────────────────
+            set_step('Pre-check', 1)
+            log('═══ STEP 1/8: Pre-check ═══')
+
+            out, rc = run_cmd('docker info --format "{{.ServerVersion}}"', critical=False)
+            if rc != 0:
+                raise RuntimeError('Docker daemon is not responding. Make sure Docker is running.')
+            log(f'✓ Docker version: {out.strip()}')
+
+            out, rc = run_cmd(
+                f'cd {compose_dir} && docker compose ps --format json 2>/dev/null | head -5',
+                critical=False,
+            )
+            if not out.strip():
+                raise RuntimeError(f'No containers found in {compose_dir}. Check compose_dir.')
+            log('✓ Containers detected')
+
+            # Log current versions before doing anything
+            current_data_version = get_data_version()
+            log(f'Current data version:  {current_data_version}')
+
+            # ── STEP 2: Maintenance mode ON ──────────────────────────────────
+            set_step('Maintenance ON', 2)
+            log('═══ STEP 2/8: Maintenance mode ON ═══')
+            maintenance(on=True)
+            maintenance_was_enabled = True
+            log('✓ Maintenance mode enabled')
+
+            # ── STEP 3: Database backup ──────────────────────────────────────
+            set_step('Database backup', 3)
+            log('═══ STEP 3/8: Database backup ═══')
+            ts = datetime.now().strftime('%Y%m%d-%H%M%S')
+            run_cmd(f'mkdir -p {backup_dir}', critical=False)
+            dump_file = f'{backup_dir}/nc-db-{ts}.sql.gz'
+            run_cmd(
+                f'cd {compose_dir} && docker compose exec -T {db_service} '
+                f'mariadb-dump -uroot -p{db_root_pass} --all-databases '
+                f'| gzip > {dump_file}',
+                timeout=300,
+            )
+            out, _ = run_cmd(f'du -sh {dump_file}', critical=False)
+            log(f'✓ DB backup saved: {out.strip() or dump_file}')
+
+            # ── STEP 4: Data volume snapshot ─────────────────────────────────
+            set_step('Volume snapshot', 4)
+            log('═══ STEP 4/8: Volume snapshot ═══')
+            run_cmd(
+                f'docker run --rm '
+                f'--volumes-from $(cd {compose_dir} && docker compose ps -q {app_service}) '
+                f'-v {backup_dir}:/backup alpine '
+                f'tar czf /backup/nc-data-{ts}.tar.gz /var/www/html/data 2>/dev/null || true',
+                timeout=600,
+                critical=False,
+            )
+            log(f'✓ Volume snapshot saved to {backup_dir}')
+
+            # ── STEP 5: Pull images ───────────────────────────────────────────
+            set_step('Pull images', 5)
+            log('═══ STEP 5/8: docker compose pull ═══')
+            run_cmd(f'cd {compose_dir} && docker compose pull', timeout=600)
+            log('✓ Images updated')
+
+            # Log image version vs data version — useful for debugging
+            new_image_version = get_image_version()
+            log(f'Pulled image version:  {new_image_version}')
+            log(f'Current data version:  {current_data_version}')
+
+            # ── STEP 6: Recreate containers ───────────────────────────────────
+            set_step('Recreate containers', 6)
+            log('═══ STEP 6/8: docker compose up -d ═══')
+            run_cmd(f'cd {compose_dir} && docker compose up -d --force-recreate', timeout=300)
+            log('✓ Containers recreated')
+
+            # Wait until Nextcloud is ready (max 60s)
+            log('Waiting for Nextcloud to be ready…')
+            run_cmd(
+                f'for i in $(seq 1 12); do '
+                f'  cd {compose_dir} && docker compose exec -T {app_service} '
+                f'  php /var/www/html/occ status --output=json 2>/dev/null | grep -q installed && break; '
+                f'  sleep 5; '
+                f'done',
+                timeout=90,
+                critical=False,
+            )
+
+            # ── STEP 7: occ upgrade ───────────────────────────────────────────
+            set_step('occ upgrade', 7)
+            log('═══ STEP 7/8: occ upgrade ═══')
+            run_cmd(
+                f'cd {compose_dir} && docker compose exec -T {app_service} '
+                f'php /var/www/html/occ upgrade --no-interaction',
+                timeout=600,
+            )
+            log('✓ occ upgrade completed')
+
+            # Additional migrations (non-blocking)
+            for extra_cmd, label in [
+                ('db:add-missing-indices',      'DB indices'),
+                ('db:add-missing-columns',      'DB columns'),
+                ('db:convert-filecache-bigint', 'Filecache bigint'),
+            ]:
+                run_cmd(
+                    f'cd {compose_dir} && docker compose exec -T {app_service} '
+                    f'php /var/www/html/occ {extra_cmd} --no-interaction',
+                    timeout=300,
+                    critical=False,
+                )
+                log(f'✓ {label} OK')
+
+            # ── VERSION ALIGNMENT FIX ─────────────────────────────────────────
+            # occ upgrade may bump the patch version in the data
+            # (e.g. 33.0.5 → 33.0.5.1) while the Docker image stays behind.
+            # On the next container restart Nextcloud would refuse to start.
+            # Fix: copy version.php from the image back into the volume so
+            # both sides stay in sync.
+            log('Checking version alignment after occ upgrade…')
+            post_upgrade_version = get_data_version()
+            log(f'Data version before upgrade: {current_data_version}')
+            log(f'Data version after upgrade:  {post_upgrade_version}')
+            log(f'Image version:               {new_image_version}')
+
+            if post_upgrade_version != current_data_version:
+                log(f'⚠ occ bumped data version: {current_data_version} → {post_upgrade_version}')
+                log('Aligning version.php with image to prevent startup block…')
+                align_version_php()
+                log('✓ version.php aligned — container restarts will work correctly')
+            else:
+                log('✓ Data version unchanged — no alignment needed')
+
+            # ── STEP 8: Maintenance OFF + status check ────────────────────────
+            set_step('Maintenance OFF', 8)
+            log('═══ STEP 8/8: Maintenance mode OFF ═══')
+            maintenance(on=False)
+            maintenance_was_enabled = False
+            log('✓ Maintenance mode disabled')
+
+            out, _ = run_cmd(
+                f'cd {compose_dir} && docker compose exec -T {app_service} '
+                f'php /var/www/html/occ status',
+                critical=False,
+            )
+            log('═══ UPDATE COMPLETED SUCCESSFULLY ═══')
+            _nextcloud_state['progress'] = 100
+
+        except Exception as e:
+            err = str(e)
+            _nextcloud_state['error'] = err
+            log(f'❌ ERROR: {err}')
+            if maintenance_was_enabled:
+                log('⚠ Maintenance mode is still ACTIVE for safety. Please check manually.')
+
+        finally:
+            _nextcloud_state['running']  = False
+            _nextcloud_state['done']     = True
+            _nextcloud_state['end_time'] = datetime.now().isoformat()
+
+            if _nextcloud_state['start_time']:
+                start    = datetime.fromisoformat(_nextcloud_state['start_time'])
+                end      = datetime.fromisoformat(_nextcloud_state['end_time'])
+                duration = int((end - start).total_seconds())
+                log(f'Total duration: {duration // 60}m {duration % 60}s')
+
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Nextcloud update started'}), 202
 
 
-# ── APT Upgrade ────────────────────────────────────────────
+# ── 3. Route status ────────────────────────────────────────────────────────────
+@system_bp.route('/api/system/nextcloud_update/status')
+@handle_db_error
+@cache_json_response(ttl_seconds=3)   # polling rapido, TTL breve
+def api_nextcloud_update_status():
+    """Restituisce lo stato corrente dell'aggiornamento Nextcloud."""
+    return jsonify(_nextcloud_state)
+
+
+_upgrade_state = {
+    'running': False, 'output': [], 'done': False,
+    'error': None, 'step': '', 'progress': 0,
+}
+
 @system_bp.route('/api/system/upgrade/start', methods=['POST'])
-@handle_db_error
 def api_upgrade_start():
     global _upgrade_state
     if _upgrade_state['running']:
-        return jsonify({'error': 'Upgrade already running'}), 409
-
-    _upgrade_state = {'running': True, 'output': [], 'done': False, 'error': None}
-
+        return jsonify({'error': 'Already running'}), 409
+    _upgrade_state = {'running': True, 'output': [], 'done': False,
+                      'error': None, 'step': 'Updating…', 'progress': 0}
     def run():
         global _upgrade_state
         try:
-            for cmd in [
-                ['sudo', 'apt-get', 'update', '-y'],
-                ['sudo', 'apt-get', 'upgrade', '-y'],
+            for cmd, label, p in [
+                ('sudo apt-get update -y',   'apt update',   50),
+                ('sudo apt-get upgrade -y',  'apt upgrade', 100),
             ]:
-                _upgrade_state['output'].append(f'$ {" ".join(cmd)}')
-                try:
-                    stdout, _, _ = _ssh_exec_host(' '.join(cmd))
-                    _upgrade_state['output'].extend((stdout or '').splitlines())
-                except Exception as e:
-                    _upgrade_state['error'] = str(e)
-                    break
+                _upgrade_state['step'] = label
+                _upgrade_state['progress'] = p
+                _upgrade_state['output'].append(f'$ {cmd}')
+                stdout, stderr, rc = _ssh_exec_host(cmd, timeout=300)
+                _upgrade_state['output'].append(stdout or stderr or '')
+                if rc != 0:
+                    raise Exception(stderr or f'exit {rc}')
+            _upgrade_state['output'].append('✓ Done')
         except Exception as e:
             _upgrade_state['error'] = str(e)
         finally:
             _upgrade_state['running'] = False
-            _upgrade_state['done']    = True
-
+            _upgrade_state['done'] = True
     threading.Thread(target=run, daemon=True).start()
-    return jsonify({'message': 'Upgrade started'}), 202
-
+    return jsonify({'message': 'APT Upgrade started'}), 202
 
 @system_bp.route('/api/system/upgrade/status')
-@handle_db_error
-@cache_json_response(ttl_seconds=5)
 def api_upgrade_status():
     return jsonify(_upgrade_state)
+
+@system_bp.route('/api/system/full_upgrade/start', methods=['POST'])
+def api_full_upgrade_start():
+    global _full_upgrade_state
+    if _full_upgrade_state['running']:
+        return jsonify({'error': 'Already running'}), 409
+    _full_upgrade_state = {
+        'running': True, 'output': [], 'done': False, 'error': None,
+        'step': 'Initializing…', 'progress': 0, 'total_steps': 8,
+        'start_time': datetime.now().isoformat(), 'end_time': None,
+    }
+    def run():
+        global _full_upgrade_state
+        steps = [
+            (1, 'Pre-check disk',      'df -h /'),
+            (2, 'apt-get update',      'sudo apt-get update -y'),
+            (3, 'apt-get full-upgrade','sudo DEBIAN_FRONTEND=noninteractive apt-get full-upgrade -y'),
+            (4, 'autoremove',          'sudo apt-get autoremove -y --purge'),
+            (5, 'autoclean',           'sudo apt-get autoclean -y'),
+            (6, 'Firmware check',      'sudo rpi-update --dry-run 2>/dev/null || echo "skipped"'),
+            (7, 'Reboot check',        '[ -f /var/run/reboot-required ] && cat /var/run/reboot-required || echo "no reboot required"'),
+            (8, 'Final report',        'df -h / && free -h'),
+        ]
+        try:
+            for n, label, cmd in steps:
+                _full_upgrade_state['step'] = label
+                _full_upgrade_state['progress'] = int(n / 8 * 100)
+                _full_upgrade_state['output'].append(f'═══ STEP {n}/8: {label} ═══')
+                _full_upgrade_state['output'].append(f'$ {cmd}')
+                stdout, stderr, rc = _ssh_exec_host(cmd, timeout=600)
+                _full_upgrade_state['output'].append(stdout or stderr or '')
+                if rc != 0 and n in (2, 3):
+                    raise Exception(stderr or f'exit {rc}')
+            _full_upgrade_state['output'].append('═══ FULL UPGRADE COMPLETATO ═══')
+            _full_upgrade_state['progress'] = 100
+        except Exception as e:
+            _full_upgrade_state['error'] = str(e)
+        finally:
+            _full_upgrade_state['running'] = False
+            _full_upgrade_state['done'] = True
+            _full_upgrade_state['end_time'] = datetime.now().isoformat()
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({'message': 'Full upgrade started'}), 202

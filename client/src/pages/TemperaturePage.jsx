@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { createElement, useState, useEffect, useCallback, useRef } from 'react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -196,8 +196,8 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
       </div>
 
       {/* Dial */}
-      <div style={{ position: 'relative', width: SIZE, margin: '0 auto' }}>
-        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block' }}>
+        <div style={{ position: 'relative', width: 'min(320px,100%)', margin: '0 auto' }}>
+          <svg width="100%" height="auto" viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ display: 'block' }}>
           {/* Track */}
           <path d={trackPath} fill="none" stroke="#e9ecef" strokeWidth={SW} strokeLinecap="round" />
           {/* Orange arc */}
@@ -222,7 +222,7 @@ function ThermostatDialCard({ thermostat, currentTemp, targetTemp, onToggle, onD
             position: 'absolute',
             top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 180, height: 180,
+            width: 'min(180px,48vw)', height: 'min(180px,48vw)',
             borderRadius: '50%',
             border: 'none', background: 'transparent', cursor: 'pointer',
             display: 'flex', flexDirection: 'column',
@@ -335,24 +335,24 @@ function StatCell({ label, value, unit, color, right = false }) {
 }
 
 // ── Chart Card ─────────────────────────────────────────────
-function ChartCard({ title, icon: Icon, badge, controls, height = 200, children }) {
+function ChartCard({ title, icon, badge, controls, height = 200, children }) {
   return (
-    <div className="card">
+    <div className="card card--flat" style={{ boxShadow: '0 10px 28px rgba(15,23,42,0.05)' }}>
       <div className="card-header">
-        <div className="card-header-icon icon-amber"><Icon size={14} /></div>
+        <div className="card-header-icon icon-amber">{createElement(icon, { size: 14 })}</div>
         <span className="card-header-title">{title}</span>
         {badge && <span className="badge badge--muted" style={{ marginLeft: 'auto' }}>{badge}</span>}
       </div>
       {controls && (
         <div style={{
-          padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-surface-2)',
+          padding: '0.7rem 1rem', borderBottom: '1px solid var(--border)',
+          background: 'linear-gradient(180deg, rgba(248,250,252,0.98), rgba(244,246,250,0.98))',
           display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'flex-end',
         }}>
           {controls}
         </div>
       )}
-      <div style={{ padding: '1rem 0.5rem 0.75rem', height }}>
+      <div style={{ padding: '0.85rem 0.85rem 0.95rem', height }}>
         {children}
       </div>
     </div>
@@ -516,7 +516,7 @@ function BlackoutCard({ showToast, onStatusLoad }) {
   const [endDay,      setEndDay]      = useState(30)
   const [reason,      setReason]      = useState('Boiler disabled during warm season')
 
-  const loadCfg = async () => {
+  const loadCfg = useCallback(async () => {
     setLoading(true)
     try {
       const res  = await fetch('/api/boiler/blackout')
@@ -535,9 +535,15 @@ function BlackoutCard({ showToast, onStatusLoad }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [onStatusLoad, showToast])
 
-  useEffect(() => { loadCfg() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) void loadCfg()
+    })
+    return () => { cancelled = true }
+  }, [loadCfg])
 
   // Clamp day when month changes
   const handleStartMonthChange = (m) => {
@@ -857,27 +863,15 @@ export default function TemperaturePage() {
 
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
 
-  useEffect(() => {
-    const init = async () => {
-      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules(), loadZigbeeLatest()])
-      loadCharts(month, year, false, null, null)
-    }
-    init()
-    const t1 = setInterval(loadSensor, 10000)
-    const t2 = setInterval(loadThermostatFull, 20000)
-    const t3 = setInterval(loadZigbeeLatest, 30000)
-    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
-  }, [])
-
-  const loadBoiler         = () => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {})
-  const loadThermostatFull = () => api.getThermostatFull().then((d) => {
+  const loadBoiler = useCallback(() => api.getBoilerStatus().then((d) => setIsOn(d.is_on)).catch(() => {}), [setIsOn])
+  const loadThermostatFull = useCallback(() => api.getThermostatFull().then((d) => {
     setThermostat(d.thermostat_enabled || false)
     if (d.current_temperature != null) setCurrentTemp(d.current_temperature)
     if (d.target_temperature  != null) setTargetTemp(d.target_temperature)
     if (d.boiler_on           != null) setIsOn(d.boiler_on)
-  }).catch(() => {})
-  const loadSensor    = () => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {})
-  const loadSchedules = () => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {})
+  }).catch(() => {}), [setCurrentTemp, setIsOn, setTargetTemp, setThermostat])
+  const loadSensor = useCallback(() => api.getSensors().then((d) => setCurrentTemp(parseFloat(d.temperature.current))).catch(() => {}), [setCurrentTemp])
+  const loadSchedules = useCallback(() => api.getSchedules().then((d) => setSchedules(d.result?.jobs || d.jobs || [])).catch(() => {}), [setSchedules])
   const loadZigbeeLatest = useCallback(async () => {
     setZigbeeLoading(true)
     try {
@@ -888,7 +882,7 @@ export default function TemperaturePage() {
     } finally {
       setZigbeeLoading(false)
     }
-  }, [])
+  }, [setZigbeeLatest, setZigbeeLoading])
 
   // ── Boiler toggle — checks blackout before acting ──────────────────────────
   const toggleBoiler = async () => {
@@ -954,10 +948,7 @@ export default function TemperaturePage() {
     }
   }
 
-  const sendTargetTemp = useCallback(
-    useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600),
-    []
-  )
+  const sendTargetTemp = useDebounce((val) => { api.setTargetTemp(val).catch(() => {}) }, 600)
 
   const adjustTarget = (d) => {
     const n = Math.max(15, Math.min(30, targetTemp + d))
@@ -1018,8 +1009,27 @@ export default function TemperaturePage() {
       } else {
         setCompareData(null)
       }
-    } catch {} finally { setLoadingCharts(false) }
-  }, [])
+    } catch (error) {
+      void error
+    } finally {
+      setLoadingCharts(false)
+    }
+  }, [setCompareData, setDailyData, setLoadingCharts, setMonthlyData, setTodayData])
+
+  useEffect(() => {
+    let cancelled = false
+    const init = async () => {
+      await Promise.all([loadBoiler(), loadThermostatFull(), loadSensor(), loadSchedules(), loadZigbeeLatest()])
+      if (!cancelled) loadCharts(month, year, false, null, null)
+    }
+    Promise.resolve().then(() => {
+      if (!cancelled) init()
+    })
+    const t1 = setInterval(loadSensor, 10000)
+    const t2 = setInterval(loadThermostatFull, 20000)
+    const t3 = setInterval(loadZigbeeLatest, 30000)
+    return () => { cancelled = true; clearInterval(t1); clearInterval(t2); clearInterval(t3) }
+  }, [loadBoiler, loadCharts, loadSchedules, loadSensor, loadThermostatFull, loadZigbeeLatest, month, year])
 
   const fetchRange = async () => {
     if (!startDate || !endDate) { showToast('Select both dates', 'error'); return }
@@ -1061,13 +1071,13 @@ export default function TemperaturePage() {
 
   const DailyControls = (
     <>
-      <div className="field" style={{ flex: 1, minWidth: 110 }}>
+      <div className="field" style={{ flex: 1, minWidth: 0 }}>
         <label className="field-label">Month</label>
         <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={month} onChange={e => setMonth(+e.target.value)}>
           {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
         </select>
       </div>
-      <div className="field" style={{ flex: 1, minWidth: 90 }}>
+      <div className="field" style={{ flex: 1, minWidth: 0 }}>
         <label className="field-label">Year</label>
         <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={year} onChange={e => setYear(+e.target.value)}>
           {years.map(y => <option key={y}>{y}</option>)}
@@ -1080,13 +1090,13 @@ export default function TemperaturePage() {
         </label>
       </div>
       {compareEnabled && <>
-        <div className="field" style={{ flex: 1, minWidth: 110 }}>
+        <div className="field" style={{ flex: 1, minWidth: 0 }}>
           <label className="field-label">Cmp Month</label>
           <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={compareMonth} onChange={e => setCompareMonth(+e.target.value)}>
             {MONTHS.map((n, i) => <option key={i} value={i + 1}>{n}</option>)}
           </select>
         </div>
-        <div className="field" style={{ flex: 1, minWidth: 90 }}>
+        <div className="field" style={{ flex: 1, minWidth: 0 }}>
           <label className="field-label">Cmp Year</label>
           <select className="select" style={{ padding: '0.42rem 0.6rem', fontSize: '0.8rem' }} value={compareYear} onChange={e => setCompareYear(+e.target.value)}>
             {years.map(y => <option key={y}>{y}</option>)}
@@ -1147,7 +1157,6 @@ export default function TemperaturePage() {
               <button onClick={toggleBoiler} style={{
                 padding: '0.55rem 1.25rem',
                 borderRadius: 'var(--radius-full)',
-                border: 'none',
                 background: isOn === true
                   ? 'var(--color-success)'
                   : isOn === false
@@ -1340,18 +1349,18 @@ export default function TemperaturePage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={todayData} margin={{ left: -16, right: 8 }}>
+              <AreaChart data={todayData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="var(--card-temp-accent)" stopOpacity={0.15} />
+                    <stop offset="5%"  stopColor="var(--card-temp-accent)" stopOpacity={0.18} />
                     <stop offset="95%" stopColor="var(--card-temp-accent)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
+                <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+                <XAxis dataKey="hour" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickMargin={10} />
+                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} tickMargin={8} />
                 <Tooltip {...TT} formatter={(v) => [v != null ? `${v}°C` : 'N/A', 'Temperature']} />
-                <Area type="monotone" dataKey="temp" stroke="var(--card-temp-accent)" fill="url(#gt)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'var(--card-temp-accent)', strokeWidth: 0 }} connectNulls />
+                <Area type="monotone" dataKey="temp" stroke="var(--card-temp-accent)" fill="url(#gt)" strokeWidth={2.3} dot={false} activeDot={{ r: 4, fill: 'var(--card-temp-accent)', strokeWidth: 0 }} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -1359,18 +1368,18 @@ export default function TemperaturePage() {
 
         <ChartCard title="Monthly average" icon={TrendingUp} badge={`${year}`}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyData} margin={{ left: -16, right: 8 }}>
+            <AreaChart data={monthlyData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gm" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="var(--accent)" stopOpacity={0.12} />
                   <stop offset="95%" stopColor="var(--accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickMargin={10} />
+              <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} tickMargin={8} />
               <Tooltip {...TT} formatter={(v) => [v != null ? `${v}°C` : 'N/A', `Avg ${year}`]} />
-              <Area type="monotone" dataKey="temp" stroke="var(--accent)" fill="url(#gm)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} connectNulls />
+              <Area type="monotone" dataKey="temp" stroke="var(--accent)" fill="url(#gm)" strokeWidth={2.3} dot={false} activeDot={{ r: 4 }} connectNulls />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -1379,12 +1388,12 @@ export default function TemperaturePage() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={dailyData.map((d, i) => ({ ...d, compare: compareData ? compareData[i] : undefined }))}
-              margin={{ left: -16, right: 8 }}
+              margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
               barGap={1}
             >
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+              <XAxis dataKey="day" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickMargin={10} />
+              <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} tickMargin={8} />
               <Tooltip {...TT} />
               {compareData && <Legend wrapperStyle={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }} />}
               <Bar dataKey="temp" name={`${MONTHS[month - 1].substring(0, 3)} ${year}`} fill="var(--card-temp-accent)" radius={[3, 3, 0, 0]} maxBarSize={14} />
@@ -1405,7 +1414,7 @@ export default function TemperaturePage() {
                 <input
                   type="datetime-local"
                   className="input input--mono"
-                  style={{ padding: '0.42rem 0.6rem', fontSize: '0.78rem' }}
+                  style={{ padding: '0.42rem 0.6rem', fontSize: '0.78rem', borderRadius: 12 }}
                   value={f.val}
                   onChange={e => f.set(e.target.value)}
                 />
@@ -1423,18 +1432,18 @@ export default function TemperaturePage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={rangeData} margin={{ left: -16, right: 8 }}>
+              <AreaChart data={rangeData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="var(--color-danger)" stopOpacity={0.12} />
                     <stop offset="95%" stopColor="var(--color-danger)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="time" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} />
+                <CartesianGrid strokeDasharray="2 4" stroke="rgba(148,163,184,0.14)" vertical={false} />
+                <XAxis dataKey="time" tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" tickMargin={10} />
+                <YAxis tick={{ fontFamily: 'var(--font-mono)', fontSize: 9, fill: 'var(--text-muted)' }} unit="°" axisLine={false} tickLine={false} width={36} tickMargin={8} />
                 <Tooltip {...TT} formatter={(v) => [`${v}°C`, 'Avg Temp']} />
-                <Area type="monotone" dataKey="temp" stroke="var(--color-danger)" fill="url(#gr)" strokeWidth={2} dot={false} connectNulls />
+                <Area type="monotone" dataKey="temp" stroke="var(--color-danger)" fill="url(#gr)" strokeWidth={2.3} dot={false} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
           )}

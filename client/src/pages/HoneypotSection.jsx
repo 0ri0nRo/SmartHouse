@@ -21,23 +21,24 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
+import { fetchJson } from '../lib/fetchCache'
 
 // ── API ────────────────────────────────────────────────────
 const api = {
-  stats:             ()      => fetch('/api/honeypot/stats').then(r => r.json()),
-  events:            (n=200) => fetch(`/api/honeypot/events?limit=${n}`).then(r => r.json()),
-  attackers:         ()      => fetch('/api/honeypot/attackers').then(r => r.json()),
-  credentials:       ()      => fetch('/api/honeypot/credentials').then(r => r.json()),
-  commands:          ()      => fetch('/api/honeypot/commands/top').then(r => r.json()),
-  session:           (id)    => fetch(`/api/honeypot/sessions/${id}`).then(r => r.json()),
-  daily:             ()      => fetch('/api/honeypot/timeline/daily').then(r => r.json()),
-  files:             ()      => fetch('/api/honeypot/files').then(r => r.json()),
-  geoip:             (n=100) => fetch(`/api/honeypot/geoip?limit=${n}`).then(r => r.json()),
-  banned:            (j='')  => fetch(`/api/honeypot/banned${j ? `?jail=${j}` : ''}`).then(r => r.json()),
-  alerts:            (h=24)  => fetch(`/api/honeypot/alerts?hours=${h}`).then(r => r.json()),
-  threats:           (d=7)   => fetch(`/api/honeypot/threats?days=${d}`).then(r => r.json()),
-  attackerProfile:   (ip)    => fetch(`/api/honeypot/attackers/${ip}`).then(r => r.json()),
-  downloadsAnalysis: ()      => fetch('/api/honeypot/downloads/analysis').then(r => r.json()),
+  stats:             ()      => fetchJson('/api/honeypot/stats'),
+  events:            (n=200) => fetchJson(`/api/honeypot/events?limit=${n}`),
+  attackers:         ()      => fetchJson('/api/honeypot/attackers'),
+  credentials:       ()      => fetchJson('/api/honeypot/credentials'),
+  commands:          ()      => fetchJson('/api/honeypot/commands/top'),
+  session:           (id)    => fetchJson(`/api/honeypot/sessions/${id}`),
+  daily:             ()      => fetchJson('/api/honeypot/timeline/daily'),
+  files:             ()      => fetchJson('/api/honeypot/files'),
+  geoip:             (n=100) => fetchJson(`/api/honeypot/geoip?limit=${n}`),
+  banned:            (j='')  => fetchJson(`/api/honeypot/banned${j ? `?jail=${j}` : ''}`),
+  alerts:            (h=24)  => fetchJson(`/api/honeypot/alerts?hours=${h}`),
+  threats:           (d=7)   => fetchJson(`/api/honeypot/threats?days=${d}`),
+  attackerProfile:   (ip)    => fetchJson(`/api/honeypot/attackers/${ip}`),
+  downloadsAnalysis: ()      => fetchJson('/api/honeypot/downloads/analysis'),
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -187,9 +188,20 @@ const TABS = [
   { id: 'map',         label: 'Map',       icon: <Globe size={12} /> },
 ]
 
-function SubTabBar({ active, onChange }) {
+function SubTabBar({ active, onChange, mobile = false }) {
+  const barStyle = mobile ? {
+    display: 'flex', gap: '0.1rem',
+    position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 110,
+    background: 'var(--bg-surface)', borderTop: '1px solid var(--border)',
+    padding: '0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom))',
+    overflowX: 'auto', scrollbarWidth: 'none',
+    backdropFilter: 'blur(18px)', WebkitOverflowScrolling: 'touch',
+  } : {
+    display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)', borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem', overflowX: 'auto', scrollbarWidth: 'none'
+  }
+
   return (
-    <div style={{ display: 'flex', gap: '0.1rem', background: 'var(--bg-muted)', borderRadius: 8, padding: '0.25rem', marginBottom: '1.25rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
+    <div style={barStyle}>
       {TABS.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
           display: 'flex', alignItems: 'center', gap: '0.3rem',
@@ -200,7 +212,11 @@ function SubTabBar({ active, onChange }) {
           color: active === t.id ? 'var(--text-primary)' : 'var(--text-secondary)',
           boxShadow: active === t.id ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
           transition: 'all 0.15s',
+          position: 'relative',
         }}>
+          {mobile && active === t.id && (
+            <span style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: 2, borderRadius: 1, background: 'var(--accent)' }} />
+          )}
           {t.icon}{t.label}
         </button>
       ))}
@@ -431,7 +447,7 @@ function OverviewTab({ stats, isMobile }) {
   }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingBottom: isMobile ? 'calc(5.5rem + env(safe-area-inset-bottom))' : 0 }}>
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: '0.75rem' }}>
         <StatCard label="Total events"    value={stats.total_events}   icon={<Zap size={15} />}      color="#f97316" />
         <StatCard label="Unique IPs"      value={stats.unique_ips}     icon={<Target size={15} />}   color="#ef4444" />
@@ -656,7 +672,7 @@ function FeedTab({ events, isMobile }) {
         </span>
       </div>
       {!isMobile && (
-        <div style={{ display: 'grid', gridTemplateColumns: '65px 130px 90px 90px 1fr', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'minmax(56px,80px) minmax(120px,1fr) minmax(90px,1fr) minmax(90px,1fr) 1fr', gap: '0.5rem', padding: '0.35rem 1rem', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
           {['Time', 'Source IP', 'Event', 'Username', 'Password / Command'].map(h => (
             <span key={h} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
           ))}
@@ -683,7 +699,7 @@ function FeedTab({ events, isMobile }) {
                 )}
               </div>
             ) : (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '65px 130px 90px 90px 1fr', gap: '0.5rem', alignItems: 'center', padding: '0.45rem 1rem', borderBottom: '1px solid var(--border)', background: isSuccess ? '#ef444408' : 'transparent' }}>
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1,1fr)' : 'minmax(56px,80px) minmax(120px,1fr) minmax(90px,1fr) minmax(90px,1fr) 1fr', gap: '0.5rem', alignItems: 'center', padding: '0.45rem 1rem', borderBottom: '1px solid var(--border)', background: isSuccess ? '#ef444408' : 'transparent' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{ts}</span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: isSuccess ? '#ef4444' : 'var(--text-primary)', fontWeight: isSuccess ? 700 : 400 }}>{e.src_ip || '—'}</span>
                 <EventBadge eventid={e.eventid} />
@@ -878,8 +894,13 @@ function AlertsTab({ isMobile }) {
   const [hours, setHours]   = useState(24)
 
   useEffect(() => {
-    setLoading(true)
-    api.alerts(hours).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setLoading(true)
+      api.alerts(hours).then(d => { if (!cancelled) setData(d) }).catch(() => { if (!cancelled) setData(null) }).finally(() => { if (!cancelled) setLoading(false) })
+    })
+    return () => { cancelled = true }
   }, [hours])
 
   if (loading) return <Loading />
@@ -949,8 +970,13 @@ function ThreatsTab({ isMobile }) {
   const [days, setDays]     = useState(7)
 
   useEffect(() => {
-    setLoading(true)
-    api.threats(days).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setLoading(true)
+      api.threats(days).then(d => { if (!cancelled) setData(d) }).catch(() => { if (!cancelled) setData(null) }).finally(() => { if (!cancelled) setLoading(false) })
+    })
+    return () => { cancelled = true }
   }, [days])
 
   if (loading) return <Loading />
@@ -1049,7 +1075,11 @@ function BannedTab({ isMobile }) {
     api.banned(jail).then(setData).catch(() => setData(null)).finally(() => setLoading(false))
   }, [jail])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [load])
 
   if (loading) return <Loading />
   if (!data || data.error) return <Empty icon={<Ban size={28} />} text={data?.error || 'Unable to connect to the Fail2ban database'} />
@@ -1377,9 +1407,10 @@ export default function HoneypotSection({ isMobile }) {
   }, [])
 
   useEffect(() => {
-    loadCore()
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) loadCore() })
     const id = setInterval(() => loadCore(true), 30000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [loadCore])
 
   if (loading) return <div className="loading-box" style={{ height: 300 }}><span className="spinner" /></div>
@@ -1419,7 +1450,7 @@ export default function HoneypotSection({ isMobile }) {
         </button>
       </div>
 
-      <SubTabBar active={subTab} onChange={setSubTab} />
+      <SubTabBar active={subTab} onChange={setSubTab} mobile={isMobile} />
 
       {subTab === 'overview'    && <OverviewTab stats={stats} isMobile={isMobile} />}
       {subTab === 'attackers'   && <AttackersTab isMobile={isMobile} onSessionClick={setSessionModal} onProfileClick={setProfileModal} />}

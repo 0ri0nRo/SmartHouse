@@ -27,12 +27,12 @@ export default function LoadingScreen() {
       transition: 'opacity 0.3s ease',
       pointerEvents: fading ? 'none' : 'all',
     }}>
-      {/* Logo */}
-      <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
         <div style={{
           width: 40, height: 40, borderRadius: 'var(--radius-md)',
-          background: 'var(--accent)',
+          background: 'linear-gradient(135deg, var(--accent), rgba(122,167,255,0.7))',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 14px 28px rgba(59,110,255,0.18)',
         }}>
           <svg width={22} height={22} viewBox="0 0 24 24" fill="none"
             stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -41,8 +41,8 @@ export default function LoadingScreen() {
           </svg>
         </div>
         <span style={{
-          fontFamily: 'var(--font-body)', fontWeight: 700,
-          fontSize: '1.25rem', letterSpacing: '-0.3px',
+          fontFamily: 'var(--font-body)', fontWeight: 800,
+          fontSize: '1.15rem', letterSpacing: '-0.4px',
           color: 'var(--text-primary)',
         }}>
           Smart<span style={{ color:'var(--accent)' }}>House</span>

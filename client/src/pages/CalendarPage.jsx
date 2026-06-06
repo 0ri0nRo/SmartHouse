@@ -473,7 +473,11 @@ export default function CalendarPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.resolve().then(() => { if (!cancelled) load() })
+    return () => { cancelled = true }
+  }, [])
 
   const allEvents = useMemo(() => Object.values(days).flat(), [days])
 

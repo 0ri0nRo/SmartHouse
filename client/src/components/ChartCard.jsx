@@ -25,7 +25,7 @@ export default function ChartCard({
   children,
 }) {
   return (
-    <div className="card">
+    <div className="card card--flat" style={{ boxShadow: '0 10px 28px rgba(15,23,42,0.05)' }}>
       {/* Header */}
       <div className="card-header">
         <div
@@ -39,7 +39,7 @@ export default function ChartCard({
         </div>
         <span className="card-header-title">{title}</span>
         {badge && (
-          <span className="badge badge--accent" style={{ marginLeft: 'auto' }}>
+          <span className="badge badge--accent" style={{ marginLeft: 'auto', borderRadius: 999, padding: '3px 10px' }}>
             {badge}
           </span>
         )}
@@ -49,9 +49,9 @@ export default function ChartCard({
       {controls && (
         <div
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.7rem 1rem',
             borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-surface-2)',
+            background: 'linear-gradient(180deg, rgba(248,250,252,0.98), rgba(244,246,250,0.98))',
             display: 'flex',
             flexWrap: 'wrap',
             gap: '0.75rem',
@@ -63,7 +63,7 @@ export default function ChartCard({
       )}
 
       {/* Chart area */}
-      <div className="card-body" style={{ height }}>
+      <div className="card-body" style={{ height, padding: '0.85rem 0.85rem 0.95rem' }}>
         {children}
       </div>
     </div>

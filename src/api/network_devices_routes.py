@@ -2,6 +2,7 @@ import json
 import datetime
 import redis
 from flask import Blueprint, jsonify, request
+from utils.redis_cache import cache_json_response
 import os
 
 network_devices_bp = Blueprint("network_devices", __name__, url_prefix="/api")
@@ -22,6 +23,7 @@ def _find_device(mac: str) -> dict | None:
 # ── Existing endpoints (extended) ─────────────────────────
 
 @network_devices_bp.route("/devices", methods=["GET"])
+@cache_json_response(ttl_seconds=5)
 def get_devices():
     """All devices, enriched with cached port/OS data."""
     devices = _get_devices()
@@ -29,6 +31,7 @@ def get_devices():
 
 
 @network_devices_bp.route("/devices/stats", methods=["GET"])
+@cache_json_response(ttl_seconds=5)
 def get_device_stats():
     """Per-device connection counts (used by pie chart)."""
     devices = _get_devices()
@@ -47,6 +50,7 @@ def get_device_stats():
 
 
 @network_devices_bp.route("/devices/most_connected_days", methods=["GET"])
+@cache_json_response(ttl_seconds=60)
 def get_most_connected_days():
     """Weekly activity heatmap: { ip: [sun..sat] }."""
     cached = r.get("network:weekly_activity")
@@ -58,6 +62,7 @@ def get_most_connected_days():
 # ── New: alerts ────────────────────────────────────────────
 
 @network_devices_bp.route("/devices/alerts", methods=["GET"])
+@cache_json_response(ttl_seconds=10)
 def get_alerts():
     """
     New-device alerts seen in the last 24h.
@@ -91,6 +96,7 @@ def clear_alerts():
 # ── New: history ───────────────────────────────────────────
 
 @network_devices_bp.route("/devices/history", methods=["GET"])
+@cache_json_response(ttl_seconds=30)
 def get_device_history():
     """Rolling connection history for all devices (last 100 per device)."""
     history = {}
@@ -103,6 +109,7 @@ def get_device_history():
 
 
 @network_devices_bp.route("/devices/<mac>/history", methods=["GET"])
+@cache_json_response(ttl_seconds=30)
 def get_single_device_history(mac: str):
     entries = r.lrange(f"network:history:{mac}", 0, 99)
     return jsonify([json.loads(e) for e in entries])

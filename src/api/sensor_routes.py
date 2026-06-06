@@ -43,11 +43,16 @@ def ensure_sensor_map_tables():
                     room_id VARCHAR(40) DEFAULT '',
                     room_name VARCHAR(120) DEFAULT '',
                     topic VARCHAR(255) DEFAULT '',
+                    device_name VARCHAR(255) DEFAULT '',
                     x DOUBLE PRECISION NOT NULL DEFAULT 50,
                     y DOUBLE PRECISION NOT NULL DEFAULT 50,
                     temperature DOUBLE PRECISION,
                     humidity DOUBLE PRECISION,
+                    battery INTEGER,
+                    signal_quality INTEGER,
+                    online BOOLEAN NOT NULL DEFAULT FALSE,
                     last_seen TIMESTAMPTZ,
+                    last_payload JSONB,
                     active BOOLEAN NOT NULL DEFAULT TRUE,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -58,12 +63,17 @@ def ensure_sensor_map_tables():
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_id VARCHAR(40) DEFAULT '';")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS room_name VARCHAR(120) DEFAULT '';")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS topic VARCHAR(255) DEFAULT '';")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS device_name VARCHAR(255) DEFAULT '';")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS live_api JSONB;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS x DOUBLE PRECISION DEFAULT 50;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS y DOUBLE PRECISION DEFAULT 50;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS temperature DOUBLE PRECISION;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS humidity DOUBLE PRECISION;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS battery INTEGER;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS signal_quality INTEGER;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS online BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;")
+            cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS last_payload JSONB;")
             cur.execute("ALTER TABLE sensors ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;")
 
             cur.execute("""
@@ -731,6 +741,7 @@ def create_sensor():
     type_    = body.get('type', 'temp_hum')
     room_id  = body.get('room_id', '')
     topic    = body.get('topic', '')
+    device_name = (body.get('device_name') or '').strip()
     live_api = body.get('live_api')
 
     if isinstance(live_api, str):
@@ -763,8 +774,8 @@ def create_sensor():
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO sensors (name, type, room_id, room_name, topic, live_api, x, y)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO sensors (name, type, room_id, room_name, topic, device_name, live_api, x, y)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
             """, (
                 name,
@@ -772,6 +783,7 @@ def create_sensor():
                 room_id,
                 room_name,
                 topic,
+                device_name,
                 psycopg2.extras.Json(live_api) if live_api is not None else None,
                 x,
                 y,
@@ -838,6 +850,7 @@ def update_sensor(sensor_id):
     }
     room_id   = body.get('room_id', '')
     room_name = ROOM_NAMES.get(room_id, '')
+    device_name = body.get('device_name')
     live_api  = body.get('live_api')
 
     if isinstance(live_api, str):
@@ -854,6 +867,7 @@ def update_sensor(sensor_id):
                     type      = COALESCE(%s, type),
                     room_id   = %s,
                     room_name = %s,
+                    device_name = COALESCE(%s, device_name),
                     topic     = COALESCE(%s, topic),
                     live_api  = COALESCE(%s, live_api)
                 WHERE id = %s
@@ -861,6 +875,7 @@ def update_sensor(sensor_id):
             """, (
                 body.get('name'), body.get('type'),
                 room_id, room_name,
+                device_name,
                 body.get('topic'),
                 psycopg2.extras.Json(live_api) if live_api is not None else None,
                 sensor_id
@@ -963,6 +978,9 @@ def post_reading(sensor_id):
     body = request.get_json()
     temp     = body.get('temperature')
     humidity = body.get('humidity')
+    battery = body.get('battery')
+    signal_quality = body.get('signal_quality')
+    online = body.get('online', True)
     extra    = body.get('extra', {})
     now      = datetime.now(timezone.utc)
  
@@ -973,10 +991,13 @@ def post_reading(sensor_id):
                 UPDATE sensors
                 SET temperature = COALESCE(%s, temperature),
                     humidity    = COALESCE(%s, humidity),
+                    battery     = COALESCE(%s, battery),
+                    signal_quality = COALESCE(%s, signal_quality),
+                    online      = COALESCE(%s, online),
                     last_seen   = %s
                 WHERE id = %s AND active = TRUE
                 RETURNING id
-            """, (temp, humidity, now, sensor_id))
+            """, (temp, humidity, battery, signal_quality, online, now, sensor_id))
  
             if cur.rowcount == 0:
                 conn.rollback()
@@ -1003,6 +1024,8 @@ def post_reading(sensor_id):
         '/api/sensors',
         '/sensors',
         '/api/sensors/summary',
+        f'/api/sensors/{sensor_id}/history',
+        f'/sensors/{sensor_id}/history',
     )
  
     return jsonify({'ok': True, 'sensor_id': sensor_id, 'recorded_at': now.isoformat()})

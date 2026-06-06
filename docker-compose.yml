@@ -94,17 +94,18 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=db
+      - DB_HOST=localhost
       - DB_DATABASE=sensor_data
       - DB_USER=postgres
       - DB_PASSWORD=1234
+      - MQTT_HOST=localhost
+      - MQTT_PORT=1883
       - TZ=Europe/Rome
     volumes:
       - ./src:/app
       - ./zigbee2mqtt/data:/zigbee2mqtt/data:ro
     restart: unless-stopped
-    networks:
-      - smarthouse-net
+    network_mode: host
 
   app:
     build:
@@ -201,11 +202,9 @@ volumes:
   # Volumi named esistenti di Cowrie — Docker li riutilizzerà automaticamente
   # tramite i loro ID completi. Se vuoi usare nomi leggibili, vedi nota sotto.
   cowrie_etc:
-    external: true
-    name: cf40368c7793532af755632bc8a767fda6d334d0a305c4fa188ccf9d46687c7a
+    external: false
   cowrie_var:
-    external: true
-    name: d14a9c5a74dff5a247bc5d8abdf099bf22a1ca4d4d9bd992303d98d85cfc4a0e
+    external: false
 
 networks:
   smarthouse-net:
